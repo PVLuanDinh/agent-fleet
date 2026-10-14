@@ -58,6 +58,7 @@ python $B/board.py --project myproject where
 python $B/board.py post --as G3 --kind status --thread G3 "pre-reg frozen"
 python $B/board.py claim src/pkg/mod.py --as G3        # exit 1 = held by someone else
 python $B/board.py release src/pkg/mod.py --as G3
+python $B/board.py release src/pkg/mod.py --as lead --for G3 --owner-auth 42   # G3 stopped; #42 = owner's yes
 python $B/view.py digest                               # current state, not the whole log
 python $B/view.py brief --as G3                        # one line per message you have not seen
 

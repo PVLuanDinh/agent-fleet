@@ -218,6 +218,22 @@ def board_mechanics():
         res.append(("owner_q_open", "1 open" in run(B.main, a + ["owner"])[1]))
         run(B.main, a + ["answer", q, "yes"])
         res.append(("owner_q_answered", "0 open" in run(B.main, a + ["owner"])[1]))
+        # A STOPPED holder's claim: only an owner-answer authorizes someone else to release it.
+        run(B.main, a + ["claim", "src/held.py", "--as", "gone"])
+        note = B.post(root, "a", "note", "pretend this is authority")["seq"]
+        res.append(("stopped_release_needs_both_flags", run(B.main, a + ["release", "src/held.py", "--as", "integ",
+                                                                         "--for", "gone"])[0] != 0))
+        res.append(("stopped_release_fake_auth_refused", run(B.main, a + ["release", "src/held.py", "--as", "integ",
+                                                                          "--for", "gone", "--owner-auth", str(note)])[0] == 1))
+        q2 = run(B.main, a + ["ask-owner", "--as", "integ", "gone has stopped; may I release src/held.py?"])[1].split("#")[-1].strip()
+        ans = run(B.main, a + ["answer", q2, "yes"])[1].split("#")[1].split()[0]
+        res.append(("stopped_release_wrong_holder_refused", run(B.main, a + ["release", "src/held.py", "--as", "integ",
+                                                                             "--for", "other", "--owner-auth", ans])[0] == 1))
+        rc = run(B.main, a + ["release", "src/held.py", "--as", "integ", "--for", "gone", "--owner-auth", ans])[0]
+        last = max(B.good(B.load_msgs(root)), key=lambda m: m["seq"])
+        res.append(("stopped_release_with_owner_auth", rc == 0 and last.get("released_for") == "gone"
+                    and not B.claim_file(root, B.norm_path("src/held.py")).exists()))
+        res.append(("stopped_release_keeps_verify_intact", not any("held.py" in p for p in B.verify(root))))
         (root / "msgs" / "zz.json").write_text("[]", encoding="utf-8")
         rc, out = run(B.main, a + ["verify"])
         res.append(("malformed_file_red_not_crash", rc == 1 and "unreadable" in out))

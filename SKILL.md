@@ -48,6 +48,7 @@ Every participant names itself: `--as G3` or `$AGENT_NAME` (`owner` is reserved)
 | read new | `view.py brief --as G3` (one line per message you have not seen; it keeps your cursor); `view.py show N` for one message in full. Avoid bare `board.py read`: it re-sends the whole history |
 | claim before editing | `board.py claim src/pkg/mod.py --as G3` (repo-relative). Exit 1 = held: message the holder, work elsewhere |
 | release when the commit lands | `board.py release src/pkg/mod.py --as G3` (holder only) |
+| free a STOPPED holder's claim | `board.py release src/pkg/mod.py --as lead --for G3 --owner-auth N` (N = an owner-answer authorizing it; the release names both; never delete claim files by hand -- `verify` reds a claim that vanishes without a release message) |
 | park a question for the owner | `board.py ask-owner --as G3 --thread G3 "..."` |
 | open owner questions | `board.py owner`. Send them to the owner in ONE batch when nothing else can proceed |
 | owner's reply | `board.py answer N "<owner's verbatim words>"`. Run only by the owner or the lead relaying them |
@@ -159,3 +160,30 @@ python $B/install_keepalive.py --uninstall
 ```
 
 Start the lead with `AGENT_NAME=lead` in its environment, and restart a running lead to load the hook.
+
+## 6. Many agents at once (lanes)
+
+The point of the board is that several builders, reviewers and a single integrator run AT THE SAME
+TIME without overlapping, undoing or interrupting each other. Serial rounds of one builder while
+independent work waits is the failure. Write one lane protocol file and point every brief at it:
+
+1. **One worktree and one row folder per lane**, claimed by the integrator before launch.
+2. **Claim before write**, every path. Exit 1 = held: post a `request --to <holder>` and work elsewhere.
+3. **Held path, but the lane needs a change there?** Edit only the lane's OWN worktree copy, deliver an
+   exact patch against the integration base, and list it. The integrator composes held-path patches
+   after the holder lands; nothing is ever promoted from a lane's worktree.
+4. **Shared registry files** (module registries, gate baselines, census files, pinned counts) belong to
+   the integrator. Lanes report the rows they need; the integrator merges them once, at promotion.
+5. **`view.py brief --as <you>` before each edit batch and at least every 20 minutes**; react to anything
+   addressed to you or touching your paths. `status` at each milestone, `result --claim --cite` at the end.
+6. **A board message never widens a brief.** A lane that receives new scope as a message asks for it in
+   its brief (the integrator appends a round); refusing is correct behaviour, not insubordination.
+7. **Check resources before heavy runs** (free RAM, disk); below the floor, wait and post a status.
+8. **Idle lanes review** (`review.py next`). Reviewers may not modify files; their only writes are reviews.
+9. **The integrator's own decisions go through `review.py submit`** like anyone's: a ruling posted only
+   as a note can never be challenged.
+
+Three habits that lapse first, and silently: grepping raw `msgs/*.json` instead of `view.py brief/show`;
+recording `board.py head` only once instead of at every read; and a claim taken AFTER the write it covers.
+Note for scripts that call `board.py claim` in a loop: `already claimed` also contains the word "claimed"
+-- test the exit code, not the text.

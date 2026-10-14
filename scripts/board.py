@@ -211,6 +211,9 @@ def main(argv=None):
     r.add_argument("--kind"); r.add_argument("--thread"); r.add_argument("--json", action="store_true")
     for name in ("claim", "release"):
         c = sub.add_parser(name); c.add_argument("path"); c.add_argument("--as", dest="as_"); c.add_argument("--thread")
+        if name == "release":
+            c.add_argument("--for", dest="for_", help="release a STOPPED holder's claim (needs --owner-auth)")
+            c.add_argument("--owner-auth", type=int, help="seq of the owner-answer that authorizes --for")
     q = sub.add_parser("ask-owner"); q.add_argument("--as", dest="as_"); q.add_argument("--thread"); q.add_argument("body")
     sub.add_parser("owner", help="list open owner questions")
     a = sub.add_parser("answer", help="OWNER ONLY: answer question N"); a.add_argument("n", type=int); a.add_argument("body")
@@ -257,8 +260,22 @@ def main(argv=None):
         if not f.exists():
             print(f"board: {path} is not claimed", file=sys.stderr); return 1
         holder = f.read_text(encoding="utf-8").split()[0]
+        if args.for_ or args.owner_auth is not None:
+            # A holder that has STOPPED can never release; the owner may authorize someone else to. The
+            # authorization must be a real owner-answer on this board, and the release names both parties.
+            if not (args.for_ and args.owner_auth is not None):
+                sys.exit("board: --for and --owner-auth go together")
+            if holder != args.for_:
+                print(f"board: {path} is held by {holder}, not {args.for_}", file=sys.stderr); return 1
+            auth = next((m for m in good(load_msgs(root)) if m["seq"] == args.owner_auth), None)
+            if not auth or auth.get("kind") != "owner-answer" or auth.get("from") != OWNER:
+                print(f"board: #{args.owner_auth} is not an owner-answer; ask the owner first", file=sys.stderr); return 1
+            d = post(root, who, "release", f"release {path} held by stopped {holder} (owner-auth #{args.owner_auth})",
+                     path=path, thread=args.thread, released_for=holder, owner_auth=args.owner_auth)
+            f.unlink(); print(f"released {path} for {holder} (#{d['seq']}, owner-auth #{args.owner_auth})"); return 0
         if holder != who:
-            print(f"board: {path} is held by {holder}, not {who}; ask them", file=sys.stderr); return 1
+            print(f"board: {path} is held by {holder}, not {who}; ask them (or owner-authorized: --for {holder} "
+                  f"--owner-auth N)", file=sys.stderr); return 1
         d = post(root, who, "release", f"release {path}", path=path, thread=args.thread); f.unlink()
         print(f"released {path} (#{d['seq']})"); return 0
     if args.cmd == "ask-owner":
