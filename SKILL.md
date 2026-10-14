@@ -227,6 +227,31 @@ Three traps found live (2026-10-14: two reviewers sat 14 minutes on a prompt nob
 Run `fleet.py sessions` after every spawn and before reading silence as progress. A `BLOCKED`
 row needs a person (or a kill), never a wait.
 
+### The hidden TUI (automatic in every session)
+
+agent-manager updates session status (dead panes, finished turns) only while its TUI runs. The optional
+SessionStart hook `hooks/agent-fleet-ui-keeper.ps1` (install: see `hooks/README.md`; off with
+`AGENT_FLEET_UI_OFF=1`) keeps ONE hidden TUI running in WSL on tmux socket `fleetui`, session `ui`. It is detached and
+idempotent: many sessions starting together still share one TUI. Measured: a killed session reads
+`dead` within 3 s.
+
+| Need | Command |
+|---|---|
+| is it up / start / stop it | `fleet.py ui status` / `ui start` / `ui stop` |
+| see it as text | `fleet.py ui shot [N]` |
+| drive it | `fleet.py ui keys <tmux key>...` (e.g. `j`, `Escape`, `Enter`), prints the screen after |
+| watch it live | `fleet.py ui attach` prints the command; run it in a Desktop Terminal tab or Windows Terminal (detach: `ctrl+b d`, never `q`, which quits it for everyone) |
+| archive every dead row | `fleet.py archive-dead`: confirms a dialog ONLY when it names a dead, unarchived session (never a group, never a live agent) |
+
+Keys sent with `ui keys` land in the same TUI a person may be watching; prefer the fleet.py commands.
+
+**Claude Code Desktop: every session that uses this skill opens the TUI in a Terminal-panel tab.** On first use, call `mcp__terminal__run_in_terminal` with
+`wsl.exe -d Ubuntu --exec tmux -L fleetui attach -t ui`, title `agent-fleet TUI`, after
+`fleet.py ui start`; skip if `mcp__terminal__list_terminal_tabs` already shows one. A PostToolUse
+hook on the Skill tool (`hooks/agent-fleet-tui-tab.ps1`, optional, Desktop only, once per session,
+off with `AGENT_FLEET_TAB_OFF=1`) injects this reminder, because a hook cannot open a tab itself.
+Closing the tab only detaches; the shared TUI keeps running.
+
 ### One claim domain
 
 The board's claims are the ONLY claim system. agent-manager's own leases (`reserve_files`, `task`)

@@ -12,6 +12,9 @@ agent-manager is Linux/macOS only, so on Windows every call goes through `wsl.ex
   fleet.py spawn --directory DIR [agent-manager spawn args]   trust DIR, then spawn (Windows paths ok)
   fleet.py sessions [--json]   agent-manager sessions, each checked for a blocking prompt or a vanished pane
   fleet.py kill ID...          stop a session from outside agent-manager (its own `kill` needs a caller)
+  fleet.py ui start|stop|status|shot [N]|keys K...|attach   one hidden agent-manager TUI (tmux socket fleetui)
+                               that keeps session status current; any session can screenshot or drive it
+  fleet.py archive-dead        archive every dead row through that TUI (agent-manager's `archive` needs a caller)
 
 Env: AGENT_FLEET_WSL_DISTRO (default Ubuntu); AGENT_FLEET_AM_DB reads that state.db file
 directly (tests, or a non-default agent-manager config dir).
@@ -81,6 +84,69 @@ def trust(dirs: list) -> int:
     p = in_wsl(["python3", "-c", WSL_TRUST] + paths)
     print((p.stdout or p.stderr).strip())
     return p.returncode
+
+
+UI_SOCKET, UI_SESSION = "fleetui", "ui"
+# agent-manager reconciles session status (dead panes, finished turns) only while its TUI runs.
+
+
+def ui_tmux(*a) -> subprocess.CompletedProcess:
+    return in_wsl(["tmux", "-L", UI_SOCKET, *a])
+
+
+def ui_running() -> bool:
+    return ui_tmux("has-session", "-t", UI_SESSION).returncode == 0
+
+
+def ui_start() -> str:
+    if ui_running():
+        return "running"
+    if in_wsl(["bash", "-lc", "command -v agent-manager"]).returncode != 0:
+        return "agent-manager not installed"
+    ui_tmux("new-session", "-d", "-s", UI_SESSION, "-x", "200", "-y", "50", "bash -lc 'exec agent-manager'")
+    time.sleep(3)
+    return "started" if ui_running() else "failed to start"
+
+
+def ui_shot() -> str:
+    return ui_tmux("capture-pane", "-p", "-t", UI_SESSION).stdout or ""
+
+
+def ui_keys(keys: list, pause: float = 0.8) -> None:
+    for k in keys:
+        ui_tmux("send-keys", "-t", UI_SESSION, k); time.sleep(pause)
+
+
+def attach_cmd() -> str:
+    return " ".join(wsl_prefix() + ["tmux", "-L", UI_SOCKET, "attach", "-t", UI_SESSION])
+
+
+def dialog_name(screen: str) -> str:
+    """The session an open archive dialog names ('archive <name>?'), or ''."""
+    m = re.search(r"archive (\S+)\?", screen)
+    return m.group(1) if m else ""
+
+
+def archive_dead() -> list:
+    rows = sessions()
+    dead = {r["name"] for r in rows if r.get("status") == "dead" and not r.get("archived")}
+    if not dead:
+        return []
+    if ui_start() not in ("running", "started"):
+        raise RuntimeError("fleet: hidden TUI could not start")
+    ui_keys(["Escape", "Escape"] + ["k"] * (len(rows) + 2), pause=0.2)  # close any modal, go to the top
+    done = []
+    for _ in range(3 * (len(rows) + 2)):
+        if set(done) == dead:
+            break
+        ui_keys(["a"], pause=1.0)
+        name = dialog_name(ui_shot())
+        # Confirm ONLY a dialog naming a dead, unarchived session: never a group, never a live agent.
+        if name in dead and name not in done:
+            ui_keys(["y"], pause=1.0); done.append(name)
+        else:
+            ui_keys((["Escape"] if name else []) + ["j"], pause=0.4)
+    return done
 
 
 def sessions() -> list:
@@ -170,6 +236,9 @@ def main(argv=None):
     sub.add_parser("spawn", add_help=False)
     sub.add_parser("sessions").add_argument("--json", action="store_true")
     sub.add_parser("kill").add_argument("ids", nargs="+")
+    u = sub.add_parser("ui"); u.add_argument("action", choices=["start", "stop", "status", "shot", "keys", "attach"])
+    u.add_argument("more", nargs="*")
+    sub.add_parser("archive-dead")
     args, rest = ap.parse_known_args(argv)
 
     if args.cmd == "am":
@@ -196,6 +265,27 @@ def main(argv=None):
         if not args.json:
             print(f"{len(rows)} session(s), {sum(1 for r in rows if r['blocked'])} need attention")
         return 0
+    if args.cmd == "ui":
+        if args.action == "start":
+            r = ui_start(); print(f"hidden TUI: {r}"); return 0 if r in ("running", "started") else 1
+        if args.action == "stop":
+            ui_tmux("kill-server"); print("hidden TUI stopped"); return 0
+        if args.action == "status":
+            up = ui_running(); print(f"hidden TUI {'running' if up else 'not running'}; watch it: {attach_cmd()}"); return 0 if up else 1
+        if args.action == "attach":
+            print(attach_cmd()); return 0
+        if not ui_running():
+            print("fleet: hidden TUI not running (fleet.py ui start)", file=sys.stderr); return 1
+        if args.action == "keys":
+            ui_keys(args.more)
+        lines = ui_shot().splitlines()
+        n = int(args.more[0]) if args.action == "shot" and args.more else len(lines)
+        print("\n".join(lines[:n])); return 0
+    if args.cmd == "archive-dead":
+        done = archive_dead()
+        left = [r["name"] for r in sessions() if r.get("status") == "dead" and not r.get("archived")]
+        print(f"archived {len(done)}: {', '.join(done) or '-'}" + (f"; still dead, not archived: {', '.join(left)}" if left else ""))
+        return 1 if left else 0
     if args.cmd == "kill":
         rc = 0
         for sid in args.ids:
@@ -205,7 +295,8 @@ def main(argv=None):
             print(f"killed {sid}" if p.returncode == 0 else f"fleet: {sid}: {p.stderr.strip()}")
             rc |= p.returncode != 0
         if rc == 0:
-            print("agent-manager marks the rows dead when its TUI next runs; archive them there.")
+            print("rows turn dead within seconds while the hidden TUI runs (fleet.py ui status); "
+                  "then fleet.py archive-dead")
         return rc
     if args.cmd == "leases":
         ls = leases()

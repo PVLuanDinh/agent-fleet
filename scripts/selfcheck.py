@@ -563,7 +563,13 @@ def fleet_bridge_mechanics():
                                                             "  ⏸ manual mode on · ? for s…") == ""),
            ("blocked_login", F.blocked_reason("Select login method:") == "login"),
            ("working_screen_not_blocked", F.blocked_reason("* Thinking... (12s - esc to interrupt)\n> fix the bug") == ""),
-           ("idle_prompt_not_blocked", F.blocked_reason("> \n  ? for shortcuts") == "")]
+           ("idle_prompt_not_blocked", F.blocked_reason("> \n  ? for shortcuts") == ""),
+           # Archive dialog captured live from agent-manager 0.41.0; archive-dead confirms only names it was given.
+           ("dialog_name_live_0_41", F.dialog_name("│   archive claude-sonnet-rv-fold-a-1014?   │\n"
+                                                   "│   frees its RAM, t to find it.   │\n│   y/↵ archive  n/esc cancel   │")
+            == "claude-sonnet-rv-fold-a-1014"),
+           ("dialog_name_none_on_list", F.dialog_name("█ ✕ ⠿ fleet-live-a  dead · claude\n  a archive") == ""),
+           ("attach_cmd_names_socket", "-L fleetui attach -t ui" in F.attach_cmd())]
     tmp = Path(tempfile.mkdtemp(prefix="fleettrust-")); cfg = tmp / ".claude.json"
     cfg.write_text(json.dumps({"keep": 1, "projects": {"/mnt/d/a": {"lastCost": 2}}}), encoding="utf-8")
     env = dict(os.environ, HOME=str(tmp), USERPROFILE=str(tmp))

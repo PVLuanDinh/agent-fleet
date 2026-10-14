@@ -109,10 +109,12 @@ python $B/fleet.py leases                  # live agent-manager leases
 python $B/fleet.py spawn --directory <dir> --name w1 --tool claude --prompt "..."   # pre-trusts the folder, then spawns
 python $B/fleet.py sessions                # flags sessions BLOCKED on a trust/login/permission prompt
 python $B/fleet.py kill <id>               # stop a session from outside agent-manager
+python $B/fleet.py ui status              # one hidden agent-manager TUI keeps session status current (ui start/stop/shot/keys/attach)
+python $B/fleet.py archive-dead           # archive every dead row (confirms only dialogs naming a dead session)
 ```
 
 The TUI needs a real terminal; everything else works from Claude Desktop or a terminal. Results and scores
-stay on the board: a green row in the TUI is not a pass. Details: [SKILL.md](SKILL.md) section 7.
+stay on the board: a green row in the TUI is not a pass. Optional Claude Code hooks (keep the hidden TUI running; open it in a Desktop Terminal tab when the skill is used): [hooks/README.md](hooks/README.md). Details: [SKILL.md](SKILL.md) section 7.
 
 ## Self-check
 
