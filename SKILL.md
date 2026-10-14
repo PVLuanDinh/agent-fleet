@@ -1,6 +1,6 @@
 ---
 name: agent-fleet
-description: Run and coordinate many coding agents at once. Two layers in one skill - (1) a durable file message board with claims, owner questions, peer review and an anti-gaming scorer, reachable from Claude Desktop (Code tab), terminal Claude, subagents, Agent-Teams teammates and Codex; (2) agent-manager (tmux fleet, in WSL on Windows) to spawn agents as live sessions, see which is working/blocked, answer without attaching, review diffs - driven from a terminal TUI or from any session through its MCP server. One claim domain covers both. Replaces agent-board. Use when agents in different sessions or tools must coordinate, when SendMessage can't reach a participant, when you want to spawn/watch a fleet of agent CLIs, or when a multi-agent task needs a cheat-resistant pass/fail. Triggers - "message board", "agent board", "agent fleet", "agent-manager", "spawn agents", "coordinate agents", "OWNER_QUESTIONS", "claim a file", "score the agents", "prevent gaming/cheating".
+description: Run and coordinate many coding agents at once. Two layers in one skill - (1) a durable file message board with claims, owner questions, peer review and an anti-gaming scorer, reachable from Claude Desktop (Code tab), terminal Claude, subagents, Agent-Teams teammates and Codex; (2) agent-manager (tmux fleet, in WSL on Windows) to spawn agents as live sessions, see which is working/blocked, answer without attaching, review diffs - driven from a terminal TUI or from any session through its MCP server. One claim domain covers both. Also (3) memtrim, which keeps memory files (a START-HERE, the auto-loaded MEMORY.md index) under a byte budget by moving text, never deleting it, with a verifier that proves no line was lost. Replaces agent-board. Use when agents in different sessions or tools must coordinate, when SendMessage can't reach a participant, when you want to spawn/watch a fleet of agent CLIs, or when a multi-agent task needs a cheat-resistant pass/fail. Triggers - "message board", "agent board", "agent fleet", "agent-manager", "spawn agents", "coordinate agents", "OWNER_QUESTIONS", "claim a file", "score the agents", "prevent gaming/cheating", "memory trim", "START-HERE too big", "MEMORY.md truncated".
 ---
 
 # agent-fleet
@@ -278,3 +278,31 @@ agent-manager has no scorer, no owner-question flow, no hash-chained record and 
 colours and `send_session` are for watching and steering. Results still go to the board as
 `post --kind result --cite --claim`, and tasks are still scored with `score.py`. A green row in the TUI
 is not a pass.
+
+## 8. Memory trim: keep memory files small without forgetting (any project)
+
+A long-running project's memory files grow until sessions skim them, and Claude Code auto-loads each
+project's `MEMORY.md` index and cuts it off past a size limit. `scripts/memtrim.py` keeps both in budget
+with one rule: **a trim is a move, never a delete.**
+
+1. A SessionStart hook (`hooks/memtrim-guard.ps1`, or any shell that pipes the hook JSON into
+   `memtrim.py hook`) checks each configured file. Over budget: it snapshots the file and tells Claude to
+   condense each section to its rule in 1-3 lines and move the full original text, verbatim, into the
+   file's DETAIL companion. `MEMORY.md` at 90% of its cap gets a prune warning.
+2. Claude then runs `memtrim.py verify <snapshot> --cwd <project>` until it exits 0: the file fits AND
+   every non-blank line of the snapshot still exists verbatim in the file, its DETAIL file, or a corpus
+   file the config names (ledgers, handoffs). A dropped line is printed as `LOST`.
+
+Config `~/.claude/memtrim.json` (or `$MEMTRIM_CONFIG`):
+
+```json
+{"projects": [{"cwd_prefix": "D:\work\app",
+               "files": [{"file": "START-HERE.md", "detail": "START-HERE-DETAIL.md", "budget": 8192,
+                          "corpus": ["history-*.md", "handoff-*.md"]}],
+               "index_cap": 24400}]}
+```
+
+`memory_dir` defaults to Claude Code's own `~/.claude/projects/<cwd with : \ / as ->/memory`. With no
+entry for a project only its `MEMORY.md` is guarded. `memtrim.py status --cwd <dir>` shows sizes;
+`memtrim.py selftest` holds the reachable reds (also run by `selfcheck.py`). Off: `MEMTRIM_OFF=1`.
+Move lines byte-identical: fixing wording or encoding while moving makes `verify` report them lost.

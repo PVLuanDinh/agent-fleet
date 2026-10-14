@@ -550,7 +550,7 @@ def fleet_bridge_mechanics():
     import os
     import fleet as F
     res = [("wsl_path_drive", F.to_wsl_path("C:\\Users\\x\\repo\\") == "/mnt/c/Users/x/repo"),
-           ("wsl_path_forward_slashes", F.to_wsl_path("D:/AI-project") == "/mnt/d/AI-project"),
+           ("wsl_path_forward_slashes", F.to_wsl_path("D:/work/app") == "/mnt/d/work/app"),
            ("wsl_path_drive_root", F.to_wsl_path("C:\\") == "/mnt/c"),
            ("wsl_path_linux_passthrough", F.to_wsl_path("/home/u/repo/") == "/home/u/repo"),
            ("blocked_trust_prompt", F.blocked_reason(" Do you trust the files in this folder?\n > 1. Yes, proceed") == "trust prompt"),
@@ -603,6 +603,11 @@ if __name__ == "__main__":
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  review: {name}")
     for name, ok in review_regressions():
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  review-red: {name}")
+    mt = subprocess.run([sys.executable, str(HERE / "memtrim.py"), "selftest"], capture_output=True, text=True, timeout=120)
+    for line in mt.stdout.splitlines():
+        if line.startswith(("PASS", "FAIL")):
+            print(line)
+    bad += mt.returncode != 0
     ok, detail = concurrent_writers(); bad += not ok
     print(f"{'PASS' if ok else 'FAIL'}  concurrent_writers_one_chain     {detail}")
     print(f"{'ALL GREEN' if not bad else f'{bad} FAILED'}: {len(CASES)} scorer cases + board/fleet mechanics + concurrency")

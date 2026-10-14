@@ -116,6 +116,12 @@ python $B/fleet.py archive-dead           # archive every dead row (confirms onl
 The TUI needs a real terminal; everything else works from Claude Desktop or a terminal. Results and scores
 stay on the board: a green row in the TUI is not a pass. Optional Claude Code hooks (keep the hidden TUI running; open it in a Desktop Terminal tab when the skill is used): [hooks/README.md](hooks/README.md). Details: [SKILL.md](SKILL.md) section 7.
 
+## Memory trim (any project)
+
+`scripts/memtrim.py` keeps Claude Code memory files (a START-HERE file, the auto-loaded `MEMORY.md`
+index) under a byte budget by MOVING text into a DETAIL file, never deleting it, and `verify` proves
+every line survived. Config and hook: [SKILL.md](SKILL.md) section 8, [hooks/README.md](hooks/README.md).
+
 ## Self-check
 
 ```bash
