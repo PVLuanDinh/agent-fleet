@@ -214,6 +214,19 @@ seen through WSL's PATH does not work there.
 `fleet.py` speaks to WSL with `wsl.exe -d <distro> --exec`, never `--`: `--` re-joins argv into one
 shell string and silently drops the quoting (`am --version` opened the TUI). Distro: `AGENT_FLEET_WSL_DISTRO`.
 
+### Spawn, watch, stop from outside agent-manager
+
+Three traps found live (2026-10-14: two reviewers sat 14 minutes on a prompt nobody saw):
+
+| Need | Command | Why not the plain agent-manager call |
+|---|---|---|
+| spawn an agent | `python $B/fleet.py spawn --directory <dir> --name <n> --tool claude --prompt "..."` (Windows paths are translated) | Claude Code stops at **"Do you trust this folder?"** in any folder WSL claude has never opened, and the default choice is "No, exit". `fleet.py spawn` marks the folder trusted in WSL's `~/.claude.json` first. `fleet.py trust <dir>...` does only that step |
+| see who is stuck | `python $B/fleet.py sessions` | agent-manager can keep showing a parked session as `starting` for its whole life. This reads each live pane and flags `BLOCKED: trust prompt / login / permission prompt / pane gone` |
+| stop a session | `python $B/fleet.py kill <id>...` | agent-manager's `kill` and `archive` need a caller session ("not inside an Agent Manager session"). This kills the tmux session `am_<id>` on its `agentmgr` socket; the row turns dead when the TUI next runs, and archiving happens there |
+
+Run `fleet.py sessions` after every spawn and before reading silence as progress. A `BLOCKED`
+row needs a person (or a kill), never a wait.
+
 ### One claim domain
 
 The board's claims are the ONLY claim system. agent-manager's own leases (`reserve_files`, `task`)

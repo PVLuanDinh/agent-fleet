@@ -545,6 +545,41 @@ def fleet_mechanics():
     return res
 
 
+def fleet_bridge_mechanics():
+    # Gaps found live 2026-10-14: spawns parked unseen on Claude's trust prompt; kill needed a caller.
+    import os
+    import fleet as F
+    res = [("wsl_path_drive", F.to_wsl_path("C:\\Users\\x\\repo\\") == "/mnt/c/Users/x/repo"),
+           ("wsl_path_forward_slashes", F.to_wsl_path("D:/AI-project") == "/mnt/d/AI-project"),
+           ("wsl_path_drive_root", F.to_wsl_path("C:\\") == "/mnt/c"),
+           ("wsl_path_linux_passthrough", F.to_wsl_path("/home/u/repo/") == "/home/u/repo"),
+           ("blocked_trust_prompt", F.blocked_reason(" Do you trust the files in this folder?\n > 1. Yes, proceed") == "trust prompt"),
+           ("blocked_trust_prompt_short", F.blocked_reason("Do you trust this folder?") == "trust prompt"),
+           # Captured live from Claude Code 2.1.278 in a fresh WSL folder (the default choice is "No, exit").
+           ("blocked_trust_prompt_live_2_1_278", F.blocked_reason(
+               " Claude Code'll be able to\n read, edit, and execute files\n here.\n Security guide\n"
+               " ❯ No, exit\n   Yes, I trust this folder\n Enter to confirm · Esc to\n cancel") == "trust prompt"),
+           ("finished_screen_not_blocked", F.blocked_reason("● OK\n✻ Brewed for 3s · done 3:51 AM\n❯ \n"
+                                                            "  ⏸ manual mode on · ? for s…") == ""),
+           ("blocked_login", F.blocked_reason("Select login method:") == "login"),
+           ("working_screen_not_blocked", F.blocked_reason("* Thinking... (12s - esc to interrupt)\n> fix the bug") == ""),
+           ("idle_prompt_not_blocked", F.blocked_reason("> \n  ? for shortcuts") == "")]
+    tmp = Path(tempfile.mkdtemp(prefix="fleettrust-")); cfg = tmp / ".claude.json"
+    cfg.write_text(json.dumps({"keep": 1, "projects": {"/mnt/d/a": {"lastCost": 2}}}), encoding="utf-8")
+    env = dict(os.environ, HOME=str(tmp), USERPROFILE=str(tmp))
+    try:
+        p = subprocess.run([sys.executable, "-c", F.WSL_TRUST, "/mnt/c/new", "/mnt/d/a"], env=env,
+                           capture_output=True, text=True, timeout=60)
+        d = json.loads(cfg.read_text(encoding="utf-8"))
+        res.append(("trust_sets_new_folder", p.returncode == 0 and d["projects"]["/mnt/c/new"]["hasTrustDialogAccepted"] is True))
+        res.append(("trust_keeps_existing_keys", d["keep"] == 1 and d["projects"]["/mnt/d/a"] == {"lastCost": 2, "hasTrustDialogAccepted": True}))
+        res.append(("kill_refuses_non_id", run(F.main, ["kill", "am_x; rm -rf /"])[0] == 1))
+        res.append(("spawn_requires_directory", run(F.main, ["spawn", "--prompt", "hi"])[0] == 2))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return res
+
+
 if __name__ == "__main__":
     bad = 0
     for name, ok in keepalive_mechanics():
@@ -556,6 +591,8 @@ if __name__ == "__main__":
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  {name}")
     for name, ok in fleet_mechanics():
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  fleet: {name}")
+    for name, ok in fleet_bridge_mechanics():
+        bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  fleet-bridge: {name}")
     for name, ok in review_mechanics():
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  review: {name}")
     for name, ok in review_regressions():

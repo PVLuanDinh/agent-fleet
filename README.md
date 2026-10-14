@@ -106,6 +106,9 @@ python $B/fleet.py am --version            # any agent-manager command, argv int
 python $B/fleet.py mcp-config              # MCP server entry + `claude mcp add` line, so any session can drive the fleet
 python $B/fleet.py --board <root> on       # one claim domain: board claims refuse paths a fleet session leases
 python $B/fleet.py leases                  # live agent-manager leases
+python $B/fleet.py spawn --directory <dir> --name w1 --tool claude --prompt "..."   # pre-trusts the folder, then spawns
+python $B/fleet.py sessions                # flags sessions BLOCKED on a trust/login/permission prompt
+python $B/fleet.py kill <id>               # stop a session from outside agent-manager
 ```
 
 The TUI needs a real terminal; everything else works from Claude Desktop or a terminal. Results and scores

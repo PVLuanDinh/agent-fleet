@@ -8,6 +8,10 @@ agent-manager is Linux/macOS only, so on Windows every call goes through `wsl.ex
   fleet.py mcp-config          the stdio MCP command that lets a Desktop/CLI session drive the fleet
   fleet.py --board DIR on|off  (or --project NAME) join or leave one claim domain: with `on`, board.py claim also
                                refuses a path an agent-manager session holds an exclusive lease on
+  fleet.py trust DIR...        pre-accept Claude Code's "trust this folder" prompt for DIR inside WSL
+  fleet.py spawn --directory DIR [agent-manager spawn args]   trust DIR, then spawn (Windows paths ok)
+  fleet.py sessions [--json]   agent-manager sessions, each checked for a blocking prompt or a vanished pane
+  fleet.py kill ID...          stop a session from outside agent-manager (its own `kill` needs a caller)
 
 Env: AGENT_FLEET_WSL_DISTRO (default Ubuntu); AGENT_FLEET_AM_DB reads that state.db file
 directly (tests, or a non-default agent-manager config dir).
@@ -16,7 +20,7 @@ ponytail: leases are matched on the path text only, not on which checkout the ag
 session runs in, so two repos with the same relative path collide. A false refusal, never a
 missed one. Upgrade path: compare against the session's repo column in state.db.
 """
-import argparse, fnmatch, json, os, shutil, sqlite3, subprocess, sys, time
+import argparse, fnmatch, json, os, re, shutil, sqlite3, subprocess, sys, time
 from pathlib import Path
 
 DISTRO = os.environ.get("AGENT_FLEET_WSL_DISTRO", "Ubuntu")
@@ -33,9 +37,67 @@ WSL_LEASES = (
     "print(json.dumps(c.execute(sys.argv[1],(time.time_ns(),)).fetchall()))\n")
 
 
+TMUX_SOCKET = "agentmgr"  # agent-manager's own tmux server; each session is tmux session am_<id>
+# Runs inside WSL: mark folders trusted in Claude Code's ~/.claude.json, written atomically.
+WSL_TRUST = (
+    "import json,os,sys,tempfile\n"
+    "p=os.path.expanduser('~/.claude.json')\n"
+    "d=json.load(open(p,encoding='utf-8')) if os.path.exists(p) else {}\n"
+    "for f in sys.argv[1:]: d.setdefault('projects',{}).setdefault(f,{})['hasTrustDialogAccepted']=True\n"
+    "fd,t=tempfile.mkstemp(dir=os.path.dirname(p))\n"
+    "with os.fdopen(fd,'w',encoding='utf-8') as h: json.dump(d,h,indent=2)\n"
+    "os.chmod(t,0o600); os.replace(t,p); print('trusted',*sys.argv[1:])\n")
+# A pane parked on one of these never starts its task, and agent-manager still shows it as "starting".
+BLOCKERS = [("trust prompt", r"trust (the files in )?this folder"), ("login", r"select login method|please run /login"),
+            ("theme picker", r"choose the text style"), ("permission prompt", r"do you want to (proceed|allow)")]
+
+
 def wsl_prefix() -> list:
     # --exec, not --: `wsl.exe --` re-joins argv into one shell string and loses the quoting.
     return [] if os.name != "nt" else ["wsl.exe", "-d", DISTRO, "--exec"]
+
+
+def to_wsl_path(p: str) -> str:
+    """C:\\Users\\x -> /mnt/c/Users/x; Linux paths pass through."""
+    m = re.match(r"^([A-Za-z]):[\\/]*(.*)$", p.strip())
+    if not m:
+        return p.strip().rstrip("/") or "/"
+    rest = m.group(2).replace("\\", "/").rstrip("/")
+    return f"/mnt/{m.group(1).lower()}" + (f"/{rest}" if rest else "")
+
+
+def blocked_reason(screen: str) -> str:
+    low = screen.lower()
+    return next((name for name, rx in BLOCKERS if re.search(rx, low)), "")
+
+
+def in_wsl(args: list, **kw) -> subprocess.CompletedProcess:
+    # utf-8 explicitly: Windows' default (cp1252) dies on the box-drawing characters agent screens are made of.
+    return subprocess.run(wsl_prefix() + args, capture_output=True, encoding="utf-8", errors="replace", timeout=60, **kw)
+
+
+def trust(dirs: list) -> int:
+    paths = [to_wsl_path(d) for d in dirs]
+    p = in_wsl(["python3", "-c", WSL_TRUST] + paths)
+    print((p.stdout or p.stderr).strip())
+    return p.returncode
+
+
+def sessions() -> list:
+    p = in_wsl(["bash", "-lc", "exec agent-manager sessions --json"])
+    if p.returncode != 0:
+        raise RuntimeError(f"fleet: agent-manager sessions failed: {p.stderr.strip()[:300]}")
+    rows = json.loads(p.stdout or "[]")
+    for r in rows:
+        r["blocked"] = ""
+        if r.get("status") == "dead" or r.get("archived"):
+            continue
+        cap = in_wsl(["tmux", "-L", TMUX_SOCKET, "capture-pane", "-p", "-t", f"am_{r['id']}"])
+        if cap.returncode != 0:
+            r["blocked"] = "pane gone (row stale until the TUI next runs)"
+        else:
+            r["blocked"] = blocked_reason(cap.stdout)
+    return rows
 
 
 def read_db(path: str) -> list:
@@ -57,8 +119,7 @@ def leases(strict: bool = False) -> list:
                 raise RuntimeError("fleet: board joined the fleet but wsl.exe is not on PATH")
             return []
         # Login shell, like agent-manager itself, so XDG_CONFIG_HOME from the profile applies.
-        p = subprocess.run(wsl_prefix() + ["bash", "-lc", 'exec python3 -c "$1" "$2"', "fleet", WSL_LEASES, LEASE_SQL],
-                           capture_output=True, text=True, timeout=60)
+        p = in_wsl(["bash", "-lc", 'exec python3 -c "$1" "$2"', "fleet", WSL_LEASES, LEASE_SQL])
         out = p.stdout.strip().splitlines()[-1] if p.stdout.strip() else ""
         if p.returncode != 0 or not out:
             raise RuntimeError(f"fleet: cannot read agent-manager leases (rc={p.returncode}): {p.stderr.strip()[:300]}")
@@ -105,13 +166,47 @@ def main(argv=None):
     sub.add_parser("leases").add_argument("--json", action="store_true")
     sub.add_parser("mcp-config")
     sub.add_parser("on"); sub.add_parser("off")
+    sub.add_parser("trust").add_argument("dirs", nargs="+")
+    sub.add_parser("spawn", add_help=False)
+    sub.add_parser("sessions").add_argument("--json", action="store_true")
+    sub.add_parser("kill").add_argument("ids", nargs="+")
     args, rest = ap.parse_known_args(argv)
 
     if args.cmd == "am":
         # bash -lc: agent-manager lives in ~/.local/bin, which only a login shell puts on PATH.
         return subprocess.call(wsl_prefix() + ["bash", "-lc", 'exec agent-manager "$@"', "am"] + rest)
+    if args.cmd == "spawn":
+        # A folder WSL claude has never opened parks the new session on the trust prompt, unseen.
+        if "--directory" not in rest or rest.index("--directory") + 1 >= len(rest):
+            ap.error("spawn needs --directory DIR, so the folder can be trusted first")
+        i = rest.index("--directory") + 1
+        rest[i] = to_wsl_path(rest[i])
+        if trust([rest[i]]) != 0:
+            return 1
+        return subprocess.call(wsl_prefix() + ["bash", "-lc", 'exec agent-manager spawn "$@"', "am"] + rest)
     if rest:
         ap.error(f"unrecognized arguments: {' '.join(rest)}")
+    if args.cmd == "trust":
+        return trust(args.dirs)
+    if args.cmd == "sessions":
+        rows = sessions()
+        for r in rows:
+            flag = f"  BLOCKED: {r['blocked']}" if r["blocked"] else ""
+            print(json.dumps(r) if args.json else f"{r['id']} {r['status']:9} {r['tool']:7} {r['name']}  {r['directory']}{flag}")
+        if not args.json:
+            print(f"{len(rows)} session(s), {sum(1 for r in rows if r['blocked'])} need attention")
+        return 0
+    if args.cmd == "kill":
+        rc = 0
+        for sid in args.ids:
+            if not re.fullmatch(r"[0-9a-f]{8}", sid):
+                print(f"fleet: {sid!r} is not an agent-manager session id", file=sys.stderr); rc = 1; continue
+            p = in_wsl(["tmux", "-L", TMUX_SOCKET, "kill-session", "-t", f"am_{sid}"])
+            print(f"killed {sid}" if p.returncode == 0 else f"fleet: {sid}: {p.stderr.strip()}")
+            rc |= p.returncode != 0
+        if rc == 0:
+            print("agent-manager marks the rows dead when its TUI next runs; archive them there.")
+        return rc
     if args.cmd == "leases":
         ls = leases()
         for l in ls:
