@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# agent-board -- install as a Claude Code skill and run the self-check
+# agent-fleet -- install as a Claude Code skill and run the self-check
 # Usage: ./setup.sh [--force]
 
 FORCE=0
 [ "${1:-}" = "--force" ] && FORCE=1
 
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEST="${HOME}/.claude/skills/agent-board"
+DEST="${HOME}/.claude/skills/agent-fleet"
 
 PY=""
 for c in python3 python; do
@@ -18,7 +18,7 @@ for c in python3 python; do
 done
 [ -n "$PY" ] || { echo "Error: Python 3.10+ is required (python3 or python on PATH)."; exit 1; }
 
-echo "=== agent-board setup ==="
+echo "=== agent-fleet setup ==="
 
 DEST_REAL=""
 [ -d "$DEST" ] && DEST_REAL="$(cd "$DEST" && pwd)"

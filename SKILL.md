@@ -1,23 +1,32 @@
 ---
-name: agent-board
-description: Durable file/folder message board for coordinating several agents across processes — Claude Desktop (Code tab), terminal Claude, subagents, Agent-Teams teammates, and Codex — plus an anti-gaming scorer that re-runs verification instead of trusting reports. Use when agents in different sessions or tools must coordinate (claims on files, status, requests, results, owner questions), when SendMessage can't reach a participant (Codex, another session, a hook-less subagent), or when a multi-agent task needs a cheat-resistant pass/fail. Triggers - "message board", "shared board", "coordinate agents", "OWNER_QUESTIONS", "claim a file", "score the agents", "prevent gaming/cheating".
+name: agent-fleet
+description: Run and coordinate many coding agents at once. Two layers in one skill - (1) a durable file message board with claims, owner questions, peer review and an anti-gaming scorer, reachable from Claude Desktop (Code tab), terminal Claude, subagents, Agent-Teams teammates and Codex; (2) agent-manager (tmux fleet, in WSL on Windows) to spawn agents as live sessions, see which is working/blocked, answer without attaching, review diffs - driven from a terminal TUI or from any session through its MCP server. One claim domain covers both. Replaces agent-board. Use when agents in different sessions or tools must coordinate, when SendMessage can't reach a participant, when you want to spawn/watch a fleet of agent CLIs, or when a multi-agent task needs a cheat-resistant pass/fail. Triggers - "message board", "agent board", "agent fleet", "agent-manager", "spawn agents", "coordinate agents", "OWNER_QUESTIONS", "claim a file", "score the agents", "prevent gaming/cheating".
 ---
 
-# agent-board
+# agent-fleet
 
 Use `SendMessage` for fast talk inside one session. Use the board for anything that must
-survive the session or reach another process.
+survive the session or reach another process. Use agent-manager to start and watch agent CLIs.
 
-Scripts are stdlib Python 3.10+ (`python` on PATH):
+| Layer | What it owns | Runs from |
+|---|---|---|
+| board (`board.py`, `view.py`, `review.py`, `score.py`, `keepalive.py`) | the record: messages, **the one claim system**, owner questions, reviews, scores | anywhere Python runs: Desktop, terminal, Codex, WSL |
+| fleet (`fleet.py` -> agent-manager) | live agent sessions: spawn, status colours, answer, revive, diff review | TUI: a real terminal only. MCP + CLI: Desktop or terminal (section 7) |
+
+Scripts are stdlib Python 3.10+ (`python` on PATH; `python3` inside WSL):
 
 ```bash
-B=~/.claude/skills/agent-board/scripts                       # Git Bash / terminal
+B=~/.claude/skills/agent-fleet/scripts                       # Git Bash / terminal
 ```
 ```powershell
-$B = "$HOME\.claude\skills\agent-board\scripts"               # PowerShell
+$B = "$HOME\.claude\skills\agent-fleet\scripts"               # PowerShell
 ```
 
-`python $B/selfcheck.py` must print ALL GREEN after any edit to the scripts.
+`python $B/selfcheck.py` must print ALL GREEN after any edit to the scripts, on Windows AND in WSL
+(a mixed fleet runs both; the WSL run once caught claims that only collided on Windows).
+Upgrading from agent-board: tasks opened by the old `score.py` pinned the old `board.py`/`score.py`
+by absolute path; keep that copy until they are scored. Changing `board.py` or `score.py`
+invalidates the integrity of every task opened before the change.
 
 ## 1. Pick ONE board path and hand it to everyone
 
@@ -46,7 +55,7 @@ Every participant names itself: `--as G3` or `$AGENT_NAME` (`owner` is reserved)
 | report a result | `board.py post --as G3 --kind result --cite "pytest tests/test_x.py" --claim pass "..."` (refused without both) |
 | what is going on | `view.py digest`: the board's CURRENT state (latest line per thread, claims, open questions and challenges); about 430 tokens where a full read costs 6,900+ |
 | read new | `view.py brief --as G3` (one line per message you have not seen; it keeps your cursor); `view.py show N` for one message in full. Avoid bare `board.py read`: it re-sends the whole history |
-| claim before editing | `board.py claim src/pkg/mod.py --as G3` (repo-relative). Exit 1 = held: message the holder, work elsewhere |
+| claim before editing | `board.py claim src/pkg/mod.py --as G3` (repo-relative, case-folded). Exit 1 = held, by a board claim or (fleet on) an agent-manager lease: message the holder, work elsewhere |
 | release when the commit lands | `board.py release src/pkg/mod.py --as G3` (holder only) |
 | free a STOPPED holder's claim | `board.py release src/pkg/mod.py --as lead --for G3 --owner-auth N` (N = an owner-answer authorizing it; the release names both; never delete claim files by hand -- `verify` reds a claim that vanishes without a release message) |
 | park a question for the owner | `board.py ask-owner --as G3 --thread G3 "..."` |
@@ -187,3 +196,47 @@ Three habits that lapse first, and silently: grepping raw `msgs/*.json` instead 
 recording `board.py head` only once instead of at every read; and a claim taken AFTER the write it covers.
 Note for scripts that call `board.py claim` in a loop: `already claimed` also contains the word "claimed"
 -- test the exit code, not the text.
+
+## 7. The fleet: agent-manager
+
+agent-manager (github.com/YoanWai/agent-manager, Apache-2.0) runs each agent CLI as a real tmux
+session and colours it working / waiting / finished / idle / errored. tmux is Linux/macOS only, so on
+Windows it lives in WSL. Install it inside WSL from its releases page (verify `checksums.txt`; tested with v0.41.0) and
+install the agent CLIs (`claude`, `codex`, ...) inside WSL too: it spawns those. A Windows-only CLI
+seen through WSL's PATH does not work there.
+
+| Where you are | How to use it |
+|---|---|
+| a terminal (Windows Terminal WSL tab, or `wsl -d Ubuntu`) | `agent-manager`: the full TUI. `space` prompt bar spawns or answers, `tab` picks the CLI, `ctrl+t` fresh worktree, `ctrl+r` diff review with line comments, `v` revive, `y` copy last reply |
+| this Desktop session, terminal Claude, Codex | `python $B/fleet.py am <subcommand>` (any agent-manager CLI command, run in WSL with argv intact); or register its MCP server once: `python $B/fleet.py mcp-config` prints the JSON and the `claude mcp add -s user ...` line. Then `create_session`, `list_sessions`, `read_session`, `send_session`, `wait_for_session`, `review` are tools in every session |
+| inside an agent-manager session | its MCP tools are already wired in. Side effect to know: when it launches a CLI, agent-manager writes an `agent-manager` entry into that CLI's own MCP config inside WSL (`claude mcp add`, codex `config.toml`) |
+
+`fleet.py` speaks to WSL with `wsl.exe -d <distro> --exec`, never `--`: `--` re-joins argv into one
+shell string and silently drops the quoting (`am --version` opened the TUI). Distro: `AGENT_FLEET_WSL_DISTRO`.
+
+### One claim domain
+
+The board's claims are the ONLY claim system. agent-manager's own leases (`reserve_files`, `task`)
+are advisory and cannot be switched off, so they are folded in instead of duplicated:
+
+1. When the fleet works on a board, the lead runs once: `python $B/fleet.py --board <root> on`.
+   From then on `board.py claim` also reads agent-manager's live leases (read-only, its `state.db`)
+   and refuses a path an agent-manager session holds **exclusively** (exact, glob, directory, any
+   case). Shared and expired leases do not block. An unreadable lease store refuses the claim
+   (fails closed); `fleet.py off` returns the board to board-only claims.
+2. Every brief, including prompts sent to agent-manager sessions, says: **claim with
+   `board.py claim`, never `reserve_files`**. Inside WSL the board is reached as
+   `--board /mnt/c/Users/<you>/.claude/agent-board/<project>`.
+3. The reverse is not covered: an agent that calls `reserve_files` anyway does not see board claims.
+   Its lease still blocks board claimers, so the collision surfaces on the board side.
+   `python $B/fleet.py leases` lists live leases.
+
+ponytail: leases match on path text, not on which checkout the session runs in, so two repos with
+the same relative path collide. That gives false refusals, never missed ones.
+
+### What stays on the board
+
+agent-manager has no scorer, no owner-question flow, no hash-chained record and no keepalive. Status
+colours and `send_session` are for watching and steering. Results still go to the board as
+`post --kind result --cite --claim`, and tasks are still scored with `score.py`. A green row in the TUI
+is not a pass.

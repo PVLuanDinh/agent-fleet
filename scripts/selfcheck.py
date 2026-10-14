@@ -490,6 +490,61 @@ def keepalive_mechanics():
     return res
 
 
+def fleet_mechanics():
+    # One claim domain: board claims also refuse paths an agent-manager session leases exclusively.
+    import os, sqlite3, time
+    import fleet as F
+    tmp = Path(tempfile.mkdtemp(prefix="agentfleet-")); root = tmp / "b"; db = tmp / "state.db"; res = []
+    a = ["--board", str(root)]; old = os.environ.get("AGENT_FLEET_AM_DB")
+    c = sqlite3.connect(db)
+    c.execute("CREATE TABLE file_reservations (id TEXT PRIMARY KEY, session_id TEXT NOT NULL, pattern TEXT NOT NULL,"
+              " mode TEXT NOT NULL DEFAULT 'exclusive', note TEXT NOT NULL DEFAULT '', acquired_at INTEGER NOT NULL"
+              " DEFAULT 0, expires_at INTEGER NOT NULL DEFAULT 0)")
+    now, hour = time.time_ns(), 3600 * 10**9
+    rows = [("1", "s1", "src/a.py", "exclusive", now + hour), ("2", "s2", "src/pkg/*", "exclusive", now + hour),
+            ("3", "s3", "SRC/B.py", "exclusive", now + hour), ("4", "s4", "src/c.py", "shared", now + hour),
+            ("5", "s5", "src/d.py", "exclusive", now - hour), ("6", "s6", "src/dir", "exclusive", now + hour),
+            ("7", "s7", "**/*.go", "exclusive", now + hour), ("8", "s8", "/home/u/repo/lib", "exclusive", now + hour)]
+    c.executemany("INSERT INTO file_reservations (id, session_id, pattern, mode, expires_at) VALUES (?,?,?,?,?)", rows)
+    c.commit(); c.close()
+    os.environ["AGENT_FLEET_AM_DB"] = str(db)
+    claim = lambda p: run(B.main, a + ["claim", p, "--as", "w"])[0]
+    try:
+        res.append(("fleet_off_board_only", claim("src/a.py") == 0))
+        run(B.main, a + ["release", "src/a.py", "--as", "w"])
+        os.environ["AGENT_FLEET_AM_DB"] = str(tmp / "missing" / "state.db")
+        res.append(("fleet_on_refused_when_unreadable", run(F.main, a + ["on"])[0] == 1 and not (root / F.MARKER).exists()))
+        os.environ["AGENT_FLEET_AM_DB"] = str(db)
+        res.append(("fleet_on", run(F.main, a + ["on"])[0] == 0 and (root / F.MARKER).exists()))
+        res.append(("fleet_rootlevel_doublestar_refused", claim("x.go") == 1))
+        res.append(("fleet_absolute_dir_lease_refused", claim("lib/x.py") == 1))
+        res.append(("fleet_exclusive_lease_refused", claim("src/a.py") == 1
+                    and not B.claim_file(root, B.norm_path("src/a.py")).exists()))
+        res.append(("fleet_glob_lease_refused", claim("src/pkg/m.py") == 1))
+        res.append(("fleet_case_alias_lease_refused", claim("src/b.py") == 1))
+        res.append(("fleet_dir_lease_refused", claim("src/dir/x.py") == 1))
+        res.append(("fleet_shared_lease_allows", claim("src/c.py") == 0))
+        res.append(("fleet_expired_lease_allows", claim("src/d.py") == 0))
+        res.append(("fleet_unleased_allows", claim("src/free.py") == 0))
+        os.environ["AGENT_FLEET_AM_DB"] = str(tmp / "missing" / "state.db")
+        res.append(("fleet_unreadable_fails_closed", claim("src/e.py") == 1))
+        os.environ["AGENT_FLEET_AM_DB"] = str(db)
+        run(F.main, a + ["off"])
+        res.append(("fleet_off_restores_board_only", claim("src/a.py") == 0))
+        res.append(("fleet_verify_intact", B.verify(root) == []))
+        # A board written before claims were case-folded everywhere: mixed-case claim, lowercased release.
+        legacy = B.claim_file(root, "SRC/Old.py"); legacy.write_text("old 2026-10-01T00:00:00\n", encoding="utf-8")
+        B.post(root, "old", "claim", "claim SRC/Old.py", path="SRC/Old.py")
+        res.append(("legacy_mixed_case_claim_verifies", B.verify(root) == []))
+        B.post(root, "old", "release", "release src/old.py", path="src/old.py"); legacy.unlink()
+        res.append(("legacy_claim_lowercase_release_verifies", B.verify(root) == []))
+    finally:
+        if old is None: os.environ.pop("AGENT_FLEET_AM_DB", None)
+        else: os.environ["AGENT_FLEET_AM_DB"] = old
+        shutil.rmtree(tmp, ignore_errors=True)
+    return res
+
+
 if __name__ == "__main__":
     bad = 0
     for name, ok in keepalive_mechanics():
@@ -499,11 +554,13 @@ if __name__ == "__main__":
         print(f"{'PASS' if ok else 'FAIL'}  {name:32s} {detail}")
     for name, ok in board_mechanics():
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  {name}")
+    for name, ok in fleet_mechanics():
+        bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  fleet: {name}")
     for name, ok in review_mechanics():
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  review: {name}")
     for name, ok in review_regressions():
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  review-red: {name}")
     ok, detail = concurrent_writers(); bad += not ok
     print(f"{'PASS' if ok else 'FAIL'}  concurrent_writers_one_chain     {detail}")
-    print(f"{'ALL GREEN' if not bad else f'{bad} FAILED'}: {len(CASES)} scorer cases + board mechanics + concurrency")
+    print(f"{'ALL GREEN' if not bad else f'{bad} FAILED'}: {len(CASES)} scorer cases + board/fleet mechanics + concurrency")
     sys.exit(1 if bad else 0)

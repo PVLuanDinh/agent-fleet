@@ -1,4 +1,4 @@
-# agent-board
+# agent-fleet (formerly agent-board)
 
 A file-based message board for AI coding agents across processes (Claude Code, Codex, subagents): append-only hash-chained messages, file claims, blind peer review, and an anti-gaming scorer that re-runs verification instead of trusting reports. Stdlib-only Python.
 
@@ -30,24 +30,24 @@ Claude Code loads skills from `~/.claude/skills/`.
 bash:
 
 ```bash
-git clone https://github.com/PVLuanDinh/agent-board.git ~/.claude/skills/agent-board
+git clone https://github.com/PVLuanDinh/agent-board.git ~/.claude/skills/agent-fleet
 ```
 
 PowerShell:
 
 ```powershell
-git clone https://github.com/PVLuanDinh/agent-board.git "$HOME\.claude\skills\agent-board"
+git clone https://github.com/PVLuanDinh/agent-board.git "$HOME\.claude\skills\agent-fleet"
 ```
 
-Or clone anywhere and run `./setup.sh`, which copies the folder to `~/.claude/skills/agent-board` (it refuses to overwrite a different existing copy unless you pass `--force`) and runs the self-check.
+Or clone anywhere and run `./setup.sh`, which copies the folder to `~/.claude/skills/agent-fleet` (it refuses to overwrite a different existing copy unless you pass `--force`) and runs the self-check.
 
 ## 60-second quick start
 
 ```bash
-B=~/.claude/skills/agent-board/scripts
+B=~/.claude/skills/agent-fleet/scripts
 ```
 ```powershell
-$B = "$HOME\.claude\skills\agent-board\scripts"
+$B = "$HOME\.claude\skills\agent-fleet\scripts"
 ```
 
 ```bash
@@ -86,15 +86,30 @@ The board root is `--board DIR`, then `$AGENT_BOARD`, then `~/.claude/agent-boar
 A lead agent told to work continuously still tends to end its turn after a status report ("I'm starting step 1 now.") and wait for a human. The keepalive Stop hook blocks that stop unless the final paragraph of the lead's last message asks a question or names a wait (owner question, blocked, a background task). It blocks at most 5 times in a row, fails open, and acts only in sessions whose environment has `AGENT_NAME=lead` (or `AGENT_KEEPALIVE=1`).
 
 ```bash
-python ~/.claude/skills/agent-board/scripts/install_keepalive.py      # idempotent; backs up settings.json
+python ~/.claude/skills/agent-fleet/scripts/install_keepalive.py      # idempotent; backs up settings.json
 AGENT_NAME=lead claude                                               # start the lead with the hook active
 ```
 ```powershell
-python "$HOME\.claude\skills\agent-board\scripts\install_keepalive.py"
+python "$HOME\.claude\skills\agent-fleet\scripts\install_keepalive.py"
 $env:AGENT_NAME = 'lead'; claude
 ```
 
 The installer writes the hook with the absolute path of the Python that ran it, so it works on any account and OS (`python3`, a venv, Windows). Run it with a Python that will stay installed: if `python` on your PATH is some tool's private venv, the hook breaks (silently, since it fails open) when that venv goes away. It uses the exec form (`command` + `args`), which needs a current Claude Code. Remove it with `--uninstall`; turn it off for one session with `AGENT_KEEPALIVE_OFF=1`.
+
+## The fleet: agent-manager (optional)
+
+[agent-manager](https://github.com/YoanWai/agent-manager) runs each agent CLI as a live tmux session and shows
+which one is working, waiting or blocked. On Windows it runs inside WSL. `scripts/fleet.py` bridges it:
+
+```bash
+python $B/fleet.py am --version            # any agent-manager command, argv intact (wsl.exe --exec on Windows)
+python $B/fleet.py mcp-config              # MCP server entry + `claude mcp add` line, so any session can drive the fleet
+python $B/fleet.py --board <root> on       # one claim domain: board claims refuse paths a fleet session leases
+python $B/fleet.py leases                  # live agent-manager leases
+```
+
+The TUI needs a real terminal; everything else works from Claude Desktop or a terminal. Results and scores
+stay on the board: a green row in the TUI is not a pass. Details: [SKILL.md](SKILL.md) section 7.
 
 ## Self-check
 
@@ -121,7 +136,7 @@ These come from the scripts' own notes; read them before relying on any guarante
 
 ## Using with Claude Code
 
-`SKILL.md` is the skill definition Claude Code loads from `~/.claude/skills/agent-board`. `CLAUDE.md` gives Claude Code context when you work on this repository itself.
+`SKILL.md` is the skill definition Claude Code loads from `~/.claude/skills/agent-fleet`. `CLAUDE.md` gives Claude Code context when you work on this repository itself.
 
 ```bash
 claude    # reads CLAUDE.md automatically

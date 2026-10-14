@@ -22,7 +22,7 @@ task-open, --min-head N:HASH from `head` at the lead's last look); messages afte
 look stay unpinned.
 Upgrade path: agents as separate OS users + per-user keys, or the lead's anchors in a write-once store.
 """
-import argparse, hashlib, json, os, re, sys, time, uuid
+import argparse, hashlib, json, os, re, sqlite3, subprocess, sys, time, uuid
 from pathlib import Path
 from urllib.parse import quote
 
@@ -159,18 +159,19 @@ def verify(root: Path) -> list:
         if msg_hash(m) != m.get("hash"):
             probs.append(f"{m['_file']}: content hash mismatch (message edited)")
         prev, want = m.get("hash"), want + 1
+    # Case-folded: boards written before claims were lowercased everywhere hold mixed-case paths.
     live = {}
     for m in good(msgs):
         if m.get("kind") == "claim":
-            live[m.get("path")] = m.get("from")
+            live[(m.get("path") or "").lower()] = m.get("from")
         elif m.get("kind") == "release":
-            live.pop(m.get("path"), None)
+            live.pop((m.get("path") or "").lower(), None)
     cdir = root / "claims"
-    on_disk = {p.name for p in cdir.glob("*.claim")} if cdir.exists() else set()
+    on_disk = {p.name.lower() for p in cdir.glob("*.claim")} if cdir.exists() else set()
     for path, who in live.items():
-        if claim_file(root, path).name not in on_disk:
+        if claim_file(root, path).name.lower() not in on_disk:
             probs.append(f"claim on {path} by {who} vanished without a release message")
-    for name in on_disk - {claim_file(root, p).name for p in live}:
+    for name in on_disk - {claim_file(root, p).name.lower() for p in live}:
         probs.append(f"claims/{name} has no claim message on the board")
     return probs
 
@@ -182,7 +183,8 @@ def norm_path(path: str) -> str:
     p = os.path.normpath(p).replace("\\", "/")
     if p.startswith("../") or p == "..":
         sys.exit("board: claim paths inside the repo")
-    return p.lower() if os.name == "nt" else p
+    # Windows and WSL agents share one board on NTFS: a case-only alias must collide on both sides.
+    return p.lower()
 
 
 def claim_file(root: Path, path: str) -> Path:
@@ -247,6 +249,15 @@ def main(argv=None):
         return 0
     if args.cmd == "claim":
         who = author_of(args); path = norm_path(args.path); f = claim_file(root, path)
+        import fleet
+        try:
+            held = fleet.conflicts(path, root)
+        except (RuntimeError, OSError, ValueError, subprocess.SubprocessError, sqlite3.Error) as e:
+            print(f"board: {path} not claimed, fleet leases unreadable: {e}", file=sys.stderr); return 1
+        if held:
+            print(f"board: {path} held by agent-manager session(s): "
+                  + "; ".join(f"{l['session_id']} {l['pattern']} {l['note']}".strip() for l in held), file=sys.stderr)
+            return 1
         f.parent.mkdir(parents=True, exist_ok=True)
         try:
             fd = os.open(f, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
