@@ -646,6 +646,44 @@ def fleet_bridge_mechanics():
     return res
 
 
+def lease_mechanics():
+    # Claims are leases: default 4h, renewable, expired ones taken over on the record; shared holders coexist.
+    import time as _t
+    tmp = Path(tempfile.mkdtemp(prefix="lease-")); root = tmp / "b"; a = ["--board", str(root)]; res = []
+    c = lambda who, path, *x: run(B.main, a + ["claim", path, "--as", who, *x])[0]
+    try:
+        res.append(("default_lease_4h", c("a", "src/p.py") == 0
+                    and "ttl=14400 mode=exclusive" in B.claim_file(root, "src/p.py").read_text()))
+        res.append(("fresh_claim_refused", c("b", "src/p.py") == 1))
+        res.append(("expired_claim_taken_over", c("a", "src/q.py", "--ttl", "1s") == 0 and (_t.sleep(2.2) or True)
+                    and c("b", "src/q.py") == 0 and B.read_lease(B.claim_file(root, "src/q.py"))["who"] == "b"))
+        rel = [m for m in B.good(B.load_msgs(root)) if m.get("kind") == "release" and m.get("expired")]
+        res.append(("takeover_recorded_with_old_holder", bool(rel) and rel[-1].get("released_for") == "a"))
+        B.claim_file(root, "src/r.py").parent.mkdir(parents=True, exist_ok=True)
+        B.post(root, "a", "claim", "claim src/r.py", path="src/r.py")
+        B.claim_file(root, "src/r.py").write_text("a 2020-01-01T00:00:00-0500\n")   # a legacy claim: no lease
+        res.append(("legacy_claim_never_expires", c("b", "src/r.py") == 1))
+        res.append(("ttl0_never_expires", c("a", "src/s.py", "--ttl", "0") == 0 and c("b", "src/s.py") == 1))
+        res.append(("shared_holders_coexist", c("a", "src/t.py", "--shared") == 0 and c("c", "src/t.py", "--shared") == 0))
+        res.append(("exclusive_waits_for_shared", c("b", "src/t.py") == 1))
+        res.append(("shared_blocked_by_live_exclusive", c("c", "src/p.py", "--shared") == 1))
+        for w in ("a", "c"):
+            run(B.main, a + ["release", "src/t.py", "--as", w, "--shared"])
+        res.append(("exclusive_after_shared_release", c("b", "src/t.py") == 0))
+        before = B.read_lease(B.claim_file(root, "src/p.py"))["ts"]; _t.sleep(1.1)
+        res.append(("holder_renews", run(B.main, a + ["renew", "src/p.py", "--as", "a"])[0] == 0
+                    and B.read_lease(B.claim_file(root, "src/p.py"))["ts"] > before))
+        res.append(("non_holder_cannot_renew", run(B.main, a + ["renew", "src/p.py", "--as", "b"])[0] == 1))
+        res.append(("expired_shared_released_on_record", c("a", "src/u.py", "--shared", "--ttl", "1s") == 0
+                    and (_t.sleep(2.2) or True) and c("b", "src/u.py") == 0
+                    and not (B.shared_dir(root, "src/u.py") / "a").exists()))
+        res.append(("verify_intact_after_leases", B.verify(root) == []))
+        res.append(("bad_ttl_refused", run(B.main, a + ["claim", "src/v.py", "--as", "a", "--ttl", "soon"])[0] != 0))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return res
+
+
 def janitor_mechanics():
     # Board readability: a stale claim (holder idle, legacy/expired) is released on the record with one owner auth.
     import os, time as _t
@@ -688,6 +726,7 @@ def janitor_mechanics():
     return res
 
 
+
 def claim_guard_mechanics():
     # Pre-commit claim guard: a commit touching a file someone ELSE claims is refused at the point of damage.
     import os
@@ -726,6 +765,14 @@ def claim_guard_mechanics():
         r = subprocess.run([sys.executable, str(HERE / "claim_guard.py"), "check", "--repo", str(repo),
                             "--board", str(tmp / "missing"), "--as", "a"], capture_output=True, text=True, env=env)
         res.append(("guard_missing_board_allows_nothing_held", r.returncode == 0))
+        # leases: an EXPIRED or a SHARED claim by someone else does not block the commit
+        run(B.main, ["--board", str(board), "claim", "src/old.py", "--as", "a", "--ttl", "1s"])
+        run(B.main, ["--board", str(board), "claim", "src/rev.py", "--as", "a", "--shared"])
+        import time as _t; _t.sleep(2.2)
+        (hooks / "pre-commit.agent-fleet-prev").unlink()
+        CG.install(str(repo), str(board), "b")
+        res.append(("guard_ignores_expired_claim", commit("old.py", "b after a's lease expired").returncode == 0))
+        res.append(("guard_ignores_shared_claim", commit("rev.py", "b edits a shared-claimed file").returncode == 0))
         body = (hooks / "pre-commit").read_text(encoding="utf-8")
         res.append(("guard_hook_skips_when_script_missing", "|| exit 0" in body.split("PY=")[0]))
     finally:
@@ -746,6 +793,8 @@ if __name__ == "__main__":
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  fleet: {name}")
     for name, ok in fleet_bridge_mechanics():
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  fleet-bridge: {name}")
+    for name, ok in lease_mechanics():
+        bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  lease: {name}")
     for name, ok in claim_guard_mechanics():
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  claim-guard: {name}")
     for name, ok in janitor_mechanics():

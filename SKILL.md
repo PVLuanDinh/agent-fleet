@@ -57,6 +57,8 @@ Every participant names itself: `--as G3` or `$AGENT_NAME` (`owner` is reserved)
 | read new | `view.py brief --as G3` (one line per message you have not seen; it keeps your cursor); `view.py show N` for one message in full. Avoid bare `board.py read`: it re-sends the whole history |
 | claim before editing | `board.py claim src/pkg/mod.py --as G3` (repo-relative, case-folded). Exit 1 = held, by a board claim or (fleet on) an agent-manager lease: message the holder, work elsewhere |
 | release when the commit lands | `board.py release src/pkg/mod.py --as G3` (holder only) |
+| claim with a lease | `board.py claim PATH --as G3 --ttl 4h` (default 4h; `30m`, `2d`, `0` = never). An expired claim can be taken by the next claimer, and the takeover is posted as a release on the record. `board.py renew PATH --as G3 [--ttl 4h]` extends it (holder only). Claims written before leases existed never expire |
+| share a path | `board.py claim PATH --as G3 --shared` (many readers, no exclusive holder while any shared claim is live); `release PATH --shared`. The pre-commit guard blocks only live exclusive claims |
 | free a STOPPED holder's claim | `board.py release src/pkg/mod.py --as lead --for G3 --owner-auth N` (N = an owner-answer authorizing it; the release names both; never delete claim files by hand -- `verify` reds a claim that vanishes without a release message) |
 | park a question for the owner | `board.py ask-owner --as G3 --thread G3 "..."` |
 | open owner questions | `board.py owner`. Send them to the owner in ONE batch when nothing else can proceed |

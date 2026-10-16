@@ -10,7 +10,12 @@ Layout under the root:
   msgs/00000042.json   one message per file; written to a temp file, then hard-linked into
                        place (link fails if the name exists), so concurrent writers never share
                        a seq and readers never see a half-written message
-  claims/<quoted path>.claim   one file per claimed repo-relative path, created with O_EXCL
+  claims/<quoted path>.claim   one file per EXCLUSIVE claim, created with O_EXCL:
+                       "<who> <iso time> ttl=<seconds> mode=exclusive" (ttl=0: never expires; a legacy
+                       file without ttl= never expires either). An expired claim can be taken over: the
+                       taker posts a release citing the expiry, then claims.
+  claims/<quoted path>.shared/<who>   one file per SHARED holder (readers/reviewers): shared holders
+                       coexist, and block exclusive claims by others until they release or expire.
   tasks/<task>.json    task specs written by score.py
 Other files already in the root (PROTOCOL.md, ROSTER.md, ...) are left alone.
 
@@ -26,8 +31,9 @@ import argparse, hashlib, json, os, re, sqlite3, subprocess, sys, time, uuid
 from pathlib import Path
 from urllib.parse import quote
 
-KINDS = {"note", "request", "status", "result", "claim", "release", "retract",
+KINDS = {"note", "request", "status", "result", "claim", "release", "renew", "retract",
          "owner-question", "owner-answer", "task-open"}
+DEFAULT_TTL = 4 * 3600   # a claim is a LEASE: a dead lane's claim frees itself; `renew` extends a live one
 OWNER = "owner"
 NAME_RE = re.compile(r"^[A-Za-z0-9_.-]{1,48}$")
 SKIP_FIELDS = {"hash", "prev", "ts", "client", "pid", "seq", "_file", "_corrupt"}
@@ -160,12 +166,22 @@ def verify(root: Path) -> list:
             probs.append(f"{m['_file']}: content hash mismatch (message edited)")
         prev, want = m.get("hash"), want + 1
     # Case-folded: boards written before claims were lowercased everywhere hold mixed-case paths.
-    live = {}
+    live, shared = {}, set()   # exclusive: path -> holder; shared: (path, holder)
     for m in good(msgs):
+        k = (m.get("path") or "").lower()
+        is_shared = m.get("mode") == "shared"
         if m.get("kind") == "claim":
-            live[(m.get("path") or "").lower()] = m.get("from")
+            if is_shared:
+                shared.add((k, m.get("from")))
+            else:
+                live[k] = m.get("from")
         elif m.get("kind") == "release":
-            live.pop((m.get("path") or "").lower(), None)
+            # an expiry takeover / owner-authorized release names the old holder in released_for
+            holder = m.get("released_for") or m.get("from")
+            if is_shared:
+                shared.discard((k, holder))
+            else:
+                live.pop(k, None)
     cdir = root / "claims"
     on_disk = {p.name.lower() for p in cdir.glob("*.claim")} if cdir.exists() else set()
     for path, who in live.items():
@@ -173,6 +189,13 @@ def verify(root: Path) -> list:
             probs.append(f"claim on {path} by {who} vanished without a release message")
     for name in on_disk - {claim_file(root, p).name.lower() for p in live}:
         probs.append(f"claims/{name} has no claim message on the board")
+    disk_shared = {(d.name.lower(), f.name) for d in cdir.glob("*.shared") if d.is_dir()
+                   for f in d.iterdir() if not f.name.startswith(".")} if cdir.exists() else set()
+    want_shared = {(shared_dir(root, p).name.lower(), w) for p, w in shared}
+    for d, w in sorted(want_shared - disk_shared):
+        probs.append(f"shared claim {d} by {w} vanished without a release message")
+    for d, w in sorted(disk_shared - want_shared):
+        probs.append(f"claims/{d}/{w} has no shared-claim message on the board")
     return probs
 
 
@@ -189,6 +212,65 @@ def norm_path(path: str) -> str:
 
 def claim_file(root: Path, path: str) -> Path:
     return root / "claims" / (quote(path, safe="") + ".claim")
+
+
+def shared_dir(root: Path, path: str) -> Path:
+    return root / "claims" / (quote(path, safe="") + ".shared")
+
+
+def parse_ttl(s) -> int:
+    """'0' (never), '45s', '30m', '4h', '2d' or plain seconds."""
+    m = re.fullmatch(r"\s*(\d+)\s*([smhd]?)\s*", str(s))
+    if not m:
+        sys.exit(f"board: bad --ttl {s!r} (use 0, 45s, 30m, 4h, 2d or seconds)")
+    return int(m.group(1)) * {"": 1, "s": 1, "m": 60, "h": 3600, "d": 86400}[m.group(2)]
+
+
+def lease_text(who: str, ttl: int, mode: str) -> str:
+    return f"{who} {time.strftime('%Y-%m-%dT%H:%M:%S%z')} ttl={ttl} mode={mode}\n"
+
+
+def read_lease(f: Path):
+    """{who, ts, ttl, mode} or None. ttl None = legacy file without a lease = never expires."""
+    try:
+        parts = f.read_text(encoding="utf-8").split()
+    except OSError:
+        return None
+    if not parts:
+        return None
+    kv = dict(p.split("=", 1) for p in parts[2:] if "=" in p)
+    ts = None
+    if len(parts) > 1:
+        try:
+            ts = time.mktime(time.strptime(parts[1][:19], "%Y-%m-%dT%H:%M:%S"))
+        except ValueError:
+            ts = None
+    ttl = int(kv["ttl"]) if kv.get("ttl", "").isdigit() else None
+    return {"who": parts[0], "ts": ts, "ttl": ttl, "mode": kv.get("mode", "exclusive")}
+
+
+def expired(lease, now=None) -> bool:
+    if not lease or not lease["ttl"] or lease["ts"] is None:
+        return False   # ttl 0 or a legacy claim never expires
+    return lease["ts"] + lease["ttl"] <= (now or time.time())
+
+
+def live_shared(root: Path, path: str, now=None) -> list:
+    d = shared_dir(root, path)
+    leases = [read_lease(f) for f in sorted(d.iterdir())] if d.is_dir() else []
+    return [l for l in leases if l and not expired(l, now)]
+
+
+def write_atomic(f: Path, text: str) -> None:
+    tmp = f.with_name(f".{f.name}.{uuid.uuid4().hex}.tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, f)
+
+
+def until(lease) -> str:
+    if not lease or not lease["ttl"] or lease["ts"] is None:
+        return "no expiry"
+    return "expires " + time.strftime("%Y-%m-%d %H:%M", time.localtime(lease["ts"] + lease["ttl"]))
 
 
 def show(m: dict) -> str:
@@ -211,8 +293,11 @@ def main(argv=None):
     p.add_argument("body", help="text, or - for stdin")
     r = sub.add_parser("read"); r.add_argument("--since", type=int, default=0); r.add_argument("--to")
     r.add_argument("--kind"); r.add_argument("--thread"); r.add_argument("--json", action="store_true")
-    for name in ("claim", "release"):
+    for name in ("claim", "release", "renew"):
         c = sub.add_parser(name); c.add_argument("path"); c.add_argument("--as", dest="as_"); c.add_argument("--thread")
+        c.add_argument("--shared", action="store_true", help="a shared claim: holders coexist; exclusive claims wait")
+        if name in ("claim", "renew"):
+            c.add_argument("--ttl", help=f"lease length: 0 (never), 45s, 30m, 4h, 2d (default {DEFAULT_TTL // 3600}h)")
         if name == "release":
             c.add_argument("--for", dest="for_", help="release a STOPPED holder's claim (needs --owner-auth)")
             c.add_argument("--owner-auth", type=int, help="seq of the owner-answer that authorizes --for")
@@ -232,7 +317,7 @@ def main(argv=None):
         body = sys.stdin.read() if args.body == "-" else args.body
         if args.kind == "result" and not (args.cite and args.claim):
             sys.exit("board: a result needs --cite '<command that proves it>' and --claim pass|fail")
-        if args.kind in ("owner-answer", "claim", "release", "task-open"):
+        if args.kind in ("owner-answer", "claim", "release", "renew", "task-open"):
             sys.exit(f"board: use the dedicated subcommand for {args.kind}")
         d = post(root, author_of(args), args.kind, body, to=args.to, thread=args.thread,
                  reply_to=args.reply_to, cite=args.cite, claim=args.claim)
@@ -259,13 +344,67 @@ def main(argv=None):
                   + "; ".join(f"{l['session_id']} {l['pattern']} {l['note']}".strip() for l in held), file=sys.stderr)
             return 1
         f.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            fd = os.open(f, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
-        except FileExistsError:
-            print(f"board: {path} already claimed: {f.read_text(encoding='utf-8').strip()}", file=sys.stderr); return 1
+        ttl = parse_ttl(args.ttl) if args.ttl is not None else DEFAULT_TTL
+        now = time.time()
+        ex = read_lease(f) if f.exists() else None
+        if args.shared:
+            if ex and ex["who"] != who and not expired(ex, now):
+                print(f"board: {path} is held exclusively by {ex['who']} ({until(ex)})", file=sys.stderr); return 1
+            sd = shared_dir(root, path); sd.mkdir(parents=True, exist_ok=True)
+            write_atomic(sd / who, lease_text(who, ttl, "shared"))
+            d = post(root, who, "claim", f"claim {path} (shared)", path=path, thread=args.thread, mode="shared", ttl=ttl)
+            print(f"claimed {path} shared (#{d['seq']}, {until(read_lease(sd / who))})"); return 0
+        # Expired SHARED holders are released on the record first, so the board shows why they are gone.
+        sd = shared_dir(root, path)
+        for sf in (sorted(sd.iterdir()) if sd.is_dir() else []):
+            sl = read_lease(sf)
+            if sl and expired(sl, now):
+                post(root, who, "release", f"release {path} (shared lease of {sl['who']} expired)", path=path,
+                     thread=args.thread, mode="shared", released_for=sl["who"], expired=True)
+                sf.unlink(missing_ok=True)
+        others = [l["who"] for l in live_shared(root, path, now) if l["who"] != who]
+        if others:
+            print(f"board: {path} has shared holder(s) {', '.join(others)}; an exclusive claim waits for them",
+                  file=sys.stderr); return 1
+        for attempt in (1, 2):
+            try:
+                fd = os.open(f, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+                break
+            except FileExistsError:
+                ex = read_lease(f)
+                if attempt == 2 or not (ex and expired(ex, now)):
+                    print(f"board: {path} already claimed: {f.read_text(encoding='utf-8').strip()} ({until(ex)})",
+                          file=sys.stderr); return 1
+                # Take over an EXPIRED claim: move it aside atomically (one taker wins), record why, then claim.
+                grave = f.with_name(f"{f.name}.expired-{uuid.uuid4().hex}")
+                try:
+                    os.replace(f, grave)
+                except FileNotFoundError:
+                    continue
+                post(root, who, "release", f"release {path} (lease of {ex['who']} expired; taken over by {who})",
+                     path=path, thread=args.thread, released_for=ex["who"], expired=True)
+                grave.unlink(missing_ok=True)
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            fh.write(f"{who} {time.strftime('%Y-%m-%dT%H:%M:%S%z')}\n")
-        d = post(root, who, "claim", f"claim {path}", path=path, thread=args.thread); print(f"claimed {path} (#{d['seq']})"); return 0
+            fh.write(lease_text(who, ttl, "exclusive"))
+        d = post(root, who, "claim", f"claim {path}", path=path, thread=args.thread, mode="exclusive", ttl=ttl)
+        print(f"claimed {path} (#{d['seq']}, {until(read_lease(f))})"); return 0
+    if args.cmd == "renew":
+        who = author_of(args); path = norm_path(args.path)
+        f = (shared_dir(root, path) / who) if args.shared else claim_file(root, path)
+        lease = read_lease(f) if f.exists() else None
+        if not lease or lease["who"] != who:
+            print(f"board: {path} is not {'shared-' if args.shared else ''}claimed by {who}", file=sys.stderr); return 1
+        ttl = parse_ttl(args.ttl) if args.ttl is not None else (lease["ttl"] if lease["ttl"] is not None else DEFAULT_TTL)
+        write_atomic(f, lease_text(who, ttl, "shared" if args.shared else "exclusive"))
+        d = post(root, who, "renew", f"renew {path}", path=path, thread=args.thread,
+                 mode="shared" if args.shared else "exclusive", ttl=ttl)
+        print(f"renewed {path} (#{d['seq']}, {until(read_lease(f))})"); return 0
+    if args.cmd == "release" and args.shared:
+        who = author_of(args); path = norm_path(args.path); sf = shared_dir(root, path) / who
+        if not sf.exists():
+            print(f"board: {path} has no shared claim by {who}", file=sys.stderr); return 1
+        d = post(root, who, "release", f"release {path} (shared)", path=path, thread=args.thread, mode="shared")
+        sf.unlink(); print(f"released shared {path} (#{d['seq']})"); return 0
     if args.cmd == "release":
         who = author_of(args); path = norm_path(args.path); f = claim_file(root, path)
         if not f.exists():

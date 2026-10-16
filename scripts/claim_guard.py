@@ -58,9 +58,12 @@ def check(repo, board, who) -> list:
         p = norm(rel)
         f = claims / (quote(p, safe="") + ".claim")
         if f.exists():
-            holder = (f.read_text(encoding="utf-8").split() or ["?"])[0]
-            if holder != who:
-                held.append(f"{rel}: claimed by {holder}")
+            sys.path.insert(0, str(HERE))
+            import board as board_mod   # not `board`: that name is this function's board-path argument
+            lease = board_mod.read_lease(f)
+            # only a LIVE EXCLUSIVE claim by someone else blocks; shared means others may edit, expired means free
+            if lease and lease["who"] != who and lease["mode"] != "shared" and not board_mod.expired(lease):
+                held.append(f"{rel}: claimed by {lease['who']} ({board_mod.until(lease)})")
         if (Path(native(board)) / "fleet.on").exists():
             sys.path.insert(0, str(HERE))
             import fleet
