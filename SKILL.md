@@ -322,3 +322,34 @@ Config `~/.claude/memtrim.json` (or `$MEMTRIM_CONFIG`):
 entry for a project only its `MEMORY.md` is guarded. `memtrim.py status --cwd <dir>` shows sizes;
 `memtrim.py selftest` holds the reachable reds (also run by `selfcheck.py`). Off: `MEMTRIM_OFF=1`.
 Move lines byte-identical: fixing wording or encoding while moving makes `verify` report them lost.
+
+## 9. Lane preflight: every required skill installed AND usable before a lane runs
+
+A lane is a separate process with its own environment (in WSL, its own `~/.claude`). A skill that loads but whose
+CLI, data or bridge is missing fails silently mid-task, or worse, answers wrongly (a graph checker that cannot see
+the graph reports "no match" and the lane rebuilds existing code). So `fleet.py spawn` runs a **preflight** first:
+
+1. `~/.claude/fleet-requirements.json` (or `$FLEET_REQUIREMENTS`) lists, per project (`cwd_prefix`: one path or a
+   list, longest match wins, WSL `/mnt/x/...` paths match their Windows form), the skills its lanes need. Each has a
+   **functional `check`** run the way a lane sees it (`bash -lc` in WSL), an optional **`install`**, and `required`.
+2. A failing check runs its install, then checks again. A required skill that still fails **refuses the spawn**;
+   an optional one only warns. A passing result is reused for 30 minutes so spawning stays fast.
+3. An unreadable requirements file refuses the spawn too (fails closed); a BOM is fine.
+
+`fleet.py preflight --cwd <dir> [--no-fix]` runs it by hand and prints one line per skill. `spawn --no-preflight`
+overrides, deliberately. Write checks that prove USE, not presence: a known query must return a known answer, a
+gate must actually block, a service must answer its health call.
+
+```json
+{"projects": [{"name": "app", "cwd_prefix": ["D:\work\app", "C:\wt\app-"],
+  "skills": [{"skill": "graphify", "required": true,
+              "check": "graphify --version | grep -q 0.9.91 && graphify query 'known symbol' --graph g.json | grep -q found",
+              "install": "uv tool install --force 'graphifyy==0.9.91'"}]}]}
+```
+
+**Lane preamble (route with hub first).** A project entry may carry `"lane_preamble"`: `fleet.py spawn` puts it in
+front of every lane's `--prompt` (never twice). Use it for rules every lane must follow from its first tool call, e.g.
+"before any other tool call, invoke Skill(hub) with a one-line description of this task, declare the route it gives,
+then invoke the routed skill; re-route when the task changes shape". A route gate alone accepts any valid route
+line, including a hand-written one, so the preamble is what makes lanes actually consult the router. Verified live:
+a preambled lane's first tool call was `Skill(hub)`, which routed it to `implement`, which it then invoked.

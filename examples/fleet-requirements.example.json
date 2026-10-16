@@ -1,0 +1,43 @@
+{
+  "projects": [
+    {
+      "name": "myproject",
+      "cwd_prefix": [
+        "D:\\work\\myproject",
+        "C:\\worktrees\\myproject-"
+      ],
+      "lane_preamble": "Before any other tool call, invoke Skill(hub) with a one-line description of this task, declare the route line it gives, then invoke the routed skill and follow it. Re-route with Skill(hub) whenever the task changes shape.",
+      "skills": [
+        {
+          "skill": "skills-link",
+          "required": true,
+          "check": "test -L ~/.claude/skills && test -f ~/.claude/skills/agent-fleet/SKILL.md",
+          "install": "ln -sfn /mnt/c/Users/<you>/.claude/skills ~/.claude/skills"
+        },
+        {
+          "skill": "hub",
+          "required": true,
+          "check": "test -f ~/.claude/skills/hub/SKILL.md"
+        },
+        {
+          "skill": "graphify",
+          "required": true,
+          "check": "graphify --version | grep -q '0.9.91' && graphify query 'a symbol you know exists' --graph /mnt/d/work/myproject/graphify-out/graph.json | grep -q 'nodes found'",
+          "install": "uv tool install --force 'graphifyy==0.9.91'"
+        },
+        {
+          "skill": "superpowers",
+          "required": true,
+          "check": "python3 -c \"import json,os,sys;e=json.load(open(os.path.expanduser('~/.claude/settings.json'))).get('enabledPlugins',{});sys.exit(0 if e.get('superpowers@claude-plugins-official') is True else 1)\"",
+          "install": "claude plugin install superpowers@claude-plugins-official --scope user"
+        },
+        {
+          "skill": "reverse-engineer-anything",
+          "required": false,
+          "check": "command -v rea >/dev/null",
+          "install": "npm install -g --prefix ~/.local rea-agents@6.3.0"
+        }
+      ]
+    }
+  ]
+}

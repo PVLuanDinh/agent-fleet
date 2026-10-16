@@ -15,6 +15,8 @@ agent-manager is Linux/macOS only, so on Windows every call goes through `wsl.ex
   fleet.py ui start|stop|status|shot [N]|keys K...|attach   one hidden agent-manager TUI (tmux socket fleetui)
                                that keeps session status current; any session can screenshot or drive it
   fleet.py archive-dead        archive every dead row through that TUI (agent-manager's `archive` needs a caller)
+  fleet.py preflight [--cwd DIR] [--no-fix]   install + functionally check every skill the project's lanes need
+                               (~/.claude/fleet-requirements.json); `spawn` runs it first and refuses on a required failure
 
 Env: AGENT_FLEET_WSL_DISTRO (default Ubuntu); AGENT_FLEET_AM_DB reads that state.db file
 directly (tests, or a non-default agent-manager config dir).
@@ -229,6 +231,102 @@ def conflicts(path: str, root: Path) -> list:
     return [l for l in leases(strict=True) if l["mode"] != "shared" and overlaps(path, l["pattern"])]
 
 
+PREFLIGHT_TTL = 1800  # seconds a passing preflight is reused, so spawning stays fast
+
+
+class RequirementsError(Exception):
+    pass
+
+
+def load_requirements() -> dict:
+    p = Path(os.environ.get("FLEET_REQUIREMENTS") or Path.home() / ".claude" / "fleet-requirements.json")
+    if not p.exists():
+        return {}
+    try:
+        # utf-8-sig: PowerShell writes a BOM. An unreadable file must REFUSE, never read as "no requirements":
+        # that silently let a lane spawn past a failing required skill (caught by the live control, 2026-10-16).
+        return json.loads(p.read_text(encoding="utf-8-sig"))
+    except ValueError as e:
+        raise RequirementsError(f"{p} is not valid JSON ({e})")
+
+
+def to_win_path(p: str) -> str:
+    m = re.match(r"^/mnt/([a-z])(/.*)?$", p)
+    return f"{m.group(1).upper()}:" + (m.group(2) or "\\").replace("/", "\\") if m else p
+
+
+def project_for(cwd: str) -> dict:
+    """The requirements entry whose cwd_prefix (one or a list) contains cwd; longest prefix wins."""
+    c = to_win_path(str(cwd)).lower().rstrip("\\/")
+    best, n = {}, -1
+    for proj in load_requirements().get("projects", []):
+        prefixes = proj.get("cwd_prefix") or []
+        for pre in [prefixes] if isinstance(prefixes, str) else prefixes:
+            pl = pre.lower().rstrip("\\/")
+            if c.startswith(pl) and len(pl) > n:
+                best, n = proj, len(pl)
+    return best
+
+
+def lane_run(cmd: str) -> int:
+    """Run a check/install the way a lane would see it: in WSL (Windows) or the local shell, login PATH."""
+    try:
+        return subprocess.run(wsl_prefix() + ["bash", "-lc", cmd], capture_output=True, timeout=600).returncode
+    except Exception:
+        return 1
+
+
+def preflight(proj: dict, fix: bool = True, run=lane_run) -> list:
+    """Each skill: check -> (install -> re-check) -> row. A skill is usable only if its CHECK passes."""
+    rows = []
+    for s in proj.get("skills", []):
+        ok = run(s["check"]) == 0
+        installed = False
+        if not ok and fix and s.get("install"):
+            installed = True
+            run(s["install"])
+            ok = run(s["check"]) == 0
+        rows.append({"skill": s["skill"], "required": s.get("required", True), "ok": ok, "installed": installed})
+    return rows
+
+
+def preflight_cached(proj: dict, fresh: bool = False) -> list:
+    cache = Path.home() / ".claude" / "fleet-preflight-cache.json"
+    try:
+        c = json.loads(cache.read_text(encoding="utf-8")) if cache.exists() else {}
+    except ValueError:
+        c = {}
+    hit = c.get(proj.get("name", "?"))
+    if not fresh and hit and time.time() - hit["ts"] < PREFLIGHT_TTL and all(r["ok"] or not r["required"] for r in hit["rows"]):
+        return hit["rows"]
+    rows = preflight(proj)
+    c[proj.get("name", "?")] = {"ts": time.time(), "rows": rows}
+    try:
+        cache.write_text(json.dumps(c, indent=1), encoding="utf-8")
+    except OSError:
+        pass
+    return rows
+
+
+def with_preamble(rest: list, proj: dict) -> list:
+    """Prefix the lane's --prompt with the project's lane_preamble (e.g. 'route with the hub skill first')."""
+    pre = (proj or {}).get("lane_preamble")
+    if not pre or "--prompt" not in rest or rest.index("--prompt") + 1 >= len(rest):
+        return rest
+    j = rest.index("--prompt") + 1
+    out = list(rest)
+    if not out[j].startswith(pre):
+        out[j] = f"{pre}\n\n{out[j]}"
+    return out
+
+
+def preflight_report(rows: list) -> tuple:
+    bad = [r["skill"] for r in rows if r["required"] and not r["ok"]]
+    lines = [f"  {'OK  ' if r['ok'] else ('FAIL' if r['required'] else 'warn')} {r['skill']}"
+             + ("  (installed now)" if r["installed"] else "") for r in rows]
+    return bad, "\n".join(lines)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="fleet", description=__doc__.splitlines()[0])
     ap.add_argument("--board"); ap.add_argument("--project")
@@ -246,6 +344,8 @@ def main(argv=None):
     u = sub.add_parser("ui"); u.add_argument("action", choices=["start", "stop", "status", "shot", "keys", "attach"])
     u.add_argument("more", nargs="*")
     sub.add_parser("archive-dead")
+    pf = sub.add_parser("preflight", help="install and verify every skill the project's lanes need")
+    pf.add_argument("--cwd", default=os.getcwd()); pf.add_argument("--no-fix", action="store_true")
     args, rest = ap.parse_known_args(argv)
 
     if args.cmd == "am":
@@ -255,18 +355,52 @@ def main(argv=None):
         # A folder WSL claude has never opened parks the new session on the trust prompt, unseen.
         if "--directory" not in rest or rest.index("--directory") + 1 >= len(rest):
             ap.error("spawn needs --directory DIR, so the folder can be trusted first")
+        skip = "--no-preflight" in rest
+        rest = [a for a in rest if a != "--no-preflight"]
         i = rest.index("--directory") + 1
         rest[i] = to_wsl_path(rest[i])
+        try:
+            proj = {} if skip else project_for(rest[i])
+        except RequirementsError as e:
+            print(f"fleet: spawn refused, lane requirements unreadable: {e}", file=sys.stderr)
+            return 1
+        if proj and not skip:
+            # Lanes must be able to install and FULLY use every skill the project requires before they run.
+            # A required skill whose functional check fails refuses the spawn.
+            bad, report = preflight_report(preflight_cached(proj))
+            if bad:
+                print(f"fleet: spawn refused, {proj.get('name')} lanes cannot use: {', '.join(bad)}\n{report}\n"
+                      f"fix and rerun, or `fleet.py preflight --cwd <dir>` for detail (--no-preflight overrides)", file=sys.stderr)
+                return 1
         if trust([rest[i]]) != 0:
             return 1
+        rest = with_preamble(rest, proj)
         return subprocess.call(wsl_prefix() + ["bash", "-lc", 'exec agent-manager spawn "$@"', "am"] + rest)
     if rest:
         ap.error(f"unrecognized arguments: {' '.join(rest)}")
     if args.cmd == "trust":
         return trust(args.dirs)
+    if args.cmd == "preflight":
+        try:
+            proj = project_for(args.cwd)
+        except RequirementsError as e:
+            print(f"fleet: {e}", file=sys.stderr); return 2
+        if not proj:
+            print(f"fleet: no requirements entry covers {args.cwd} (~/.claude/fleet-requirements.json)"); return 0
+        rows = preflight(proj, fix=not args.no_fix)
+        bad, report = preflight_report(rows)
+        print(f"preflight {proj.get('name')}: {len(rows) - len(bad)}/{len(rows)} usable\n{report}")
+        try:
+            cache = Path.home() / ".claude" / "fleet-preflight-cache.json"
+            c = json.loads(cache.read_text(encoding="utf-8")) if cache.exists() else {}
+            c[proj.get("name", "?")] = {"ts": time.time(), "rows": rows}
+            cache.write_text(json.dumps(c, indent=1), encoding="utf-8")
+        except (OSError, ValueError):
+            pass
+        return 1 if bad else 0
     if args.cmd == "sessions":
         rows = sessions()
-        # Archived rows are history, not agents: listing them as "dead" read as 30+ failed agents (owner, 2026-10-15).
+        # Archived rows are history, not agents: listing them as "dead" read as 30+ failed agents (seen 2026-10-15).
         hidden = 0 if args.all else sum(1 for r in rows if r.get("archived"))
         rows = rows if args.all else [r for r in rows if not r.get("archived")]
         for r in rows:

@@ -580,6 +580,52 @@ def fleet_bridge_mechanics():
             == "claude-sonnet-rv-fold-a-1014"),
            ("dialog_name_none_on_list", F.dialog_name("█ ✕ ⠿ fleet-live-a  dead · claude\n  a archive") == ""),
            ("attach_cmd_names_socket", "-L fleetui attach -t ui" in F.attach_cmd())]
+    # Preflight: a lane may run only when every REQUIRED skill's functional check passes (install first if it can).
+    state = {"tool": False}
+    def fake(cmd):
+        if cmd == "install-tool": state["tool"] = True; return 0
+        if cmd == "check-tool": return 0 if state["tool"] else 1
+        return {"pass": 0, "fail": 1}[cmd]
+    proj = {"name": "p", "skills": [{"skill": "a", "check": "pass"},
+                                     {"skill": "b", "check": "check-tool", "install": "install-tool"},
+                                     {"skill": "c", "check": "fail"},
+                                     {"skill": "d", "check": "fail", "required": False}]}
+    rows = {r["skill"]: r for r in F.preflight(proj, run=fake)}
+    bad, _ = F.preflight_report(list(rows.values()))
+    res += [("preflight_pass_untouched", rows["a"]["ok"] and not rows["a"]["installed"]),
+            ("preflight_installs_then_rechecks", rows["b"]["ok"] and rows["b"]["installed"]),
+            ("preflight_required_failure_refuses", bad == ["c"]),
+            ("preflight_optional_failure_only_warns", not rows["d"]["ok"] and "d" not in bad)]
+    state["tool"] = False
+    rows_nofix = {r["skill"]: r for r in F.preflight(proj, fix=False, run=fake)}
+    res.append(("preflight_no_fix_does_not_install", not rows_nofix["b"]["ok"] and not state["tool"]))
+    pre_proj = {"lane_preamble": "FIRST: invoke the hub skill."}
+    pr = F.with_preamble(["--name", "n", "--prompt", "do the task"], pre_proj)
+    res += [("preamble_prefixes_prompt", pr[3].startswith("FIRST: invoke the hub skill.") and pr[3].endswith("do the task")),
+            ("preamble_not_doubled", F.with_preamble(pr, pre_proj) == pr),
+            ("preamble_absent_leaves_prompt", F.with_preamble(["--prompt", "x"], {}) == ["--prompt", "x"])]
+    reqf = Path(tempfile.mkdtemp(prefix="fleetreq-")) / "req.json"
+    reqf.write_text(json.dumps({"projects": [{"name": "outer", "cwd_prefix": "D:\\work"},
+                                             {"name": "inner", "cwd_prefix": ["D:\\work\\app", "C:\\wt\\app-"]}]}))
+    old_req = os.environ.get("FLEET_REQUIREMENTS"); os.environ["FLEET_REQUIREMENTS"] = str(reqf)
+    try:
+        res += [("preflight_longest_prefix_wins", F.project_for("D:\\work\\app\\src").get("name") == "inner"),
+                ("preflight_wsl_path_matches", F.project_for("/mnt/c/wt/app-lane1").get("name") == "inner"),
+                ("preflight_other_cwd_unmatched", F.project_for("E:\\elsewhere") == {})]
+        reqf.write_bytes(b"\xef\xbb\xbf" + reqf.read_bytes())
+        res.append(("preflight_bom_file_still_read", F.project_for("D:\\work\\app").get("name") == "inner"))
+        reqf.write_text("{ not json", encoding="utf-8")
+        try:
+            F.project_for("D:\\work\\app"); broken_refused = False
+        except F.RequirementsError:
+            broken_refused = True
+        res.append(("preflight_broken_file_refuses_not_skips", broken_refused))
+        res.append(("spawn_refused_on_broken_requirements",
+                    run(F.main, ["spawn", "--directory", "D:\\work\\app", "--prompt", "x"])[0] == 1))
+    finally:
+        if old_req is None: os.environ.pop("FLEET_REQUIREMENTS", None)
+        else: os.environ["FLEET_REQUIREMENTS"] = old_req
+        shutil.rmtree(reqf.parent, ignore_errors=True)
     tmp = Path(tempfile.mkdtemp(prefix="fleettrust-")); cfg = tmp / ".claude.json"
     cfg.write_text(json.dumps({"keep": 1, "projects": {"/mnt/d/a": {"lastCost": 2}}}), encoding="utf-8")
     env = dict(os.environ, HOME=str(tmp), USERPROFILE=str(tmp))

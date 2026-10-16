@@ -116,6 +116,18 @@ python $B/fleet.py archive-dead           # archive every dead row (confirms onl
 The TUI needs a real terminal; everything else works from Claude Desktop or a terminal. Results and scores
 stay on the board: a green row in the TUI is not a pass. Optional Claude Code hooks (keep the hidden TUI running; open it in a Desktop Terminal tab when the skill is used): [hooks/README.md](hooks/README.md). Details: [SKILL.md](SKILL.md) section 7.
 
+## Lane preflight (any project)
+
+`fleet.py spawn` first checks that every skill the project's lanes need is installed AND usable (a functional
+check per skill, install-then-recheck, refuse on a required failure), and can prefix every lane prompt with a
+`lane_preamble` such as "route with the hub skill first". Example: [examples/fleet-requirements.example.json](examples/fleet-requirements.example.json); details: SKILL.md section 9.
+
+## Lane preflight (any project)
+
+`fleet.py spawn` first checks that every skill the project's lanes need is installed AND usable (a functional
+check per skill, install-then-recheck, refuse on a required failure), and can prefix every lane prompt with a
+`lane_preamble` such as "route with the hub skill first". Example: [examples/fleet-requirements.example.json](examples/fleet-requirements.example.json); details: SKILL.md section 9.
+
 ## Memory trim (any project)
 
 `scripts/memtrim.py` keeps Claude Code memory files (a START-HERE file, the auto-loaded `MEMORY.md`
