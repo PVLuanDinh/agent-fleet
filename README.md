@@ -15,6 +15,7 @@ It is a Claude Code skill (`SKILL.md` + `scripts/` + `references/`), and the scr
 |---|---|
 | `scripts/board.py` | Append-only, hash-chained message board. Posts, file claims/releases, owner questions, integrity `verify`, `head`. |
 | `scripts/view.py` | Token-lean reads: `digest` (current state), `brief` (only what is new to you), `show N`. Read-only. |
+| `scripts/janitor.py` | Keeps what agents read small: `check` (exit 1 when stale claims pass a limit), `clean` (owner-authorized releases on the record), `authorize`. |
 | `scripts/review.py` | Blind peer review for idle agents: `submit`, `next`, `post`, `reply`, `resolve`, `open`, `check`. |
 | `scripts/score.py` | Anti-gaming scorer: `open` a task (pins the verify command, protected files, hashes), `score` it (re-runs the command). |
 | `scripts/keepalive.py` | Claude Code Stop hook that keeps the lead agent working instead of idling after a status report. |

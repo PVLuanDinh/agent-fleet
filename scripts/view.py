@@ -2,9 +2,9 @@
 """Token-lean reads of the board: the CURRENT STATE instead of the whole log, one line per message,
 only what is new to you, full text only on demand. Read-only; never posts.
 
-  view.py digest                       the board state: latest line per thread, live claims, open
-                                       owner questions, open challenges, head -- size grows with
-                                       threads, not with history
+  view.py digest [--all]               the board state: latest line per thread active in 48h, claims
+                                       of holders active in 24h, open owner questions and challenges;
+                                       older state collapses to counts (--all lists everything)
   view.py brief --as R1 [--to-me]      one line per message you have not seen yet (a per-agent cursor
                                        under <board>/cursors/); --all ignores the cursor
   view.py show N [N ...]               full text of chosen messages
@@ -35,23 +35,51 @@ def _line(m):
     return f"#{m['seq']} {m.get('from')}{to} {m.get('kind')}[{m.get('thread') or '-'}]{tags}: {body}"
 
 
+RECENT_H = 48   # digest lists threads active this recently; older ones collapse to a count (--all lists them)
+ACTIVE_H = 24   # a claim is listed when its holder posted this recently; stale holders collapse to counts
+
+
+def _epoch(ts):
+    import time
+    try:
+        return time.mktime(time.strptime(str(ts)[:19], "%Y-%m-%dT%H:%M:%S"))
+    except ValueError:
+        return 0.0
+
+
 def cmd_digest(a, root):
+    # Bounded: the full state grew to ~19k tokens on a 2,950-message board and every lane read it.
+    import time
+    from collections import Counter
+    now = time.time()
     msgs = B.good(B.load_msgs(root))
-    latest = {}
+    latest, last_seen = {}, {}
     for m in msgs:
-        if m.get("kind") in ("claim", "release", "review"):
+        last_seen[m.get("from")] = _epoch(m.get("ts"))
+        if m.get("kind") in ("claim", "release", "review", "renew"):
             continue
         latest[m.get("thread") or "-"] = m
+    recent = {t: m for t, m in latest.items() if a.all or now - _epoch(m.get("ts")) <= RECENT_H * 3600}
     print(f"head #{msgs[-1]['seq'] if msgs else 0}  messages {len(msgs)}  threads {len(latest)}")
-    for thread, m in sorted(latest.items()):
+    for thread, m in sorted(recent.items()):
         print("  " + _line(m))
+    if len(recent) < len(latest):
+        print(f"  ... {len(latest) - len(recent)} quiet thread(s), no message for >{RECENT_H}h (view.py digest --all)")
     cdir = root / "claims"
     claims = sorted(cdir.glob("*.claim")) if cdir.exists() else []
     if claims:
         print(f"claims ({len(claims)}):")
+        stale = Counter()
         for p in claims:
             holder = p.read_text(encoding="utf-8").split()[0] if p.stat().st_size else "?"
-            print(f"  {holder}: {_unq(p.stem)}")
+            if a.all or now - last_seen.get(holder, 0) <= ACTIVE_H * 3600:
+                print(f"  {holder}: {_unq(p.stem)}")
+            else:
+                stale[holder] += 1
+        if stale:
+            print(f"  ... {sum(stale.values())} claim(s) by holders idle >{ACTIVE_H}h: "
+                  + ", ".join(f"{h} {n}" for h, n in stale.most_common(6))
+                  + (f", +{len(stale) - 6} more" if len(stale) > 6 else "") + "  (janitor.py check)")
     answered = {m.get("reply_to") for m in msgs if m.get("kind") == "owner-answer"}
     open_q = [m for m in msgs if m.get("kind") == "owner-question" and m["seq"] not in answered]
     if open_q:
@@ -84,8 +112,20 @@ def cmd_brief(a, root):
     msgs = [m for m in B.good(B.load_msgs(root)) if m["seq"] > since]
     if a.to_me:
         msgs = [m for m in msgs if m.get("to") in (who, "all", None) or m.get("from") == who]
-    for m in msgs:
-        print(_line(m))
+    i = 0
+    while i < len(msgs):
+        # A run of releases by one author (a janitor clean-up) is one line, not hundreds in every agent's brief.
+        j = i
+        while (j + 1 < len(msgs) and msgs[j + 1].get("kind") == "release" == msgs[i].get("kind")
+               and msgs[j + 1].get("from") == msgs[i].get("from")):
+            j += 1
+        if j - i >= 2:
+            print(f"#{msgs[i]['seq']}-#{msgs[j]['seq']} {msgs[i].get('from')} release: {j - i + 1} claims released "
+                  f"(view.py show {msgs[i]['seq']} for one)")
+        else:
+            for m in msgs[i:j + 1]:
+                print(_line(m))
+        i = j + 1
     new_head = max((m["seq"] for m in B.good(B.load_msgs(root))), default=since)
     cur.parent.mkdir(parents=True, exist_ok=True)
     cur.write_text(str(new_head), encoding="utf-8")
@@ -104,7 +144,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog="view", description=__doc__.splitlines()[0])
     ap.add_argument("--board"); ap.add_argument("--project")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("digest")
+    sub.add_parser("digest").add_argument("--all", action="store_true", help="every thread and claim, unbounded")
     b = sub.add_parser("brief"); b.add_argument("--as", dest="as_"); b.add_argument("--to-me", action="store_true")
     b.add_argument("--all", action="store_true")
     s = sub.add_parser("show"); s.add_argument("n", type=int, nargs="+")

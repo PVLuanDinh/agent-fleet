@@ -646,6 +646,48 @@ def fleet_bridge_mechanics():
     return res
 
 
+def janitor_mechanics():
+    # Board readability: a stale claim (holder idle, legacy/expired) is released on the record with one owner auth.
+    import os, time as _t
+    import janitor as J
+    import view as V
+    os.environ["JANITOR_NO_FLEET"] = "1"
+    tmp = Path(tempfile.mkdtemp(prefix="janitor-")); root = tmp / "b"; a = ["--board", str(root)]; res = []
+    try:
+        for p in ("src/a1.py", "src/a2.py", "src/a3.py"):
+            # lease-aware boards: a live lease is never stale, so give these a 1s lease that lapses
+            run(B.main, a + ["claim", p, "--as", "gone"] + (["--ttl", "1s"] if hasattr(B, "read_lease") else []))
+        _t.sleep(1.6)
+        run(B.main, a + ["claim", "src/c.py", "--as", "busy"])
+        stale = J.stale_claims(root, J.hours("0.0003h"))
+        res.append(("stale_means_idle_holder_only", sorted(s["path"] for s in stale) == ["src/a1.py", "src/a2.py", "src/a3.py"]))
+        res.append(("check_over_stale_limit", run(J.main, a + ["check", "--stale-limit", "1", "--budget", "99999", "--idle", "0.0003h"])[0] == 1))
+        res.append(("check_over_digest_budget_with_stale", run(J.main, a + ["check", "--stale-limit", "999", "--budget", "1",
+                                                                          "--idle", "0.0003h"])[0] == 1))
+        res.append(("check_budget_without_stale_is_ok", run(J.main, a + ["check", "--stale-limit", "999", "--budget", "1",
+                                                                       "--idle", "99h"])[0] == 0))
+        res.append(("check_ok_under_both", run(J.main, a + ["check", "--stale-limit", "999", "--budget", "99999"])[0] == 0))
+        res.append(("clean_refused_without_auth", run(J.main, a + ["clean", "--idle", "0.0003h"])[0] == 1))
+        note = B.post(root, "busy", "note", "not an authorization")["seq"]
+        res.append(("authorize_rejects_non_owner_answer", run(J.main, a + ["authorize", "--owner-auth", str(note)])[0] == 1))
+        q = run(B.main, a + ["ask-owner", "--as", "janitor", "release claims of idle holders?"])[1].split("#")[-1].strip()
+        ans = run(B.main, a + ["answer", q, "yes, clean up the stale claims"])[1].split("#")[1].split()[0]
+        res.append(("authorize_accepts_owner_answer", run(J.main, a + ["authorize", "--owner-auth", ans])[0] == 0))
+        rc = run(J.main, a + ["clean", "--idle", "0.0003h"])[0]
+        gone = [B.claim_file(root, p).exists() for p in ("src/a1.py", "src/a2.py", "src/a3.py")]
+        res.append(("clean_releases_stale_keeps_active", rc == 0 and not any(gone) and B.claim_file(root, "src/c.py").exists()))
+        rel = [m for m in B.good(B.load_msgs(root)) if m.get("kind") == "release"]
+        res.append(("releases_on_record_by_janitor", len(rel) == 3 and all(m.get("from") == "janitor"
+                    and m.get("released_for") == "gone" for m in rel)))
+        res.append(("verify_intact_after_clean", B.verify(root) == []))
+        out = run(V.main, a + ["brief", "--as", "reader", "--all"])[1]
+        res.append(("brief_collapses_release_run", "3 claims released" in out))
+    finally:
+        os.environ.pop("JANITOR_NO_FLEET", None)
+        shutil.rmtree(tmp, ignore_errors=True)
+    return res
+
+
 def claim_guard_mechanics():
     # Pre-commit claim guard: a commit touching a file someone ELSE claims is refused at the point of damage.
     import os
@@ -706,6 +748,8 @@ if __name__ == "__main__":
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  fleet-bridge: {name}")
     for name, ok in claim_guard_mechanics():
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  claim-guard: {name}")
+    for name, ok in janitor_mechanics():
+        bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  janitor: {name}")
     for name, ok in review_mechanics():
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  review: {name}")
     for name, ok in review_regressions():

@@ -366,3 +366,20 @@ happens: a git `pre-commit` hook refuses a commit whose staged files are claimed
 - No identity (a human or the integrator) means the commit is allowed with a note. If the guard script is missing the
   hook skips it, so a shared hooks dir never blocks every commit; if the board cannot be read, the lane's commit is refused.
 - It only READS claim files, so `board.py`/`score.py` stay byte-identical for tasks that pinned them.
+
+## 11. Board janitor: keep what agents read small (stale claims)
+
+A board never shrinks (hash chain, score anchors), but what every lane READS can rot: claims left by dead or finished
+lanes fill `view.py digest`. Measured on a real 2,950-message board: the full state was ~19k tokens per read, 419 claims
+held by agents silent for days.
+
+- `view.py digest` is bounded: threads active in 48h, claims of holders active in 24h; the rest collapse to counts
+  (`digest --all` lists everything). `view.py brief` folds a run of one author's releases into one line.
+- `janitor.py check --board B` exits 1 (CLEAN DUE) when stale claims exceed `--stale-limit` (25), or the digest is over
+  `--budget` (4,000 tokens) while stale claims exist. Stale = holder posted nothing for `--idle` (24h), no live
+  agent-manager session, and the claim is legacy or its lease expired. Active threads over budget print a note only.
+- `janitor.py clean` releases each stale claim through `board.py release --for <holder> --owner-auth N` as `janitor`,
+  so every release is on the record and verify stays INTACT. `N` is ONE standing owner answer recorded by
+  `janitor.py authorize --owner-auth N` in `<board>/janitor.json`; without it clean refuses (`--dry-run` always works).
+- The monitor: list it as a non-required preflight entry (check = `janitor.py check`, install = `janitor.py clean`),
+  so every lane spawn runs it and cleans when the limit is hit.
