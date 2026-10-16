@@ -561,6 +561,16 @@ def fleet_bridge_mechanics():
                " ❯ No, exit\n   Yes, I trust this folder\n Enter to confirm · Esc to\n cancel") == "trust prompt"),
            ("finished_screen_not_blocked", F.blocked_reason("● OK\n✻ Brewed for 3s · done 3:51 AM\n❯ \n"
                                                             "  ⏸ manual mode on · ? for s…") == ""),
+           # Captured live 2026-10-14 (probe-1014, fold worktree): parked unseen, sessions said 0 need attention.
+           ("blocked_external_imports_live", F.blocked_reason(
+               "  allow this for third-party\n  repositories.\n  External imports:\n    /mnt/c/User…claude/RTK.md\n"
+               "  ❯ No, disable external\n    imports\n    Yes, allow external imports\n  Enter to confirm · Esc to\n"
+               "  cancel") == "external imports prompt"),
+           # Captured live 2026-10-14 (fold-r2-builder): the brief sat outside the cwd; sessions said 0 need attention.
+           ("blocked_read_outside_live", F.blocked_reason(
+               " Read outside the working directories\n Allow this read outside the working directories?\n"
+               " ❯ 1. Yes, and keep allowing any reads outside the working directories\n"
+               "   4. Yes, but ask again next time\n Esc to cancel · Tab to amend") == "read-outside prompt"),
            ("blocked_login", F.blocked_reason("Select login method:") == "login"),
            ("working_screen_not_blocked", F.blocked_reason("* Thinking... (12s - esc to interrupt)\n> fix the bug") == ""),
            ("idle_prompt_not_blocked", F.blocked_reason("> \n  ? for shortcuts") == ""),
@@ -578,7 +588,11 @@ def fleet_bridge_mechanics():
                            capture_output=True, text=True, timeout=60)
         d = json.loads(cfg.read_text(encoding="utf-8"))
         res.append(("trust_sets_new_folder", p.returncode == 0 and d["projects"]["/mnt/c/new"]["hasTrustDialogAccepted"] is True))
-        res.append(("trust_keeps_existing_keys", d["keep"] == 1 and d["projects"]["/mnt/d/a"] == {"lastCost": 2, "hasTrustDialogAccepted": True}))
+        res.append(("trust_keeps_existing_keys", d["keep"] == 1 and d["projects"]["/mnt/d/a"].get("lastCost") == 2
+                    and d["projects"]["/mnt/d/a"]["hasTrustDialogAccepted"] is True))
+        new = d["projects"]["/mnt/c/new"]
+        res.append(("trust_skips_imports_prompt_as_its_default_no", new.get("hasClaudeMdExternalIncludesWarningShown") is True
+                    and new.get("hasClaudeMdExternalIncludesApproved") is False))
         res.append(("kill_refuses_non_id", run(F.main, ["kill", "am_x; rm -rf /"])[0] == 1))
         res.append(("spawn_requires_directory", run(F.main, ["spawn", "--prompt", "hi"])[0] == 2))
     finally:

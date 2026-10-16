@@ -46,13 +46,18 @@ WSL_TRUST = (
     "import json,os,sys,tempfile\n"
     "p=os.path.expanduser('~/.claude.json')\n"
     "d=json.load(open(p,encoding='utf-8')) if os.path.exists(p) else {}\n"
-    "for f in sys.argv[1:]: d.setdefault('projects',{}).setdefault(f,{})['hasTrustDialogAccepted']=True\n"
+    "for f in sys.argv[1:]:\n"
+    " e=d.setdefault('projects',{}).setdefault(f,{}); e['hasTrustDialogAccepted']=True\n"
+    # The CLAUDE.md external-imports prompt parks a lane too; answer it as its own default ("No"), never wider.
+    " e['hasClaudeMdExternalIncludesWarningShown']=True; e.setdefault('hasClaudeMdExternalIncludesApproved',False)\n"
     "fd,t=tempfile.mkstemp(dir=os.path.dirname(p))\n"
     "with os.fdopen(fd,'w',encoding='utf-8') as h: json.dump(d,h,indent=2)\n"
     "os.chmod(t,0o600); os.replace(t,p); print('trusted',*sys.argv[1:])\n")
 # A pane parked on one of these never starts its task, and agent-manager still shows it as "starting".
 BLOCKERS = [("trust prompt", r"trust (the files in )?this folder"), ("login", r"select login method|please run /login"),
-            ("theme picker", r"choose the text style"), ("permission prompt", r"do you want to (proceed|allow)")]
+            ("theme picker", r"choose the text style"), ("external imports prompt", r"allow external imports"),
+            ("read-outside prompt", r"allow this read outside"),
+("permission prompt", r"do you want to (proceed|allow)")]
 
 
 def wsl_prefix() -> list:
@@ -234,7 +239,9 @@ def main(argv=None):
     sub.add_parser("on"); sub.add_parser("off")
     sub.add_parser("trust").add_argument("dirs", nargs="+")
     sub.add_parser("spawn", add_help=False)
-    sub.add_parser("sessions").add_argument("--json", action="store_true")
+    sp = sub.add_parser("sessions")
+    sp.add_argument("--json", action="store_true")
+    sp.add_argument("--all", action="store_true", help="also list ARCHIVED sessions (hidden by default)")
     sub.add_parser("kill").add_argument("ids", nargs="+")
     u = sub.add_parser("ui"); u.add_argument("action", choices=["start", "stop", "status", "shot", "keys", "attach"])
     u.add_argument("more", nargs="*")
@@ -259,11 +266,15 @@ def main(argv=None):
         return trust(args.dirs)
     if args.cmd == "sessions":
         rows = sessions()
+        # Archived rows are history, not agents: listing them as "dead" read as 30+ failed agents (owner, 2026-10-15).
+        hidden = 0 if args.all else sum(1 for r in rows if r.get("archived"))
+        rows = rows if args.all else [r for r in rows if not r.get("archived")]
         for r in rows:
             flag = f"  BLOCKED: {r['blocked']}" if r["blocked"] else ""
             print(json.dumps(r) if args.json else f"{r['id']} {r['status']:9} {r['tool']:7} {r['name']}  {r['directory']}{flag}")
         if not args.json:
-            print(f"{len(rows)} session(s), {sum(1 for r in rows if r['blocked'])} need attention")
+            print(f"{len(rows)} session(s), {sum(1 for r in rows if r['blocked'])} need attention"
+                  + (f", {hidden} archived hidden (--all to list)" if hidden else ""))
         return 0
     if args.cmd == "ui":
         if args.action == "start":

@@ -208,7 +208,8 @@ seen through WSL's PATH does not work there.
 | Where you are | How to use it |
 |---|---|
 | a terminal (Windows Terminal WSL tab, or `wsl -d Ubuntu`) | `agent-manager`: the full TUI. `space` prompt bar spawns or answers, `tab` picks the CLI, `ctrl+t` fresh worktree, `ctrl+r` diff review with line comments, `v` revive, `y` copy last reply |
-| this Desktop session, terminal Claude, Codex | `python $B/fleet.py am <subcommand>` (any agent-manager CLI command, run in WSL with argv intact); or register its MCP server once: `python $B/fleet.py mcp-config` prints the JSON and the `claude mcp add -s user ...` line. Then `create_session`, `list_sessions`, `read_session`, `send_session`, `wait_for_session`, `review` are tools in every session |
+| this Desktop session, terminal Claude, Codex | `python $B/fleet.py` (`spawn`, `sessions`, `kill`, `archive-dead`, `ui`, `leases`), or `fleet.py am <subcommand>` (any agent-manager CLI command, run in WSL with argv intact). The MCP server (`fleet.py mcp-config`) does NOT serve these callers: every tool, `list_sessions` included, refuses with "not inside an Agent Manager session or terminal" unless the server's env names a REAL session in `AGENT_MANAGER_SESSION_ID` (a fake id is refused too; measured 2026-10-14, obs 2346). Owner chose CLI only from outside |
+| skills inside a WSL lane | WSL claude reads WSL's own `~/.claude`, which starts with no skills, no hooks and no global CLAUDE.md. Link the skills once: `ln -s /mnt/c/Users/<you>/.claude/skills ~/.claude/skills` (move any existing folder aside first). Plugins must be installed in WSL claude separately. Windows hooks can run in lanes through a WSL bridge (`python3 win_hook.py ps1 <C:\hook.ps1>` in WSL settings: path translation both ways, exit code kept). A lane writes under any `.claude` folder with Bash only (Claude Code refuses Write/Edit there as a sensitive file). Every hard rule a lane must obey still goes in its brief |
 | inside an agent-manager session | its MCP tools are already wired in. Side effect to know: when it launches a CLI, agent-manager writes an `agent-manager` entry into that CLI's own MCP config inside WSL (`claude mcp add`, codex `config.toml`) |
 
 `fleet.py` speaks to WSL with `wsl.exe -d <distro> --exec`, never `--`: `--` re-joins argv into one
@@ -223,6 +224,21 @@ Three traps found live (2026-10-14: two reviewers sat 14 minutes on a prompt nob
 | spawn an agent | `python $B/fleet.py spawn --directory <dir> --name <n> --tool claude --prompt "..."` (Windows paths are translated) | Claude Code stops at **"Do you trust this folder?"** in any folder WSL claude has never opened, and the default choice is "No, exit". `fleet.py spawn` marks the folder trusted in WSL's `~/.claude.json` first. `fleet.py trust <dir>...` does only that step |
 | see who is stuck | `python $B/fleet.py sessions` | agent-manager can keep showing a parked session as `starting` for its whole life. This reads each live pane and flags `BLOCKED: trust prompt / login / permission prompt / pane gone` |
 | stop a session | `python $B/fleet.py kill <id>...` | agent-manager's `kill` and `archive` need a caller session ("not inside an Agent Manager session"). This kills the tmux session `am_<id>` on its `agentmgr` socket; the row turns dead when the TUI next runs, and archiving happens there |
+
+Never probe with `fleet.py am <cmd> --help`: an unknown flag opens the TUI and hangs the caller.
+
+Lanes on a WINDOWS checkout from WSL (measured 2026-10-14 on a real project):
+- **WSLENV or wrong code.** A WSL lane calling a Windows venv `python.exe` drops `PYTHONPATH` etc. unless
+  `WSLENV=PYTHONUTF8:PYTHONPATH:<any var a test reads>` is exported; an editable install then imports the MAIN
+  checkout's package, not the worktree's -- silently. Every brief carries the export and a `print(pkg.__file__)` check.
+- **Prompts that park a lane:** folder trust and CLAUDE.md external imports (`fleet.py trust` answers both, the
+  imports one as its own default "No"); "Allow this read outside the working directories?" for a brief or board
+  outside the cwd -- put those dirs in the lane folder's `.claude/settings.local.json` `permissions.additionalDirectories`
+  with a scoped `allow` list (agent-manager has no permission-mode flag). `fleet.py sessions` flags all three.
+- **WSL Claude has no Windows hooks unless they are bridged** (`hooks/win_hook.py`, see `hooks/README.md`): without the
+  bridge there are no policy/route/graphify reminders inside the lane. Either way the brief carries every hard rule in text.
+- **`review.py next` has no task filter:** it hands the board's least-reviewed item, which on a big board is an
+  old unrelated one. Name the item number in the reviewer brief.
 
 Run `fleet.py sessions` after every spawn and before reading silence as progress. A `BLOCKED`
 row needs a person (or a kill), never a wait.
