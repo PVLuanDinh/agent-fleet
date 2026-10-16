@@ -375,6 +375,18 @@ def main(argv=None):
         if trust([rest[i]]) != 0:
             return 1
         rest = with_preamble(rest, proj)
+        if proj.get("board") and "--name" in rest:
+            # Enforce board claims at commit time in the lane's worktree, under the lane's name.
+            lane_dir = to_win_path(rest[i]) if os.name == "nt" else rest[i]
+            name = rest[rest.index("--name") + 1]
+            try:
+                import claim_guard
+                if subprocess.run(["git", "-C", lane_dir, "rev-parse", "--is-inside-work-tree"],
+                                  capture_output=True, text=True).stdout.strip() == "true":
+                    print(f"claim guard: {claim_guard.install(lane_dir, proj['board'], name)} (lane {name})")
+            except Exception as e:
+                print(f"fleet: spawn refused, claim guard could not be installed ({e})", file=sys.stderr)
+                return 1
         return subprocess.call(wsl_prefix() + ["bash", "-lc", 'exec agent-manager spawn "$@"', "am"] + rest)
     if rest:
         ap.error(f"unrecognized arguments: {' '.join(rest)}")

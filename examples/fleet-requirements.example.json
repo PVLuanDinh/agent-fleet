@@ -37,7 +37,8 @@
           "check": "command -v rea >/dev/null",
           "install": "npm install -g --prefix ~/.local rea-agents@6.3.0"
         }
-      ]
+      ],
+      "board": "C:\\Users\\<you>\\.claude\\agent-board\\myproject"
     }
   ]
 }

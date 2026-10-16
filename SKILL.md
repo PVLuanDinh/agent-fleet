@@ -353,3 +353,16 @@ front of every lane's `--prompt` (never twice). Use it for rules every lane must
 then invoke the routed skill; re-route when the task changes shape". A route gate alone accepts any valid route
 line, including a hand-written one, so the preamble is what makes lanes actually consult the router. Verified live:
 a preambled lane's first tool call was `Skill(hub)`, which routed it to `implement`, which it then invoked.
+
+## 10. Claims enforced at commit time (pre-commit claim guard)
+
+A claim used to be checked only when an agent asked for one. `scripts/claim_guard.py` enforces it where damage
+happens: a git `pre-commit` hook refuses a commit whose staged files are claimed on the board by someone else
+(case-folded like board claims; with the fleet layer on, an exclusive agent-manager lease counts too).
+
+- `claim_guard.py install --repo <worktree> --board <root> --as <name>` writes the hook (an existing pre-commit is
+  kept and runs first) and records the identity in that worktree's own git dir. `fleet.py spawn` does this
+  automatically when the project's requirements entry has `"board"`, using the lane's `--name`.
+- No identity (a human or the integrator) means the commit is allowed with a note. If the guard script is missing the
+  hook skips it, so a shared hooks dir never blocks every commit; if the board cannot be read, the lane's commit is refused.
+- It only READS claim files, so `board.py`/`score.py` stay byte-identical for tasks that pinned them.

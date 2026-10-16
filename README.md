@@ -128,6 +128,12 @@ check per skill, install-then-recheck, refuse on a required failure), and can pr
 check per skill, install-then-recheck, refuse on a required failure), and can prefix every lane prompt with a
 `lane_preamble` such as "route with the hub skill first". Example: [examples/fleet-requirements.example.json](examples/fleet-requirements.example.json); details: SKILL.md section 9.
 
+## Lane preflight (any project)
+
+`fleet.py spawn` first checks that every skill the project's lanes need is installed AND usable (a functional
+check per skill, install-then-recheck, refuse on a required failure), and can prefix every lane prompt with a
+`lane_preamble` such as "route with the hub skill first". Example: [examples/fleet-requirements.example.json](examples/fleet-requirements.example.json); details: SKILL.md section 9.
+
 ## Memory trim (any project)
 
 `scripts/memtrim.py` keeps Claude Code memory files (a START-HERE file, the auto-loaded `MEMORY.md`

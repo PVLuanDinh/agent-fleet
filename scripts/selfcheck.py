@@ -646,6 +646,51 @@ def fleet_bridge_mechanics():
     return res
 
 
+def claim_guard_mechanics():
+    # Pre-commit claim guard: a commit touching a file someone ELSE claims is refused at the point of damage.
+    import os
+    import claim_guard as CG
+    tmp = Path(tempfile.mkdtemp(prefix="claimguard-")); repo = tmp / "repo"; board = tmp / "board"; res = []
+    env = {k: v for k, v in os.environ.items() if k not in ("AGENT_NAME", "AGENT_FLEET_AS")}
+    g = lambda *a, cwd=repo: subprocess.run(["git", *a], cwd=cwd, capture_output=True, text=True, env=env)
+    try:
+        repo.mkdir(); g("init", "-q"); g("config", "user.email", "t@t"); g("config", "user.name", "t")
+        (repo / "README.md").write_text("x"); g("add", "."); g("commit", "-qm", "init")
+        (repo / "src").mkdir()
+        run(B.main, ["--board", str(board), "claim", "src/x.py", "--as", "a"])
+        run(B.main, ["--board", str(board), "claim", "SRC/Y.py", "--as", "a"])
+        CG.install(str(repo), str(board), "b")
+        def commit(name, msg):
+            (repo / "src" / name).write_text(msg); g("add", "-A"); return g("commit", "-qm", msg)
+        r = commit("x.py", "b edits a's file")
+        res.append(("guard_refuses_other_holders_file", r.returncode != 0 and "claimed by a" in r.stderr))
+        g("reset", "-q"); (repo / "src" / "x.py").unlink()
+        res.append(("guard_allows_unclaimed_file", commit("free.py", "b adds free").returncode == 0))
+        r = commit("y.py", "b edits case alias")
+        res.append(("guard_refuses_case_alias", r.returncode != 0 and "claimed by a" in r.stderr))
+        g("reset", "-q"); (repo / "src" / "y.py").unlink()
+        CG.install(str(repo), str(board), "a")
+        res.append(("guard_allows_the_holder", commit("x.py", "a edits own file").returncode == 0))
+        (CG.git_dir(str(repo)) / "agent-fleet-as").unlink()
+        res.append(("guard_no_identity_allows", commit("y.py", "integrator edit").returncode == 0))
+        # an existing repo gate is kept and still runs first
+        hooks = repo / ".git" / "hooks"
+        (hooks / "pre-commit").write_text("#!/bin/sh\necho repo-gate-red >&2\nexit 1\n", newline="\n")
+        (hooks / "pre-commit").chmod(0o755)
+        CG.install(str(repo), str(board), "a")
+        r = commit("z.py", "blocked by repo gate")
+        res.append(("guard_chains_existing_hook", (hooks / "pre-commit.agent-fleet-prev").exists()
+                    and r.returncode != 0 and "repo-gate-red" in r.stderr))
+        r = subprocess.run([sys.executable, str(HERE / "claim_guard.py"), "check", "--repo", str(repo),
+                            "--board", str(tmp / "missing"), "--as", "a"], capture_output=True, text=True, env=env)
+        res.append(("guard_missing_board_allows_nothing_held", r.returncode == 0))
+        body = (hooks / "pre-commit").read_text(encoding="utf-8")
+        res.append(("guard_hook_skips_when_script_missing", "|| exit 0" in body.split("PY=")[0]))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return res
+
+
 if __name__ == "__main__":
     bad = 0
     for name, ok in keepalive_mechanics():
@@ -659,6 +704,8 @@ if __name__ == "__main__":
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  fleet: {name}")
     for name, ok in fleet_bridge_mechanics():
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  fleet-bridge: {name}")
+    for name, ok in claim_guard_mechanics():
+        bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  claim-guard: {name}")
     for name, ok in review_mechanics():
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  review: {name}")
     for name, ok in review_regressions():

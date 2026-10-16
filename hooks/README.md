@@ -50,3 +50,16 @@ not reach them by themselves.
   WSL copy of the claude-mem plugin then. Node-only hooks can run on WSL's node directly.
 - Trap: Claude Code refuses Write/Edit under any `.claude` folder as a sensitive file, and allow rules do not
   override it, so lanes write logs and observation files there with Bash (`cat > f <<'EOF'`, `printf ... >>`), append only.
+
+### Lanes and `.claude` writes, plus lane cost
+
+- `lane_claude_guard.py` (WSL PreToolUse, matcher `Write|Edit|MultiEdit|NotebookEdit|Bash`, run with WSL `python3`):
+  DENIES a lane's writes into any `.claude` path before Claude Code's sensitive-file permission prompt can park the
+  lane, and points it at the helper. Reads, and running scripts that live under `.claude`, stay allowed.
+- `lane_obs.py observation|checkpoint|ledger`: the sanctioned way for a lane to record task-observer items. It picks
+  the next id (decimal, reserved exclusively so concurrent lanes never collide), appends only, skips exact repeats
+  and finds the lane's session id itself. `LANE_OBS_ROOT` overrides the log root.
+- Lane cost: in WSL `~/.claude/settings.json`, `"syncClaudeAiPlugins": false` keeps claude.ai-synced plugin skills
+  out of every lane turn and `"skillListingMaxDescChars": 300` shortens the skill listing. Measured on one lane that
+  runs a full review/commit chain: $10.73 -> $4.54 with the same steps. Do NOT set `syncClaudeAiSkills` false if WSL's
+  skills folder is a link to Windows: that setting moves synced skills to a trash folder, through the link.
