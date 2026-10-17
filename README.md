@@ -117,18 +117,18 @@ python $B/fleet.py archive-dead           # archive every dead row (confirms onl
 The TUI needs a real terminal; everything else works from Claude Desktop or a terminal. Results and scores
 stay on the board: a green row in the TUI is not a pass. Optional Claude Code hooks (keep the hidden TUI running; open it in a Desktop Terminal tab when the skill is used): [hooks/README.md](hooks/README.md). Details: [SKILL.md](SKILL.md) section 7.
 
-## Lane preflight (any project)
+### The agent-fleet TUI (branch `tui`)
 
-`fleet.py spawn` first checks that every skill the project's lanes need is installed AND usable (a functional
-check per skill, install-then-recheck, refuse on a required failure), and can prefix every lane prompt with a
-`lane_preamble` such as "route with the hub skill first". Example: [examples/fleet-requirements.example.json](examples/fleet-requirements.example.json); details: SKILL.md section 9.
+The [`tui` branch](https://github.com/PVLuanDinh/agent-fleet/tree/tui) holds a fork of agent-manager v0.41.0
+(Apache-2.0, upstream history and NOTICE kept; changes listed in its `FORK.md`) with a redesigned interface:
+native-desktop palette (`fleet` / `fleet light` themes), states aligned in one column, hairline frame, and a
+header strip showing the board's open owner questions and claims. Same binary name, CLI, MCP server, keys and
+actions as upstream. `fleet.py ui start` passes the board path (`AGENT_FLEET_BOARD`) to it.
 
-## Lane preflight (any project)
-
-`fleet.py spawn` first checks that every skill the project's lanes need is installed AND usable (a functional
-check per skill, install-then-recheck, refuse on a required failure), and can prefix every lane prompt with a
-`lane_preamble` such as "route with the hub skill first". Example: [examples/fleet-requirements.example.json](examples/fleet-requirements.example.json); details: SKILL.md section 9.
-
+```bash
+git clone -b tui https://github.com/PVLuanDinh/agent-fleet.git agent-fleet-tui && cd agent-fleet-tui
+go build -ldflags "-X main.version=0.41.0" -o ~/.local/bin/agent-manager .
+```
 ## Lane preflight (any project)
 
 `fleet.py spawn` first checks that every skill the project's lanes need is installed AND usable (a functional
