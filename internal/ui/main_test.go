@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"github.com/YoanWai/agent-manager/internal/mcpreg"
 	"os"
 	"os/exec"
 	"testing"
@@ -28,6 +29,7 @@ func TestMain(m *testing.M) {
 	// The suite keeps guarding upstream's feed, update and auto-open flow;
 	// ownbuild_test.go pins the agent-fleet build's own behavior.
 	ownBuild = false
+	mcpreg.CLIOnly = false
 	// The suite runs as if at the machine it runs on, even when the
 	// developer reached it over SSH.
 	remoteTerminal = localTerminal

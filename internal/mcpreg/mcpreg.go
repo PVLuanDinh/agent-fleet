@@ -54,10 +54,20 @@ var knownStyles = map[string]bool{
 	StyleNone:      true,
 }
 
+// CLIOnly is the agent-fleet build's default: no session gets the MCP
+// server. Every MCP tool has a CLI subcommand with the same behavior (the
+// cli package's parity tests hold the two fronts together), and a session
+// with no MCP style is told to run "agent-fleet help" instead, so nothing
+// an agent could do is lost. Set it false to restore per-tool registration.
+var CLIOnly = true
+
 // Style resolves a tool's registration style: the explicit `mcp` config
 // value wins, otherwise a tool whose config key names a known style uses
-// it, and anything else registers nothing.
+// it, and anything else registers nothing. CLIOnly overrides all of it.
 func Style(toolName, explicit string) string {
+	if CLIOnly {
+		return StyleNone
+	}
 	if explicit != "" {
 		if knownStyles[explicit] {
 			return explicit
