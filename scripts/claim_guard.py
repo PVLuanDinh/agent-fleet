@@ -9,7 +9,7 @@ mcp_agent_mail's pre-commit guard enforces its file leases. It only READS the bo
   claim_guard.py check --repo DIR --board ROOT [--as NAME]   what the hook runs; exit 1 lists each held path
 Identity: --as, else $AGENT_NAME / $AGENT_FLEET_AS, else <git-dir>/agent-fleet-as (written by install, per worktree).
 No identity = a human or the integrator committing: allowed with a note. Claimed paths match case-folded, as
-board.py claims do. With the fleet layer on (fleet.on), an exclusive agent-manager lease counts as a claim too.
+board.py claims do. With the fleet layer on (fleet.on), an exclusive agent-fleet lease counts as a claim too.
 Bypass is git's own `--no-verify` (only on the owner's word).
 """
 import argparse, os, re, stat, subprocess, sys
@@ -68,7 +68,7 @@ def check(repo, board, who) -> list:
             sys.path.insert(0, str(HERE))
             import fleet
             for l in fleet.conflicts(p, Path(native(board))):
-                held.append(f"{rel}: agent-manager session {l['session_id']} holds an exclusive lease ({l['pattern']})")
+                held.append(f"{rel}: agent-fleet session {l['session_id']} holds an exclusive lease ({l['pattern']})")
     return held
 
 

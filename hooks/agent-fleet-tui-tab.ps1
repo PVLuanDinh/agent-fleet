@@ -1,6 +1,6 @@
 # PostToolUse (registered on matcher Skill only: a Bash|PowerShell matcher would add a PowerShell start to
 # every shell call in every session; the shell branch below stays for a wider matcher): the first time a Claude Code DESKTOP session uses agent-fleet, tell
-# the model to open the agent-manager TUI in a Terminal-panel tab (attached to the shared hidden TUI that
+# the model to open the agent-fleet TUI in a Terminal-panel tab (attached to the shared hidden TUI that
 # agent-fleet-ui-keeper.ps1 keeps running). A hook cannot open a Desktop terminal tab itself; the model's
 # run_in_terminal tool can, so this injects the instruction once per session.
 try {

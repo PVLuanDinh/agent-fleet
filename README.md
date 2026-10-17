@@ -97,20 +97,20 @@ $env:AGENT_NAME = 'lead'; claude
 
 The installer writes the hook with the absolute path of the Python that ran it, so it works on any account and OS (`python3`, a venv, Windows). Run it with a Python that will stay installed: if `python` on your PATH is some tool's private venv, the hook breaks (silently, since it fails open) when that venv goes away. It uses the exec form (`command` + `args`), which needs a current Claude Code. Remove it with `--uninstall`; turn it off for one session with `AGENT_KEEPALIVE_OFF=1`.
 
-## The fleet: agent-manager (optional)
+## The fleet: the agent-fleet binary (optional)
 
-[agent-manager](https://github.com/YoanWai/agent-manager) runs each agent CLI as a live tmux session and shows
+The agent-fleet binary ([branch `tui`](https://github.com/PVLuanDinh/agent-fleet/tree/tui)) runs each agent CLI as a live tmux session and shows
 which one is working, waiting or blocked. On Windows it runs inside WSL. `scripts/fleet.py` bridges it:
 
 ```bash
-python $B/fleet.py am --version            # any agent-manager command, argv intact (wsl.exe --exec on Windows)
+python $B/fleet.py am --version            # any agent-fleet command, argv intact (wsl.exe --exec on Windows)
 python $B/fleet.py am help                 # the agent-fleet CLI: sessions, send, read, spawn, task, reserve, wait, ...
 python $B/fleet.py --board <root> on       # one claim domain: board claims refuse paths a fleet session leases
-python $B/fleet.py leases                  # live agent-manager leases
+python $B/fleet.py leases                  # live agent-fleet leases
 python $B/fleet.py spawn --directory <dir> --name w1 --tool claude --prompt "..."   # pre-trusts the folder, then spawns
 python $B/fleet.py sessions                # flags sessions BLOCKED on a trust/login/permission prompt
-python $B/fleet.py kill <id>               # stop a session from outside agent-manager
-python $B/fleet.py ui status              # one hidden agent-manager TUI keeps session status current (ui start/stop/shot/keys/attach)
+python $B/fleet.py kill <id>               # stop a session from outside agent-fleet
+python $B/fleet.py ui status              # one hidden agent-fleet TUI keeps session status current (ui start/stop/shot/keys/attach)
 python $B/fleet.py archive-dead           # archive every dead row (confirms only dialogs naming a dead session)
 ```
 
@@ -119,7 +119,7 @@ stay on the board: a green row in the TUI is not a pass. Optional Claude Code ho
 
 ### The agent-fleet TUI (branch `tui`)
 
-The [`tui` branch](https://github.com/PVLuanDinh/agent-fleet/tree/tui) holds a fork of agent-manager v0.41.0
+The [`tui` branch](https://github.com/PVLuanDinh/agent-fleet/tree/tui) holds the agent-fleet binary, an Apache-2.0 fork
 (Apache-2.0, upstream history and NOTICE kept; changes listed in its `FORK.md`) with a redesigned interface:
 native-desktop palette (`fleet` / `fleet light` themes), states aligned in one column, hairline frame, and a
 header strip showing the board's open owner questions and claims. The binary is `agent-fleet` (CLI only: every upstream MCP tool

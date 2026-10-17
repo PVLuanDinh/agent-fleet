@@ -4,7 +4,7 @@
 A board is append-only and hash-chained, and score.py anchors pin its history, so nothing is deleted or rotated.
 What grows without bound is the live STATE every lane reads (view.py digest): claims left behind by finished or
 dead lanes. A claim is STALE when its holder has posted nothing for --idle (default 24h) and the claim is a legacy
-one (no lease) or its lease expired, and the holder has no live agent-manager session. Releasing it goes through
+one (no lease) or its lease expired, and the holder has no live agent-fleet session. Releasing it goes through
 board.py's own owner-authorized release (`release --for <holder> --owner-auth N`), one standing owner answer
 recorded in <board>/janitor.json, so every release is on the record and verify stays intact.
 
@@ -50,7 +50,7 @@ def epoch(ts) -> float:
 
 
 def live_fleet_names() -> set:
-    """Names of agent-manager sessions still alive (a holder with one is never stale). Best effort."""
+    """Names of agent-fleet sessions still alive (a holder with one is never stale). Best effort."""
     if os.environ.get("JANITOR_NO_FLEET") == "1":
         return set()
     try:

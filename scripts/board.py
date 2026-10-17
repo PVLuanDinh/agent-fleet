@@ -340,7 +340,7 @@ def main(argv=None):
         except (RuntimeError, OSError, ValueError, subprocess.SubprocessError, sqlite3.Error) as e:
             print(f"board: {path} not claimed, fleet leases unreadable: {e}", file=sys.stderr); return 1
         if held:
-            print(f"board: {path} held by agent-manager session(s): "
+            print(f"board: {path} held by agent-fleet session(s): "
                   + "; ".join(f"{l['session_id']} {l['pattern']} {l['note']}".strip() for l in held), file=sys.stderr)
             return 1
         f.parent.mkdir(parents=True, exist_ok=True)

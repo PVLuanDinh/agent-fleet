@@ -1,4 +1,4 @@
-# SessionStart: keep ONE hidden agent-manager TUI running in WSL (tmux socket fleetui, session ui).
+# SessionStart: keep ONE hidden agent-fleet TUI running in WSL (tmux socket fleetui, session ui).
 # only while its TUI runs; without it a parked or killed session keeps reading "starting".
 # Detached and idempotent: `fleet.py ui start` returns at once when the TUI already runs, so many
 # sessions starting together cost one TUI. Never blocks the session. Watch it live:

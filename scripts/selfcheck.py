@@ -491,7 +491,7 @@ def keepalive_mechanics():
 
 
 def fleet_mechanics():
-    # One claim domain: board claims also refuse paths an agent-manager session leases exclusively.
+    # One claim domain: board claims also refuse paths an agent-fleet session leases exclusively.
     import os, sqlite3, time
     import fleet as F
     tmp = Path(tempfile.mkdtemp(prefix="agentfleet-")); root = tmp / "b"; db = tmp / "state.db"; res = []
@@ -574,7 +574,7 @@ def fleet_bridge_mechanics():
            ("blocked_login", F.blocked_reason("Select login method:") == "login"),
            ("working_screen_not_blocked", F.blocked_reason("* Thinking... (12s - esc to interrupt)\n> fix the bug") == ""),
            ("idle_prompt_not_blocked", F.blocked_reason("> \n  ? for shortcuts") == ""),
-           # Archive dialog captured live from agent-manager 0.41.0; archive-dead confirms only names it was given.
+           # Archive dialog captured live from agent-fleet 0.41.0; archive-dead confirms only names it was given.
            ("dialog_name_live_0_41", F.dialog_name("│   archive claude-sonnet-rv-fold-a-1014?   │\n"
                                                    "│   frees its RAM, t to find it.   │\n│   y/↵ archive  n/esc cancel   │")
             == "claude-sonnet-rv-fold-a-1014"),

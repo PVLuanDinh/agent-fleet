@@ -1,12 +1,12 @@
 ---
 name: agent-fleet
-description: Run and coordinate many coding agents at once. Two layers in one skill - (1) a durable file message board with claims, owner questions, peer review and an anti-gaming scorer, reachable from Claude Desktop (Code tab), terminal Claude, subagents, Agent-Teams teammates and Codex; (2) agent-manager (tmux fleet, in WSL on Windows) to spawn agents as live sessions, see which is working/blocked, answer without attaching, review diffs - driven from a terminal TUI or from any session through its CLI (agent-fleet binary, no MCP server). One claim domain covers both. Also (3) memtrim, which keeps memory files (a START-HERE, the auto-loaded MEMORY.md index) under a byte budget by moving text, never deleting it, with a verifier that proves no line was lost. Replaces agent-board. Use when agents in different sessions or tools must coordinate, when SendMessage can't reach a participant, when you want to spawn/watch a fleet of agent CLIs, or when a multi-agent task needs a cheat-resistant pass/fail. Triggers - "message board", "agent board", "agent fleet", "agent-manager", "spawn agents", "coordinate agents", "OWNER_QUESTIONS", "claim a file", "score the agents", "prevent gaming/cheating", "memory trim", "START-HERE too big", "MEMORY.md truncated".
+description: Run and coordinate many coding agents at once. Two layers in one skill - (1) a durable file message board with claims, owner questions, peer review and an anti-gaming scorer, reachable from Claude Desktop (Code tab), terminal Claude, subagents, Agent-Teams teammates and Codex; (2) the agent-fleet binary (tmux fleet, in WSL on Windows) to spawn agents as live sessions, see which is working/blocked, answer without attaching, review diffs - driven from a terminal TUI or from any session through its CLI (agent-fleet binary, no MCP server). One claim domain covers both. Also (3) memtrim, which keeps memory files (a START-HERE, the auto-loaded MEMORY.md index) under a byte budget by moving text, never deleting it, with a verifier that proves no line was lost. Replaces agent-board. Use when agents in different sessions or tools must coordinate, when SendMessage can't reach a participant, when you want to spawn/watch a fleet of agent CLIs, or when a multi-agent task needs a cheat-resistant pass/fail. Triggers - "message board", "agent board", "agent fleet", "spawn agents", "coordinate agents", "OWNER_QUESTIONS", "claim a file", "score the agents", "prevent gaming/cheating", "memory trim", "START-HERE too big", "MEMORY.md truncated".
 ---
 
 # agent-fleet
 
 Use `SendMessage` for fast talk inside one session. Use the board for anything that must
-survive the session or reach another process. Use agent-manager to start and watch agent CLIs.
+survive the session or reach another process. Use the agent-fleet binary to start and watch agent CLIs.
 
 | Layer | What it owns | Runs from |
 |---|---|---|
@@ -55,7 +55,7 @@ Every participant names itself: `--as G3` or `$AGENT_NAME` (`owner` is reserved)
 | report a result | `board.py post --as G3 --kind result --cite "pytest tests/test_x.py" --claim pass "..."` (refused without both) |
 | what is going on | `view.py digest`: the board's CURRENT state (latest line per thread, claims, open questions and challenges); about 430 tokens where a full read costs 6,900+ |
 | read new | `view.py brief --as G3` (one line per message you have not seen; it keeps your cursor); `view.py show N` for one message in full. Avoid bare `board.py read`: it re-sends the whole history |
-| claim before editing | `board.py claim src/pkg/mod.py --as G3` (repo-relative, case-folded). Exit 1 = held, by a board claim or (fleet on) an agent-manager lease: message the holder, work elsewhere |
+| claim before editing | `board.py claim src/pkg/mod.py --as G3` (repo-relative, case-folded). Exit 1 = held, by a board claim or (fleet on) an agent-fleet lease: message the holder, work elsewhere |
 | release when the commit lands | `board.py release src/pkg/mod.py --as G3` (holder only) |
 | claim with a lease | `board.py claim PATH --as G3 --ttl 4h` (default 4h; `30m`, `2d`, `0` = never). An expired claim can be taken by the next claimer, and the takeover is posted as a release on the record. `board.py renew PATH --as G3 [--ttl 4h]` extends it (holder only). Claims written before leases existed never expire |
 | share a path | `board.py claim PATH --as G3 --shared` (many readers, no exclusive holder while any shared claim is live); `release PATH --shared`. The pre-commit guard blocks only live exclusive claims |
@@ -202,11 +202,11 @@ Note for scripts that call `board.py claim` in a loop: `already claimed` also co
 ## 7. The fleet: the agent-fleet binary (CLI only)
 
 The fleet layer runs each agent CLI as a real tmux session and colours it working / waiting /
-finished / idle / errored. The binary is `agent-fleet`, this skill's own build of agent-manager
-(branch `tui` of this repo; Apache-2.0 fork of github.com/YoanWai/agent-manager v0.41.0): redesigned
+finished / idle / errored. The binary is `agent-fleet`, this skill's own build of agent-fleet
+(branch `tui` of this repo; an Apache-2.0 fork; origin, license and every change in its FORK.md): redesigned
 TUI, no upstream release checks, feed or self-update, issue reports to this repo, and NO MCP server in
 sessions (every MCP tool has a CLI subcommand with identical behavior; sessions are told to run
-`agent-fleet help`). `fleet.py` falls back to a stock `agent-manager` where no `agent-fleet` is
+`agent-fleet help`). `fleet.py` falls back to a stock `agent-fleet` where no `agent-fleet` is
 installed. tmux is Linux/macOS only, so on Windows it lives in WSL: build the `tui` branch there (see
 README) and install the agent CLIs (`claude`, `codex`, ...) inside WSL too: it spawns those. A
 Windows-only CLI seen through WSL's PATH does not work there.
@@ -214,22 +214,22 @@ Windows-only CLI seen through WSL's PATH does not work there.
 | Where you are | How to use it |
 |---|---|
 | a terminal (Windows Terminal WSL tab, or `wsl -d Ubuntu`) | `agent-fleet`: the full TUI. `space` prompt bar spawns or answers, `tab` picks the CLI, `ctrl+t` fresh worktree, `ctrl+r` diff review with line comments, `v` revive, `y` copy last reply |
-| this Desktop session, terminal Claude, Codex | `python $B/fleet.py` (`spawn`, `sessions`, `kill`, `archive-dead`, `ui`, `leases`), or `fleet.py am <subcommand>` (any `agent-fleet` CLI command, run in WSL with argv intact). CLI only: no MCP server is registered anywhere; `fleet.py mcp-config` still prints an opt-in entry, but its tools refuse unless a REAL session id is in `AGENT_MANAGER_SESSION_ID` |
+| this Desktop session, terminal Claude, Codex | `python $B/fleet.py` (`spawn`, `sessions`, `kill`, `archive-dead`, `ui`, `leases`), or `fleet.py am <subcommand>` (any `agent-fleet` CLI command, run in WSL with argv intact). CLI only: no MCP server is registered anywhere; `fleet.py mcp-config` still prints an opt-in entry, but its tools refuse unless a REAL session id is in `AGENT_FLEET_SESSION_ID` |
 | skills inside a WSL lane | WSL claude reads WSL's own `~/.claude`, which starts with no skills, no hooks and no global CLAUDE.md. Link the skills once: `ln -s /mnt/c/Users/<you>/.claude/skills ~/.claude/skills` (move any existing folder aside first). Plugins must be installed in WSL claude separately. Windows hooks can run in lanes through a WSL bridge (`python3 win_hook.py ps1 <C:\hook.ps1>` in WSL settings: path translation both ways, exit code kept). A lane writes under any `.claude` folder with Bash only (Claude Code refuses Write/Edit there as a sensitive file). Every hard rule a lane must obey still goes in its brief |
 | inside an agent-fleet session | the launch note points the agent at `agent-fleet help`: `sessions`, `send`, `read`, `spawn`, `task`, `reserve`, `wait`, `review-comment` and the rest, the same operations the MCP tools offered (parity-tested) |
 
 `fleet.py` speaks to WSL with `wsl.exe -d <distro> --exec`, never `--`: `--` re-joins argv into one
 shell string and silently drops the quoting (`am --version` opened the TUI). Distro: `AGENT_FLEET_WSL_DISTRO`.
 
-### Spawn, watch, stop from outside agent-manager
+### Spawn, watch, stop from outside agent-fleet
 
 Three traps found live (2026-10-14: two reviewers sat 14 minutes on a prompt nobody saw):
 
-| Need | Command | Why not the plain agent-manager call |
+| Need | Command | Why not the plain agent-fleet call |
 |---|---|---|
 | spawn an agent | `python $B/fleet.py spawn --directory <dir> --name <n> --tool claude --prompt "..."` (Windows paths are translated) | Claude Code stops at **"Do you trust this folder?"** in any folder WSL claude has never opened, and the default choice is "No, exit". `fleet.py spawn` marks the folder trusted in WSL's `~/.claude.json` first. `fleet.py trust <dir>...` does only that step |
-| see who is stuck | `python $B/fleet.py sessions` | agent-manager can keep showing a parked session as `starting` for its whole life. This reads each live pane and flags `BLOCKED: trust prompt / login / permission prompt / pane gone` |
-| stop a session | `python $B/fleet.py kill <id>...` | agent-manager's `kill` and `archive` need a caller session ("not inside an Agent Manager session"). This kills the tmux session `am_<id>` on its `agentmgr` socket; the row turns dead when the TUI next runs, and archiving happens there |
+| see who is stuck | `python $B/fleet.py sessions` | agent-fleet can keep showing a parked session as `starting` for its whole life. This reads each live pane and flags `BLOCKED: trust prompt / login / permission prompt / pane gone` |
+| stop a session | `python $B/fleet.py kill <id>...` | agent-fleet's `kill` and `archive` need a caller session ("not inside an agent-fleet session"). This kills the tmux session `am_<id>` on its `agentfleet` socket; the row turns dead when the TUI next runs, and archiving happens there |
 
 Never probe with `fleet.py am <cmd> --help`: an unknown flag opens the TUI and hangs the caller.
 
@@ -240,7 +240,7 @@ Lanes on a WINDOWS checkout from WSL (measured 2026-10-14 on a real project):
 - **Prompts that park a lane:** folder trust and CLAUDE.md external imports (`fleet.py trust` answers both, the
   imports one as its own default "No"); "Allow this read outside the working directories?" for a brief or board
   outside the cwd -- put those dirs in the lane folder's `.claude/settings.local.json` `permissions.additionalDirectories`
-  with a scoped `allow` list (agent-manager has no permission-mode flag). `fleet.py sessions` flags all three.
+  with a scoped `allow` list (agent-fleet has no permission-mode flag). `fleet.py sessions` flags all three.
 - **WSL Claude has no Windows hooks unless they are bridged** (`hooks/win_hook.py`, see `hooks/README.md`): without the
   bridge there are no policy/route/graphify reminders inside the lane. Either way the brief carries every hard rule in text.
 - **`review.py next` has no task filter:** it hands the board's least-reviewed item, which on a big board is an
@@ -251,7 +251,7 @@ row needs a person (or a kill), never a wait.
 
 ### The hidden TUI (automatic in every session)
 
-agent-manager updates session status (dead panes, finished turns) only while its TUI runs. The optional
+agent-fleet updates session status (dead panes, finished turns) only while its TUI runs. The optional
 SessionStart hook `hooks/agent-fleet-ui-keeper.ps1` (install: see `hooks/README.md`; off with
 `AGENT_FLEET_UI_OFF=1`) keeps ONE hidden TUI running in WSL on tmux socket `fleetui`, session `ui`. It is detached and
 idempotent: many sessions starting together still share one TUI. Measured: a killed session reads
@@ -276,15 +276,15 @@ Closing the tab only detaches; the shared TUI keeps running.
 
 ### One claim domain
 
-The board's claims are the ONLY claim system. agent-manager's own leases (`reserve_files`, `task`)
+The board's claims are the ONLY claim system. agent-fleet's own leases (`reserve_files`, `task`)
 are advisory and cannot be switched off, so they are folded in instead of duplicated:
 
 1. When the fleet works on a board, the lead runs once: `python $B/fleet.py --board <root> on`.
-   From then on `board.py claim` also reads agent-manager's live leases (read-only, its `state.db`)
-   and refuses a path an agent-manager session holds **exclusively** (exact, glob, directory, any
+   From then on `board.py claim` also reads agent-fleet's live leases (read-only, its `state.db`)
+   and refuses a path an agent-fleet session holds **exclusively** (exact, glob, directory, any
    case). Shared and expired leases do not block. An unreadable lease store refuses the claim
    (fails closed); `fleet.py off` returns the board to board-only claims.
-2. Every brief, including prompts sent to agent-manager sessions, says: **claim with
+2. Every brief, including prompts sent to agent-fleet sessions, says: **claim with
    `board.py claim`, never `reserve_files`**. Inside WSL the board is reached as
    `--board /mnt/c/Users/<you>/.claude/agent-board/<project>`.
 3. The reverse is not covered: an agent that calls `reserve_files` anyway does not see board claims.
@@ -296,7 +296,7 @@ the same relative path collide. That gives false refusals, never missed ones.
 
 ### What stays on the board
 
-agent-manager has no scorer, no owner-question flow, no hash-chained record and no keepalive. Status
+agent-fleet has no scorer, no owner-question flow, no hash-chained record and no keepalive. Status
 colours and `send_session` are for watching and steering. Results still go to the board as
 `post --kind result --cite --claim`, and tasks are still scored with `score.py`. A green row in the TUI
 is not a pass.
@@ -364,7 +364,7 @@ a preambled lane's first tool call was `Skill(hub)`, which routed it to `impleme
 
 A claim used to be checked only when an agent asked for one. `scripts/claim_guard.py` enforces it where damage
 happens: a git `pre-commit` hook refuses a commit whose staged files are claimed on the board by someone else
-(case-folded like board claims; with the fleet layer on, an exclusive agent-manager lease counts too).
+(case-folded like board claims; with the fleet layer on, an exclusive agent-fleet lease counts too).
 
 - `claim_guard.py install --repo <worktree> --board <root> --as <name>` writes the hook (an existing pre-commit is
   kept and runs first) and records the identity in that worktree's own git dir. `fleet.py spawn` does this
@@ -383,7 +383,7 @@ held by agents silent for days.
   (`digest --all` lists everything). `view.py brief` folds a run of one author's releases into one line.
 - `janitor.py check --board B` exits 1 (CLEAN DUE) when stale claims exceed `--stale-limit` (25), or the digest is over
   `--budget` (4,000 tokens) while stale claims exist. Stale = holder posted nothing for `--idle` (24h), no live
-  agent-manager session, and the claim is legacy or its lease expired. Active threads over budget print a note only.
+  agent-fleet session, and the claim is legacy or its lease expired. Active threads over budget print a note only.
 - `janitor.py clean` releases each stale claim through `board.py release --for <holder> --owner-auth N` as `janitor`,
   so every release is on the record and verify stays INTACT. `N` is ONE standing owner answer recorded by
   `janitor.py authorize --owner-auth N` in `<board>/janitor.json`; without it clean refuses (`--dry-run` always works).

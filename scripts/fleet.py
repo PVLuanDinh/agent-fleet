@@ -1,27 +1,27 @@
 #!/usr/bin/env python3
-"""Bridge from the board to agent-manager, the tmux agent fleet (github.com/YoanWai/agent-manager).
+"""Bridge from the board to the agent-fleet binary, the tmux agent fleet (branch tui of the agent-fleet repo).
 
-agent-manager is Linux/macOS only, so on Windows every call goes through `wsl.exe -d <distro>`.
+agent-fleet is Linux/macOS only, so on Windows every call goes through `wsl.exe -d <distro>`.
 
-  fleet.py am <args...>        run agent-manager (TUI with no args: needs a real terminal)
-  fleet.py leases [--json]     live agent-manager file leases (read-only, from its state.db)
+  fleet.py am <args...>        run agent-fleet (TUI with no args: needs a real terminal)
+  fleet.py leases [--json]     live agent-fleet file leases (read-only, from its state.db)
   fleet.py mcp-config          the stdio MCP command that lets a Desktop/CLI session drive the fleet
   fleet.py --board DIR on|off  (or --project NAME) join or leave one claim domain: with `on`, board.py claim also
-                               refuses a path an agent-manager session holds an exclusive lease on
+                               refuses a path an agent-fleet session holds an exclusive lease on
   fleet.py trust DIR...        pre-accept Claude Code's "trust this folder" prompt for DIR inside WSL
-  fleet.py spawn --directory DIR [agent-manager spawn args]   trust DIR, then spawn (Windows paths ok)
-  fleet.py sessions [--json]   agent-manager sessions, each checked for a blocking prompt or a vanished pane
-  fleet.py kill ID...          stop a session from outside agent-manager (its own `kill` needs a caller)
-  fleet.py ui start|stop|status|shot [N]|keys K...|attach   one hidden agent-manager TUI (tmux socket fleetui)
+  fleet.py spawn --directory DIR [agent-fleet spawn args]   trust DIR, then spawn (Windows paths ok)
+  fleet.py sessions [--json]   agent-fleet sessions, each checked for a blocking prompt or a vanished pane
+  fleet.py kill ID...          stop a session from outside agent-fleet (its own `kill` needs a caller)
+  fleet.py ui start|stop|status|shot [N]|keys K...|attach   one hidden agent-fleet TUI (tmux socket fleetui)
                                that keeps session status current; any session can screenshot or drive it
-  fleet.py archive-dead        archive every dead row through that TUI (agent-manager's `archive` needs a caller)
+  fleet.py archive-dead        archive every dead row through that TUI (agent-fleet's `archive` needs a caller)
   fleet.py preflight [--cwd DIR] [--no-fix]   install + functionally check every skill the project's lanes need
                                (~/.claude/fleet-requirements.json); `spawn` runs it first and refuses on a required failure
 
 Env: AGENT_FLEET_WSL_DISTRO (default Ubuntu); AGENT_FLEET_AM_DB reads that state.db file
-directly (tests, or a non-default agent-manager config dir).
+directly (tests, or a non-default agent-fleet config dir).
 
-ponytail: leases are matched on the path text only, not on which checkout the agent-manager
+ponytail: leases are matched on the path text only, not on which checkout the agent-fleet
 session runs in, so two repos with the same relative path collide. A false refusal, never a
 missed one. Upgrade path: compare against the session's repo column in state.db.
 """
@@ -32,19 +32,19 @@ DISTRO = os.environ.get("AGENT_FLEET_WSL_DISTRO", "Ubuntu")
 MARKER = "fleet.on"
 LEASE_SQL = ("SELECT pattern, mode, session_id, note, expires_at FROM file_reservations "
              "WHERE expires_at > ? ORDER BY acquired_at")
-# Runs inside WSL; prints NODB when agent-manager has never run there, so "no fleet" is not an error.
+# Runs inside WSL; prints NODB when agent-fleet has never run there, so "no fleet" is not an error.
 WSL_LEASES = (
     "import json,os,sqlite3,sys,time\n"
     "d=os.environ.get('XDG_CONFIG_HOME') or os.path.expanduser('~/.config')\n"
-    "p=os.path.join(d,'agent-manager','state.db')\n"
+    "p=os.path.join(d,'agent-fleet','state.db')\n"
     "if not os.path.exists(p): print('NODB'); sys.exit(0)\n"
     "c=sqlite3.connect('file:'+p+'?mode=ro',uri=True)\n"
     "print(json.dumps(c.execute(sys.argv[1],(time.time_ns(),)).fetchall()))\n")
 
 
-# The fleet binary: agent-fleet (this skill's build of agent-manager), else a stock agent-manager.
-AM = '"$(command -v agent-fleet || command -v agent-manager)"'
-TMUX_SOCKET = "agentmgr"  # agent-manager's own tmux server; each session is tmux session am_<id>
+# The fleet binary: agent-fleet, built from this repo's tui branch (lives in ~/.local/bin).
+AM = "agent-fleet"
+TMUX_SOCKET = "agentfleet"  # agent-fleet's own tmux server; each session is tmux session am_<id>
 # Runs inside WSL: mark folders trusted in Claude Code's ~/.claude.json, written atomically.
 WSL_TRUST = (
     "import json,os,sys,tempfile\n"
@@ -57,7 +57,7 @@ WSL_TRUST = (
     "fd,t=tempfile.mkstemp(dir=os.path.dirname(p))\n"
     "with os.fdopen(fd,'w',encoding='utf-8') as h: json.dump(d,h,indent=2)\n"
     "os.chmod(t,0o600); os.replace(t,p); print('trusted',*sys.argv[1:])\n")
-# A pane parked on one of these never starts its task, and agent-manager still shows it as "starting".
+# A pane parked on one of these never starts its task, and agent-fleet still shows it as "starting".
 BLOCKERS = [("trust prompt", r"trust (the files in )?this folder"), ("login", r"select login method|please run /login"),
             ("theme picker", r"choose the text style"), ("external imports prompt", r"allow external imports"),
             ("read-outside prompt", r"allow this read outside"),
@@ -96,7 +96,7 @@ def trust(dirs: list) -> int:
 
 
 UI_SOCKET, UI_SESSION = "fleetui", "ui"
-# agent-manager reconciles session status (dead panes, finished turns) only while its TUI runs.
+# agent-fleet reconciles session status (dead panes, finished turns) only while its TUI runs.
 
 
 def ui_tmux(*a) -> subprocess.CompletedProcess:
@@ -121,8 +121,8 @@ def ui_board() -> str:
 def ui_start() -> str:
     if ui_running():
         return "running"
-    if in_wsl(["bash", "-lc", "command -v agent-fleet || command -v agent-manager"]).returncode != 0:
-        return "agent-fleet (or agent-manager) not installed"
+    if in_wsl(["bash", "-lc", "command -v agent-fleet"]).returncode != 0:
+        return "agent-fleet not installed"
     board = ui_board()
     env = ["-e", f"AGENT_FLEET_BOARD={board}"] if board else []
     ui_tmux("new-session", "-d", "-s", UI_SESSION, "-x", "200", "-y", "50", *env, f"bash -lc 'exec {AM}'")
@@ -198,7 +198,7 @@ def read_db(path: str) -> list:
 
 def leases(strict: bool = False) -> list:
     """Live leases as dicts. Raises RuntimeError when they cannot be read; with strict (the board
-    joined the fleet), a missing wsl.exe or agent-manager state also raises instead of reading as none."""
+    joined the fleet), a missing wsl.exe or agent-fleet state also raises instead of reading as none."""
     if os.environ.get("AGENT_FLEET_AM_DB"):
         rows = read_db(os.environ["AGENT_FLEET_AM_DB"])
     else:
@@ -206,14 +206,14 @@ def leases(strict: bool = False) -> list:
             if strict:
                 raise RuntimeError("fleet: board joined the fleet but wsl.exe is not on PATH")
             return []
-        # Login shell, like agent-manager itself, so XDG_CONFIG_HOME from the profile applies.
+        # Login shell, like agent-fleet itself, so XDG_CONFIG_HOME from the profile applies.
         p = in_wsl(["bash", "-lc", 'exec python3 -c "$1" "$2"', "fleet", WSL_LEASES, LEASE_SQL])
         out = p.stdout.strip().splitlines()[-1] if p.stdout.strip() else ""
         if p.returncode != 0 or not out:
-            raise RuntimeError(f"fleet: cannot read agent-manager leases (rc={p.returncode}): {p.stderr.strip()[:300]}")
+            raise RuntimeError(f"fleet: cannot read agent-fleet leases (rc={p.returncode}): {p.stderr.strip()[:300]}")
         if out == "NODB":
             if strict:
-                raise RuntimeError(f"fleet: board joined the fleet but agent-manager has no state in WSL distro {DISTRO}")
+                raise RuntimeError(f"fleet: board joined the fleet but agent-fleet has no state in WSL distro {DISTRO}")
             return []
         rows = json.loads(out)
     return [dict(zip(("pattern", "mode", "session_id", "note", "expires_at"), r)) for r in rows]
@@ -240,7 +240,7 @@ def overlaps(path: str, pattern: str) -> bool:
 
 
 def conflicts(path: str, root: Path) -> list:
-    """Exclusive agent-manager leases over `path`; empty unless the board joined the fleet."""
+    """Exclusive agent-fleet leases over `path`; empty unless the board joined the fleet."""
     if not (root / MARKER).exists():
         return []
     return [l for l in leases(strict=True) if l["mode"] != "shared" and overlaps(path, l["pattern"])]
@@ -364,7 +364,7 @@ def main(argv=None):
     args, rest = ap.parse_known_args(argv)
 
     if args.cmd == "am":
-        # bash -lc: agent-manager lives in ~/.local/bin, which only a login shell puts on PATH.
+        # bash -lc: agent-fleet lives in ~/.local/bin, which only a login shell puts on PATH.
         return subprocess.call(wsl_prefix() + ["bash", "-lc", f'exec {AM} "$@"', "am"] + rest)
     if args.cmd == "spawn":
         # A folder WSL claude has never opened parks the new session on the trust prompt, unseen.
@@ -462,7 +462,7 @@ def main(argv=None):
         rc = 0
         for sid in args.ids:
             if not re.fullmatch(r"[0-9a-f]{8}", sid):
-                print(f"fleet: {sid!r} is not an agent-manager session id", file=sys.stderr); rc = 1; continue
+                print(f"fleet: {sid!r} is not an agent-fleet session id", file=sys.stderr); rc = 1; continue
             p = in_wsl(["tmux", "-L", TMUX_SOCKET, "kill-session", "-t", f"am_{sid}"])
             print(f"killed {sid}" if p.returncode == 0 else f"fleet: {sid}: {p.stderr.strip()}")
             rc |= p.returncode != 0
