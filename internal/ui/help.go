@@ -76,7 +76,7 @@ func (h *helpRows) fixed(key, does string) {
 
 func listHelpRows(list keybind.Table, arrowStep bool) [][2]string {
 	h := helpRows{list: list}
-	h.fixed("", "Tell your agent to manage sessions and terminals in Agent Manager.")
+	h.fixed("", "Tell your agent to manage sessions and terminals in agent-fleet.")
 	h.action("move the cursor up", keybind.Up)
 	h.action("move the cursor down", keybind.Down)
 	h.fixed("click", "focus a session in the split, select any other row")
@@ -262,7 +262,7 @@ func titledWith(name string, list keybind.Table, actions ...string) string {
 
 func reviewHelpSection(list keybind.Table) helpSection {
 	return helpSection{title: titledWith("review", list, keybind.Review), rows: [][2]string{
-		{"", "Tell your agent what to review in Agent Manager; they set it up."},
+		{"", "Tell your agent what to review in agent-fleet; they set it up."},
 		{"c", "comment on the line"},
 		{"d", "remove a draft, or mark sent feedback handled / open"},
 		{"C", "send drafts to the agent as the next review round"},

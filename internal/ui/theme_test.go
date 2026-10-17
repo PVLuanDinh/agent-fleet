@@ -30,6 +30,7 @@ func contrastRatio(a, b string) float64 {
 // lightThemeNames mirrors TestLightThemesPresent: the themes whose backdrop
 // is light, which the luminance split must classify exactly.
 var lightThemeNames = map[string]bool{
+	"fleet light":      true,
 	"solarized light":  true,
 	"catppuccin latte": true,
 	"tokyo night day":  true,
@@ -49,6 +50,7 @@ func TestLightBackdropClassification(t *testing.T) {
 
 func TestLightThemesPresent(t *testing.T) {
 	for _, name := range []string{
+		"fleet light",
 		"solarized light",
 		"catppuccin latte",
 		"tokyo night day",

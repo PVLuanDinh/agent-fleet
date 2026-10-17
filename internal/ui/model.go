@@ -313,6 +313,11 @@ type Model struct {
 	// the frame is not repainted forever.
 	bannerPhase int
 
+	// board reads the agent-fleet message board for the header strip; nil
+	// when $AGENT_FLEET_BOARD names none. boardSum is its last reading.
+	board    *boardScanner
+	boardSum boardSummary
+
 	startupPhase     int
 	startupAnimating bool
 	booting          bool
@@ -920,9 +925,9 @@ func autoThemeName(stored string, scheme systheme.Scheme) string {
 		return theme.Counterpart
 	}
 	if wantLight {
-		return "solarized light"
+		return "fleet light"
 	}
-	return "classic"
+	return "fleet"
 }
 
 const collapsedSetting = "collapsed_groups"
@@ -1017,7 +1022,8 @@ func (m *Model) requestRefresh() {
 
 func (m *Model) Init() tea.Cmd {
 	m.syncPollInput()
-	return tea.Batch(m.syncPaneTheme(), m.refreshExistingSessionUX, m.checkForUpdate, m.checkFeed, m.updateTick(), m.bannerTick(), m.previewTick(), m.startStartupTick(), m.sweepPastes, m.pasteSweepTick())
+	m.board = newBoardScanner()
+	return tea.Batch(m.boardScanCmd(), m.syncPaneTheme(), m.refreshExistingSessionUX, m.checkForUpdate, m.checkFeed, m.updateTick(), m.bannerTick(), m.previewTick(), m.startStartupTick(), m.sweepPastes, m.pasteSweepTick())
 }
 
 // updateMsg carries the result of a GitHub release check. A failed check may
@@ -1535,6 +1541,13 @@ func (m *Model) handleMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case bannerShimmerMsg:
 		m.bannerPhase = 0
 		return m, m.bannerTick()
+
+	case boardScanMsg:
+		m.boardSum = msg.sum
+		return m, m.boardTick()
+
+	case boardTickMsg:
+		return m, m.boardScanCmd()
 
 	case browserOpenMsg:
 		m.handleBrowserOpen(msg)

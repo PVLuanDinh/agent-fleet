@@ -19,12 +19,19 @@ func TestBannerShimmerReArms(t *testing.T) {
 	}
 }
 
-// The resting wordmark spans the mark's gradient: the two ends must differ,
-// darker teal on the left.
-func TestBannerRestGradient(t *testing.T) {
-	left := bannerRest(0)
-	right := bannerRest(float64(bannerWidth() - 1))
-	if left == right {
-		t.Fatal("gradient ends should differ")
+// The resting wordmark is set in the theme's brightest label across its
+// whole width, and the sweep's head leans it toward the accent.
+func TestBannerRestIsBrightAndSweepTintsAccent(t *testing.T) {
+	if got := bannerRest(0); got != current.Bright {
+		t.Fatalf("rest = %s, want the theme's bright label %s", got, current.Bright)
+	}
+	if bannerRest(0) != bannerRest(float64(bannerWidth()-1)) {
+		t.Fatal("a plain wordmark has one resting color end to end")
+	}
+	if lit := bannerTint(3, 3); lit == current.Bright {
+		t.Fatal("the column under the sweep head should be tinted toward the accent")
+	}
+	if bannerWord != "agent-fleet" {
+		t.Fatalf("wordmark = %q, want agent-fleet", bannerWord)
 	}
 }

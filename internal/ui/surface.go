@@ -27,8 +27,10 @@ func panelHex() string { return mix(current.Bg, current.Surface, 0.55) }
 // rail so it groups without announcing itself.
 func blockHex() string { return mix(current.Bg, current.Surface, 0.35) }
 
-// selectedHex is the band under the cursor's entry.
-func selectedHex() string { return current.Surface }
+// selectedHex is the band under the cursor's entry: the selection tone
+// tinted toward the accent, the way a native source list marks the focused
+// row, so the cursor reads as selection rather than as one more gray.
+func selectedHex() string { return mix(current.Surface, current.Accent, 0.2) }
 
 func quickModeHex() string { return panelHex() }
 
@@ -37,7 +39,7 @@ func searchFieldHex() string { return mix(panelHex(), current.Accent, 0.2) }
 
 // liftedHex is the band under a row lifted for reordering: the selection
 // tone pulled toward the accent, so the row reads as picked up.
-func liftedHex() string { return mix(current.Surface, current.Accent, 0.3) }
+func liftedHex() string { return mix(current.Surface, current.Accent, 0.45) }
 
 // dropHex is the band under the row a drag would land on: the selection
 // tone pulled toward the second accent, apart from the lifted row's.
@@ -59,48 +61,25 @@ func hrule(width int) string {
 	return lipgloss.NewStyle().Foreground(lipgloss.Color(ruleHex())).Render(strings.Repeat("─", width))
 }
 
-// railTopRow opens the body a third of a cell under the wordmark. Sextants,
-// not half blocks: no half block fits the corner over the half-width bleed
-// column at the height of the run beside it, so that cell always stepped.
+// railTopRow opens the body under the title with one hairline, the way a
+// native window separates its toolbar from its content: the rail keeps its
+// own fill beneath the line, and the line runs unbroken across both sides.
 func (m *Model) railTopRow(paneWidth, width int) string {
-	if paneWidth < 2 || paneWidth >= width {
-		return paint(hrule(width), width, backdropHex())
-	}
-	fill := lipgloss.NewStyle().Foreground(lipgloss.Color(panelHex()))
-	first := plain(fill.Render("🬹"), 1)
-	interior := lipgloss.NewStyle().Foreground(colorBg).Render(strings.Repeat("🬂", paneWidth-1))
-	last := lipgloss.NewStyle().Foreground(colorBg).Render("🬨")
-	return first + paint(interior, paneWidth-1, panelHex()) + paint(last, 1, panelHex()) +
-		paint(hrule(width-paneWidth-1), width-paneWidth-1, backdropHex())
+	return m.hairlineRow(paneWidth, width)
 }
 
-// boundedRuleRow closes the body. Over the pane it draws half blocks in the
-// pane's own tone — the fill bleeding half a cell past its box — and across
-// the content it draws the thin rule, whose center line meets the half
-// blocks' edge at the same height.
-// The run's interior is drawn inverted — the cell background carries the
-// pane tone and the glyph paints the backdrop half in the theme's backdrop
-// color — but both end cells are not. The terminal extends a row's edge
-// cell background into the window margin at full cell height, so an
-// inverted first cell smears pane tone past the pane's corner; drawing it
-// as a foreground half block keeps the margin on the terminal's own
-// background. The last cell sits over the bleed column, whose fill is only
-// half a cell wide, so it takes a quadrant instead of a half block and the
-// pane tone stops at the corner instead of jutting past it.
+// boundedRuleRow closes the body with the same hairline that opened it, so
+// the frame is two quiet lines rather than a drawn box. edge is kept for the
+// callers that once picked a half block per side; the line is the same.
 func (m *Model) boundedRuleRow(paneWidth, width int, edge string) string {
-	if paneWidth < 2 || paneWidth >= width {
-		return paint(hrule(width), width, backdropHex())
-	}
-	facing, corner := "▄", "▜"
-	if edge == "▄" {
-		facing, corner = "▀", "▟"
-	}
-	first := plain(lipgloss.NewStyle().Foreground(lipgloss.Color(panelHex())).Render(facing), 1)
-	interior := lipgloss.NewStyle().Foreground(colorBg).
-		Render(strings.Repeat(edge, paneWidth-1))
-	last := lipgloss.NewStyle().Foreground(colorBg).Render(corner)
-	return first + paint(interior, paneWidth-1, panelHex()) + paint(last, 1, panelHex()) +
-		paint(hrule(width-paneWidth-1), width-paneWidth-1, backdropHex())
+	return m.hairlineRow(paneWidth, width)
+}
+
+// hairlineRow is a full-width separator on the backdrop. The rail's fill
+// starts on the row below it and stops on the row above the closing one, so
+// the sidebar reads as sitting between the two lines, never poking past them.
+func (m *Model) hairlineRow(paneWidth, width int) string {
+	return paint(hrule(width), width, backdropHex())
 }
 
 // railEdgeCell is one row of the pane's first column, drawn as a foreground
@@ -121,10 +100,10 @@ func (m *Model) vruleColumn(height int) []string {
 	return lines
 }
 
-// bleedColumn finishes a pane's right edge: a half block in the pane's
-// tone on the backdrop, extending the fill half a cell past the seam.
+// bleedColumn finishes a pane's right edge: a single hairline on the
+// backdrop, the sidebar separator of a native split view.
 func (m *Model) bleedColumn(height int) []string {
-	cell := paint(lipgloss.NewStyle().Foreground(colorBg).Render("▐"), 1, panelHex())
+	cell := paint(lipgloss.NewStyle().Foreground(lipgloss.Color(ruleHex())).Render("│"), 1, backdropHex())
 	lines := make([]string, height)
 	for i := range lines {
 		lines[i] = cell
@@ -133,8 +112,8 @@ func (m *Model) bleedColumn(height int) []string {
 	// traces the agent's terminal rather than the whole content panel. The
 	// top corner sits on the rule row just above the capture.
 	if m.mode == modeFocus && m.pane.box.ok {
-		edge := paint(focusEdgeStyle.Render("│"), 1, panelHex())
-		corner := paint(focusEdgeStyle.Render("╭"), 1, panelHex())
+		edge := paint(focusEdgeStyle.Render("│"), 1, backdropHex())
+		corner := paint(focusEdgeStyle.Render("╭"), 1, backdropHex())
 		top := m.pane.box.y - m.listChromeRows()
 		if top-1 >= 0 && top-1 < len(lines) {
 			lines[top-1] = corner
@@ -156,10 +135,9 @@ func (m *Model) focusBottomRule(paneWidth, width int) string {
 	if tail < 1 || paneWidth < 2 {
 		return m.boundedRuleRow(paneWidth, width, "▄")
 	}
-	first := plain(lipgloss.NewStyle().Foreground(lipgloss.Color(panelHex())).Render("▀"), 1)
-	interior := lipgloss.NewStyle().Foreground(colorBg).Render(strings.Repeat("▄", paneWidth-1))
 	corner := focusEdgeStyle.Render("╰")
-	return first + paint(interior, paneWidth-1, panelHex()) + paint(corner, 1, panelHex()) +
+	return plain(hrule(1), 1) + paint(hrule(paneWidth-1), paneWidth-1, panelHex()) +
+		paint(corner, 1, backdropHex()) +
 		paint(focusEdgeStyle.Render(strings.Repeat("─", tail)), tail, backdropHex())
 }
 

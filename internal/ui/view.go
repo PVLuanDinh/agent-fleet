@@ -276,10 +276,11 @@ func (m *Model) renameRowInput(entry treeRow, width int) string {
 	return lead + " " + textInputView(m.rename.input)
 }
 
-// divider renders a labeled section rule that fills the given width: an
-// accent tick, the label, then a hairline out to the edge.
+// divider renders a labeled section rule that fills the given width: the
+// label as a quiet bold heading, then a hairline out to the edge, the way a
+// native inspector groups its fields.
 func divider(label string, width int) string {
-	head := sectionStyle.Render("▍"+label) + " "
+	head := legendTitleStyle.Render(" "+label) + " "
 	dashes := width - ansi.StringWidth(label) - 2
 	if dashes < 0 {
 		dashes = 0

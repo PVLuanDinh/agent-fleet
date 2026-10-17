@@ -43,7 +43,14 @@ func sameColor(a, b color.Color) bool {
 	}
 	ar, ag, ab, _ := a.RGBA()
 	br, bg, bb, _ := b.RGBA()
-	return ar == br && ag == bg && ab == bb
+	// The truecolor path converts hex through floating point and can land a
+	// channel one 8-bit step off (#0a84ff paints as 10,131,255); a step that
+	// small is the same color on screen, so it is the same color here.
+	near := func(x, y uint32) bool {
+		d := int(x>>8) - int(y>>8)
+		return d >= -1 && d <= 1
+	}
+	return near(ar, br) && near(ag, bg) && near(ab, bb)
 }
 
 func hexColor(hex string) color.Color {

@@ -458,7 +458,7 @@ func TestOpenNoticesFromList(t *testing.T) {
 func TestNoticesViewListsAndDetails(t *testing.T) {
 	m := modalModel(t)
 	frame := ansi.Strip(m.View())
-	for _, want := range []string{"messages", "Welcome to agent-manager", "Settings (s)", "A bug or an idea?", "dismiss"} {
+	for _, want := range []string{"messages", "Welcome to agent-fleet", "Settings (s)", "A bug or an idea?", "dismiss"} {
 		if !strings.Contains(frame, want) {
 			t.Fatalf("modal missing %q:\n%s", want, frame)
 		}

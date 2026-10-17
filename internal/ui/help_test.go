@@ -194,7 +194,7 @@ func TestReviewHelpOnlyShowsReviewBindingsAndSetupGuidance(t *testing.T) {
 
 func TestGlobalHelpShowsAgentManagementGuidance(t *testing.T) {
 	frame := ansi.Strip(helpModel().View())
-	if !strings.Contains(frame, "Tell your agent to manage sessions and terminals in Agent Manager") {
+	if !strings.Contains(frame, "Tell your agent to manage sessions and terminals in agent-fleet") {
 		t.Fatalf("global help is missing agent-management guidance:\n%s", frame)
 	}
 }

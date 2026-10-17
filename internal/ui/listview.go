@@ -760,23 +760,133 @@ func (m *Model) renderSessionEntry(entry treeRow, selected bool, width int, pad,
 
 	metaStyle := subtleStyle
 	if selected {
-		metaStyle = mutedStyle
+		metaStyle = valueStyle
 	}
 	// A session names its state in words as well as in its dot; a group,
-	// whose row rolls several states together, is left to its dots.
-	meta := lipgloss.NewStyle().Foreground(statusColor(sess.Status)).Render(statusLabel(sess.Status)) +
-		metaStyle.Render(" · "+sess.Tool)
+	// whose row rolls several states together, is left to its dots. State,
+	// tool and age sit in fixed columns, so a glance down the rail reads one
+	// column of states the way a departures board reads one column of times:
+	// a row changing state restyles its cell, it never shifts the grid.
+	state := lipgloss.NewStyle().Foreground(statusColor(sess.Status)).
+		Render(padCell(metaStatusLabel(sess.Status), metaStatusWidth))
+	tool := metaStyle.Render(metaGap + padCell(sess.Tool, metaToolWidth))
+	var id string
 	// The id only fits the roomy layout; the compact meta is already crowded.
 	if sess.AgentSessionID != "" && m.comfortableRows {
-		meta += metaStyle.Render(" · " + sess.AgentSessionID)
+		id = metaStyle.Render(metaGap + sess.AgentSessionID)
 	}
-	meta += metaStyle.Render(" · " + relSince(lastActivity(sess)) + m.elsewhereNote(sess))
+	age := metaStyle.Render(metaGap + padCellLeft(relTime(lastActivity(sess)), metaAgeWidth) + m.elsewhereNote(sess))
+	// One shed level for the whole rail, picked from the rail's width, never
+	// from a row's own name: every row then carries the same meta width, so
+	// right-aligned states start in one column down the list. A tight rail
+	// sheds the tool first and the age next, so the state always survives.
+	var meta string
+	switch m.railMetaLevel(width) {
+	case metaFull:
+		meta = state + tool + id + age
+	case metaStateAge:
+		meta = state + age
+	default:
+		meta = state
+	}
 
 	if m.comfortableRows {
 		indent := metaIndent(pad, trail) + strings.Repeat(" ", ansi.StringWidth(handle))
 		return m.tallRow(sess, head, meta, indent, selected, width, bg)
 	}
 	return m.compactRow(sess, head, meta, selected, width, bg)
+}
+
+// The meta columns' fixed widths. The state column fits the longest state
+// word; the tool column fits the common CLI names and clips a longer one;
+// the age column right-aligns the bare age ("59m", the detail panel spells
+// out "ago") so the units stack and the column fits the default rail.
+const (
+	// minNameRoom is the fewest name columns a row keeps before the state
+	// cell stops reserving its width out of the name.
+	minNameRoom     = 5
+	metaStatusWidth = 8
+	metaToolWidth   = 8
+	metaAgeWidth    = 4
+	metaGap         = "  "
+)
+
+// The rail's meta levels, widest first.
+const (
+	metaFull = iota
+	metaStateAge
+	metaStateOnly
+)
+
+// railMetaLevel picks how much meta every session row carries, once for the
+// whole rail: the widest level at which every visible row's head still fits
+// beside it. All rows then share one meta width, so right-aligned states
+// start in one column, and no name is cut to make room for a column.
+func (m *Model) railMetaLevel(width int) int {
+	widest := 0
+	for i, entry := range m.rows {
+		if entry.isGroup {
+			continue
+		}
+		widest = max(widest, m.sessionHeadWidth(entry, i))
+	}
+	room := width - railGutter - widest - len(metaGap)
+	for _, level := range []int{metaFull, metaStateAge} {
+		if room >= metaWidthFor(level) {
+			return level
+		}
+	}
+	return metaStateOnly
+}
+
+// sessionHeadWidth is the columns a session row's head takes unselected: the
+// inset, tree guides, glyph, handle and name. Badges are left out on purpose:
+// a message arriving for one row must not move every other row's columns, so
+// a badged row that no longer fits sheds its own meta instead.
+func (m *Model) sessionHeadWidth(entry treeRow, index int) int {
+	w := railInset + ansi.StringWidth(m.treeGuidesAt(index)) + 2 +
+		ansi.StringWidth(m.rowHandle(entry, false)) + ansi.StringWidth(m.displayName(entry.sess))
+	return w
+}
+
+// railMetaWidth is the columns the rail's meta level occupies.
+func (m *Model) railMetaWidth(width int) int { return metaWidthFor(m.railMetaLevel(width)) }
+
+func metaWidthFor(level int) int {
+	switch level {
+	case metaFull:
+		return metaStatusWidth + 2*len(metaGap) + metaToolWidth + metaAgeWidth
+	case metaStateAge:
+		return metaStatusWidth + len(metaGap) + metaAgeWidth
+	}
+	return metaStatusWidth
+}
+
+// metaStatusLabel is the state word sized for the rail's state column: the
+// launch state drops its second word there, the detail panel keeps it.
+func metaStatusLabel(s string) string {
+	if s == status.Starting {
+		return "starting"
+	}
+	return statusLabel(s)
+}
+
+// padCell pads or clips plain text to an exact cell width.
+func padCell(s string, width int) string {
+	if w := ansi.StringWidth(s); w > width {
+		return ansi.Truncate(s, width, "…")
+	} else if w < width {
+		return s + strings.Repeat(" ", width-w)
+	}
+	return s
+}
+
+// padCellLeft right-aligns plain text in an exact cell width.
+func padCellLeft(s string, width int) string {
+	if w := ansi.StringWidth(s); w < width {
+		return strings.Repeat(" ", width-w) + s
+	}
+	return s
 }
 
 // rowPromptFloor is the narrowest slot worth printing a prompt into: any
@@ -1726,9 +1836,12 @@ func (m *Model) viewHeaderRows() []string {
 	sep := subtleStyle.Render("   ")
 	scope := m.headerScope()
 	agents := m.headerAgents()
+	board, boardCompact := m.headerBoard(false), m.headerBoard(true)
 	for _, right := range []string{
-		joinHeaderPieces(sep, scope, m.viewStatusCounts(false), agents),
-		joinHeaderPieces(sep, scope, m.viewStatusCounts(true), agents),
+		joinHeaderPieces(sep, scope, m.viewStatusCounts(false), board, agents),
+		joinHeaderPieces(sep, scope, m.viewStatusCounts(true), board, agents),
+		joinHeaderPieces(sep, scope, m.viewStatusCounts(true), boardCompact, agents),
+		joinHeaderPieces(sep, scope, m.viewStatusCounts(true), boardCompact),
 		joinHeaderPieces(sep, scope, m.viewStatusCounts(true), ""),
 		scope,
 		"",

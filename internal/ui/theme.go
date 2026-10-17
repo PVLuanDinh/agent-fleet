@@ -48,10 +48,32 @@ type Theme struct {
 	Counterpart string
 }
 
-// themes is the built-in palette set, in picker order. Classic leads: it
-// is the default, a restrained take on the sixteen colors every terminal
-// has had for decades.
+// themes is the built-in palette set, in picker order. Fleet leads: it is
+// the default, built on the dark system palette of a native desktop app —
+// graphite surfaces, a four-step label hierarchy and the system state
+// colors — so the workspace reads like the operating system around it.
 var themes = []Theme{
+	{
+		Name:    "fleet",
+		Bg:      "#1c1c1e",
+		Surface: "#3a3a3c",
+		Overlay: "#48484a",
+		Border:  "#38383a",
+		Bright:  "#f5f5f7",
+		Text:    "#d1d1d6",
+		Dim:     "#aeaeb2",
+		Subtle:  "#949499",
+		Accent:  "#0a84ff",
+		Accent2: "#64d2ff",
+
+		Working:  "#ff9f0a",
+		Waiting:  "#bf5af2",
+		Finished: "#30d158",
+		Errored:  "#ff453a",
+		Idle:     "#949499",
+
+		Counterpart: "fleet light",
+	},
 	{
 		Name:    "classic",
 		Bg:      "#0f1115",
@@ -255,6 +277,27 @@ var themes = []Theme{
 		Counterpart: "kanagawa lotus",
 	},
 	{
+		Name:    "fleet light",
+		Bg:      "#f5f5f7",
+		Surface: "#d9d9de",
+		Overlay: "#c7c7cc",
+		Border:  "#d1d1d6",
+		Bright:  "#1d1d1f",
+		Text:    "#3a3a3c",
+		Dim:     "#515154",
+		Subtle:  "#66666b",
+		Accent:  "#0066cc",
+		Accent2: "#0071a4",
+
+		Working:  "#b25000",
+		Waiting:  "#8944ab",
+		Finished: "#1f7a35",
+		Errored:  "#d70015",
+		Idle:     "#66666b",
+
+		Counterpart: "fleet",
+	},
+	{
 		Name:    "solarized light",
 		Bg:      "#fdf6e3",
 		Surface: "#eee8d5",
@@ -431,7 +474,7 @@ func applyTheme(t Theme) {
 	colorSubtle = lipgloss.Color(t.Subtle)
 	colorAccent = lipgloss.Color(t.Accent)
 	colorAccent2 = lipgloss.Color(t.Accent2)
-	colorSelBg = colorSurface
+	colorSelBg = lipgloss.Color(selectedHex())
 
 	colorWorking = lipgloss.Color(t.Working)
 	colorWaiting = lipgloss.Color(t.Waiting)

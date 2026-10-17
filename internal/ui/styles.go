@@ -61,6 +61,7 @@ var (
 	legendLabelStyle lipgloss.Style
 	legendLeadKey    lipgloss.Style
 	legendLeadLabel  lipgloss.Style
+	keycapStyle      lipgloss.Style
 )
 
 func init() { applyTheme(themes[0]) }
@@ -98,8 +99,13 @@ func rebuildStyles() {
 		Background(colorSurface)
 
 	legendTitleStyle = lipgloss.NewStyle().Foreground(colorSubtle).Bold(true)
+	// A tier's title is a plain bold label, the way a native menu names its
+	// section: the bindings beside it carry the color, not the heading.
 	legendBadgeStyle = lipgloss.NewStyle().
-		Foreground(colorBg).Background(colorAccent).Bold(true).Padding(0, 1)
+		Foreground(colorBright).Bold(true).Padding(0, 1)
+	// Foreground only, like every other mark that can sit on a band: a fill
+	// would punch a chip through the quick prompt's band and the selected row.
+	keycapStyle = lipgloss.NewStyle().Foreground(colorBright).Bold(true)
 	legendLabelStyle = lipgloss.NewStyle().Foreground(colorText)
 	lead := lipgloss.Color(mix(current.Bg, current.Accent, 0.28))
 	legendLeadKey = lipgloss.NewStyle().Foreground(colorAccent).Background(lead).Bold(true).PaddingLeft(1)
@@ -113,7 +119,7 @@ func rebuildStyles() {
 // Re-applying the selected bg+fg after every reset keeps the row tinted
 // end-to-end.
 func renderSelectedRow(s string) string {
-	reapply := "\x1b[0m" + bgSeq(current.Surface) + fgSeq(current.Bright)
+	reapply := "\x1b[0m" + bgSeq(selectedHex()) + fgSeq(current.Bright)
 	return selectedRowStyle.Render(strings.ReplaceAll(s, "\x1b[0m", reapply))
 }
 
@@ -236,10 +242,12 @@ func gauge(percent float64, width int, invert bool) string {
 // rather than any state color: a machine meter is a temperature, and a
 // theme whose working color is blue would otherwise paint a cold gauge.
 func gaugeRamp(percent float64) string {
+	// Red is reserved for an agent that errored, so a scan for red finds
+	// failures only; a full disk climbs to the working tone and stops there.
 	if percent >= 85 {
-		return current.Errored
+		return current.Working
 	}
-	return mix(current.Finished, current.Errored, percent/85)
+	return mix(current.Finished, current.Working, percent/85)
 }
 
 // pill renders a small label chip: tinted text on the surface fill, so a
@@ -278,11 +286,11 @@ func keyPill(key, text string, fg lipgloss.Color) string {
 	return subtleStyle.Render(key+" ") + pill(text, fg)
 }
 
-// keyCap renders one binding: the key in accent, its action beside it. The
-// key stays plain text; the legend's badge carries the visual weight, so a
-// row of bindings reads as prose under a header rather than as buttons.
+// keyCap renders one binding: the key in the brightest label, its action
+// beside it, the way a native menu sets a shortcut apart from the command
+// it runs: by weight, not by a drawn button.
 func keyCap(key, label string) string {
-	return keyStyle.Render(key) + " " + legendLabelStyle.Render(label)
+	return keycapStyle.Render(key) + " " + legendLabelStyle.Render(label)
 }
 
 func keyCapLead(key, label string) string {
@@ -292,7 +300,7 @@ func keyCapLead(key, label string) string {
 // keyCapQuiet is keyCap for a secondary tier: the label drops to the dim
 // tone so the tier recedes behind the one above it.
 func keyCapQuiet(key, label string) string {
-	return keyStyle.Render(key) + " " + mutedStyle.Render(label)
+	return keycapStyle.Render(key) + " " + mutedStyle.Render(label)
 }
 
 // imageChip tints a pasted-image token. Color only: the token's own

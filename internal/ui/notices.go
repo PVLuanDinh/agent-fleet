@@ -181,7 +181,7 @@ func (m *Model) activeNotices() []notice {
 			id:    noticeWelcome,
 			glyph: "✳",
 			tint:  colorAccent2,
-			title: "Welcome to agent-manager",
+			title: "Welcome to agent-fleet",
 			body:  m.welcomeBody(),
 			url:   repoURL + "#readme",
 		},

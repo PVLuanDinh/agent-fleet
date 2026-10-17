@@ -8,11 +8,12 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// The wordmark is the product name set in tracked-out capitals over the
-// mark's own gradient, lit by a highlight that sweeps across it on launch
-// and again once in a while. One row: a header, not a splash screen.
+// The wordmark is the product name set plainly, the way a native app titles
+// its window: lowercase, bold, at the reading size, with no tracking or
+// gradient to perform. A soft highlight in the theme's accent passes over
+// it on launch and once in a while after. One row: a title, not a splash.
 const (
-	bannerWord = "agent manager"
+	bannerWord = "agent-fleet"
 	bannerRows = 1
 
 	// bannerFrames is how long a sweep runs. Between sweeps the wordmark
@@ -22,12 +23,6 @@ const (
 	bannerInterval = 110 * time.Millisecond
 	// bannerShimmerEvery re-runs the sweep on a settled wordmark.
 	bannerShimmerEvery = 30 * time.Second
-
-	// The wordmark's resting fill runs the brand teal into a soft blue,
-	// pulled a step toward the theme's text so it stays legible on any
-	// backdrop.
-	bannerGradientFrom = "#12766a"
-	bannerGradientTo   = "#6da4c8"
 )
 
 type (
@@ -44,13 +39,13 @@ func (m *Model) bannerTick() tea.Cmd {
 	return tea.Tick(bannerInterval, func(time.Time) tea.Msg { return bannerTickMsg{} })
 }
 
-// bannerWidth is the columns the tracked-out wordmark needs.
+// bannerWidth is the columns the wordmark needs.
 func bannerWidth() int {
-	return len(bannerWord)*2 - 1
+	return len(bannerWord)
 }
 
-// showBanner reports whether the terminal leaves the tracked-out wordmark
-// room beside the fleet readings; a narrow one gets the name set plainly.
+// showBanner reports whether the terminal leaves the lit wordmark room
+// beside the fleet readings; a narrow one gets the name in the accent alone.
 func (m *Model) showBanner() bool {
 	return m.width >= bannerWidth()+railGutter+40
 }
@@ -80,37 +75,31 @@ func (m *Model) viewBanner() []string {
 		return []string{b.String()}
 	}
 	for i, letter := range bannerWord {
-		if i > 0 {
-			b.WriteString(" ")
-		}
 		b.WriteString(lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color(bannerTint(float64(i*2), head))).
-			Render(strings.ToUpper(string(letter))))
+			Foreground(lipgloss.Color(bannerTint(float64(i), head))).
+			Render(string(letter)))
 	}
 	return []string{b.String()}
 }
 
-// bannerRest is a column's settled color: its slice of the mark's gradient.
-func bannerRest(column float64) string {
-	span := float64(bannerWidth() - 1)
-	if span < 1 {
-		span = 1
-	}
-	return mix(mix(bannerGradientFrom, bannerGradientTo, column/span), current.Text, 0.2)
+// bannerRest is a column's settled color: the theme's brightest label, the
+// same ink a native title bar uses, so the name never competes with state.
+func bannerRest(float64) string {
+	return current.Bright
 }
 
 // bannerTint colors one column of the wordmark by its distance from the
-// sweep's head: lit at the head, its gradient color behind it, dimmed
-// ahead of it so the sweep reads as light passing over the word.
+// sweep's head: tinted toward the accent at the head, settled behind it,
+// dimmed ahead of it so the sweep reads as light passing over the word.
 func bannerTint(column, head float64) string {
 	rest := bannerRest(column)
 	distance := head - column
 	switch {
 	case distance < 0:
-		return mix(rest, current.Subtle, 0.5)
-	case distance < 4:
-		return mix(rest, current.Bright, 1-distance/4)
+		return mix(rest, current.Subtle, 0.6)
+	case distance < 3:
+		return mix(rest, current.Accent, 0.7*(1-distance/3))
 	default:
 		return rest
 	}

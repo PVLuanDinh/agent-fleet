@@ -401,50 +401,37 @@ func TestFrameFitsTerminal(t *testing.T) {
 	}
 }
 
-// The pane's soft edges: the opening row is drawn in sextants and stops a
-// third of a cell under the wordmark, the closing row bleeds up by half, and
-// every body row ends with the ▐ half-block edge one column past the seam.
-// The end cells of the edge rows are the corners: the first is a foreground
-// block so the window margin cannot inherit pane tone and smear past the
-// corner, and the last is narrowed to the bleed's half width so the fill
-// closes at the corner instead of jutting right. The top row's corner is
-// also a sextant, which is what keeps its edge level with the run beside it.
+// The pane's edges: the body opens and closes on a full-width hairline,
+// every body row starts on the rail's own fill and ends with the sidebar
+// separator one column past the seam.
 func TestPaneSoftEdges(t *testing.T) {
 	m := shotModel()
 	rows := strings.Split(m.View(), "\n")
 	leftWidth, _ := m.splitWidths()
 
+	// The body opens and closes on one hairline that runs unbroken across
+	// the rail, the seam and the content, the way a native window separates
+	// its toolbar and status bar from its content.
 	top := []rune(ansi.Strip(rows[m.headerRows()]))
 	bottom := []rune(ansi.Strip(rows[m.headerRows()+1+m.listBodyHeight()]))
-	if top[0] != '🬹' || bottom[0] != '▀' {
-		t.Fatalf("edge rows should open with foreground blocks, got %q and %q",
-			string(top[0]), string(bottom[0]))
-	}
-	for col := 1; col <= leftWidth; col++ {
-		if top[col] != '🬂' {
-			t.Fatalf("top edge col %d is %q, want 🬂:\n%s", col, string(top[col]), string(top))
+	for col := 0; col < m.width; col++ {
+		if top[col] != '─' {
+			t.Fatalf("top hairline col %d is %q, want ─:\n%s", col, string(top[col]), string(top))
 		}
-		if bottom[col] != '▄' {
-			t.Fatalf("bottom edge col %d is %q, want ▄:\n%s", col, string(bottom[col]), string(bottom))
+		if bottom[col] != '─' {
+			t.Fatalf("bottom hairline col %d is %q, want ─:\n%s", col, string(bottom[col]), string(bottom))
 		}
-	}
-	if top[leftWidth+1] != '🬨' || bottom[leftWidth+1] != '▟' {
-		t.Fatalf("edge rows should close on the bleed's half width, got %q and %q",
-			string(top[leftWidth+1]), string(bottom[leftWidth+1]))
-	}
-	if top[leftWidth+2] == '🬂' || bottom[leftWidth+2] == '▄' {
-		t.Fatalf("the bleed should stop after the seam's edge column")
 	}
 	for i := m.headerRows() + 1; i < m.headerRows()+1+m.listBodyHeight(); i++ {
 		row := []rune(ansi.Strip(rows[i]))
 		if cell := row[0]; cell != '█' {
 			t.Fatalf("row %d: first column is %q, want █:\n%s", i, string(cell), string(row))
 		}
-		if cell := row[leftWidth+1]; cell != '▐' && cell != '─' {
-			t.Fatalf("row %d: edge column is %q, want ▐:\n%s", i, string(cell), string(row))
+		// The rail's right edge is the sidebar separator: one hairline.
+		if cell := row[leftWidth+1]; cell != '│' && cell != '─' {
+			t.Fatalf("row %d: edge column is %q, want │:\n%s", i, string(cell), string(row))
 		}
-		// The seam is fill, not a drawn line: the glyphs of the old line
-		// seam appearing here mean a stale seam renderer shipped again.
+		// The seam is fill, not a drawn line.
 		if cell := row[leftWidth]; cell != ' ' && cell != '─' {
 			t.Fatalf("row %d: seam column is %q, want pane fill:\n%s", i, string(cell), string(row))
 		}
