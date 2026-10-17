@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/hooks"
-	"github.com/YoanWai/agent-manager/internal/report"
-	"github.com/YoanWai/agent-manager/internal/sessioncmd"
-	"github.com/YoanWai/agent-manager/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/hooks"
+	"github.com/PVLuanDinh/agent-fleet/internal/report"
+	"github.com/PVLuanDinh/agent-fleet/internal/sessioncmd"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -647,7 +647,7 @@ func TestBadInputsReturnToolErrors(t *testing.T) {
 	}
 
 	noSession := connect(t, configDir, "")
-	if text, isError := callText(t, noSession, "rename", map[string]any{"name": "x"}); !isError || !strings.Contains(text, "AGENT_MANAGER_SESSION_ID") {
+	if text, isError := callText(t, noSession, "rename", map[string]any{"name": "x"}); !isError || !strings.Contains(text, "AGENT_FLEET_SESSION_ID") {
 		t.Fatalf("missing session id should error, got %q", text)
 	}
 }
@@ -1187,7 +1187,7 @@ func TestReservationToolsReportConflictsWithoutRefusingTheLease(t *testing.T) {
 func TestReportIssuePreviewsUntilTheUserConfirms(t *testing.T) {
 	fake := &fakeReporter{
 		preview: report.Preview{ID: "3f2a91c4", Kind: report.Bug, Title: "Space lands in the wrong pane", Body: "### What happened\n\nsteps\n", Labels: []string{"bug"}, Route: report.RouteGH, Account: "yoan"},
-		result:  report.Filed{Route: report.RouteGH, URL: "https://github.com/YoanWai/agent-manager/issues/512"},
+		result:  report.Filed{Route: report.RouteGH, URL: "https://github.com/PVLuanDinh/agent-fleet/issues/512"},
 	}
 	session := connectServer(t, newServer(t.TempDir(), "abc123", "test", true, &fakeTerminalCommands{}, &fakeSessionCommands{}, fake))
 
@@ -1208,14 +1208,14 @@ func TestReportIssuePreviewsUntilTheUserConfirms(t *testing.T) {
 
 	args["preview_id"] = "3f2a91c4"
 	text, isError = callText(t, session, "report_issue", args)
-	if isError || text != "filed https://github.com/YoanWai/agent-manager/issues/512" {
+	if isError || text != "filed https://github.com/PVLuanDinh/agent-fleet/issues/512" {
 		t.Fatalf("confirm = %q, isError=%v", text, isError)
 	}
 	if len(fake.filed) != 1 || fake.filed[0] != want || fake.approved != "3f2a91c4" {
 		t.Fatalf("confirm filed %v approved as %q", fake.filed, fake.approved)
 	}
 	structured := callTool(t, session, "report_issue", args).StructuredContent
-	if record, ok := structured.(map[string]any); !ok || record["url"] != "https://github.com/YoanWai/agent-manager/issues/512" || record["route"] != "gh" {
+	if record, ok := structured.(map[string]any); !ok || record["url"] != "https://github.com/PVLuanDinh/agent-fleet/issues/512" || record["route"] != "gh" {
 		t.Fatalf("structured content = %#v", structured)
 	}
 }

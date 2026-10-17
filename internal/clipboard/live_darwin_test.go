@@ -26,14 +26,14 @@ func TestDarwinLiveCopy(t *testing.T) {
 			t.Errorf("restore pasteboard: %v", err)
 		}
 	})
-	if err := WriteText("agent-manager-live-copy-proof"); err != nil {
+	if err := WriteText("agent-fleet-live-copy-proof"); err != nil {
 		t.Skipf("pasteboard unavailable: %v", err)
 	}
 	out, err := exec.Command("pbpaste").Output()
 	if err != nil {
 		t.Skipf("pbpaste unavailable: %v", err)
 	}
-	if string(out) != "agent-manager-live-copy-proof" {
+	if string(out) != "agent-fleet-live-copy-proof" {
 		t.Fatalf("pbpaste = %q", out)
 	}
 }

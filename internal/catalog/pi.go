@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/YoanWai/agent-manager/internal/update"
+	"github.com/PVLuanDinh/agent-fleet/internal/update"
 )
 
 // piKeepsDefaults is the first pi whose set_model stays in the session.

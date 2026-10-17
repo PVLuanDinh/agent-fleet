@@ -19,7 +19,7 @@ import (
 
 // downloadBase is a var so tests can point the release download at a
 // local server.
-var downloadBase = "https://github.com/YoanWai/agent-manager/releases/download"
+var downloadBase = "https://github.com/PVLuanDinh/agent-fleet/releases/download"
 
 var buildSource string
 
@@ -68,7 +68,7 @@ func Apply(ctx context.Context, tag, execPath string) error {
 	defer cancel()
 
 	version := strings.TrimPrefix(tag, "v")
-	asset := fmt.Sprintf("agent-manager_%s_%s_%s.tar.gz", version, runtime.GOOS, runtime.GOARCH)
+	asset := fmt.Sprintf("agent-fleet_%s_%s_%s.tar.gz", version, runtime.GOOS, runtime.GOARCH)
 
 	wantSum, err := fetchChecksum(ctx, tag, asset)
 	if err != nil {
@@ -126,7 +126,7 @@ func fetchAsset(ctx context.Context, tag, asset string) (string, error) {
 		return "", err
 	}
 	defer body.Close()
-	tmp, err := os.CreateTemp("", "agent-manager-update-*.tar.gz")
+	tmp, err := os.CreateTemp("", "agent-fleet-update-*.tar.gz")
 	if err != nil {
 		return "", err
 	}
@@ -175,7 +175,7 @@ func verifyChecksum(path, want string) error {
 	return nil
 }
 
-// extractBinary writes the archive's agent-manager entry to staged,
+// extractBinary writes the archive's agent-fleet entry to staged,
 // executable, next to the target so the final rename stays on one
 // filesystem.
 func extractBinary(archive, staged string) error {
@@ -193,12 +193,12 @@ func extractBinary(archive, staged string) error {
 	for {
 		header, err := entries.Next()
 		if errors.Is(err, io.EOF) {
-			return errors.New("update: archive holds no agent-manager binary")
+			return errors.New("update: archive holds no agent-fleet binary")
 		}
 		if err != nil {
 			return err
 		}
-		if filepath.Base(header.Name) != "agent-manager" || header.Typeflag != tar.TypeReg {
+		if filepath.Base(header.Name) != "agent-fleet" || header.Typeflag != tar.TypeReg {
 			continue
 		}
 		out, err := os.OpenFile(staged, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o755)

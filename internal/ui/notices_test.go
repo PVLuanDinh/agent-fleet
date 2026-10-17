@@ -11,12 +11,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/YoanWai/agent-manager/internal/clipboard"
-	"github.com/YoanWai/agent-manager/internal/feed"
-	"github.com/YoanWai/agent-manager/internal/keybind"
-	"github.com/YoanWai/agent-manager/internal/store"
-	"github.com/YoanWai/agent-manager/internal/sysstat"
-	"github.com/YoanWai/agent-manager/internal/update"
+	"github.com/PVLuanDinh/agent-fleet/internal/clipboard"
+	"github.com/PVLuanDinh/agent-fleet/internal/feed"
+	"github.com/PVLuanDinh/agent-fleet/internal/keybind"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/sysstat"
+	"github.com/PVLuanDinh/agent-fleet/internal/update"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
@@ -149,7 +149,7 @@ func TestUpdateNoticeSummarizesEverySkippedRelease(t *testing.T) {
 	}
 	m.Update(updateMsg{
 		latest:   "v0.6.0",
-		url:      "https://github.com/YoanWai/agent-manager/releases/tag/v0.6.0",
+		url:      "https://github.com/PVLuanDinh/agent-fleet/releases/tag/v0.6.0",
 		releases: releases,
 	})
 	m.openNotices("update-v0.6.0")
@@ -1111,7 +1111,7 @@ func TestAutoOpenFeedAndUpdateFrames(t *testing.T) {
 		Banner: "Hold off on v0.36",
 		Title:  "Hold off on v0.36",
 		Body:   []string{"Sessions may drop.", "Stay on v0.35 until the fix."},
-		URL:    "https://github.com/YoanWai/agent-manager/issues/1",
+		URL:    "https://github.com/PVLuanDinh/agent-fleet/issues/1",
 	}}})
 	feedFrame := ansi.Strip(feedModel.View())
 	for _, want := range []string{"messages", "Hold off on v0.36", "Sessions may drop", "Stay on v0.35", "esc"} {
@@ -1125,7 +1125,7 @@ func TestAutoOpenFeedAndUpdateFrames(t *testing.T) {
 	upd.mode = modeList
 	upd.Update(updateMsg{
 		latest:   "v0.3.0",
-		url:      "https://github.com/YoanWai/agent-manager/releases/tag/v0.3.0",
+		url:      "https://github.com/PVLuanDinh/agent-fleet/releases/tag/v0.3.0",
 		releases: []update.Release{uiRelease("v0.3.0", "Notices: Open the modal on a new message")},
 	})
 	updFrame := ansi.Strip(upd.View())
@@ -1152,7 +1152,7 @@ func TestUpdateNoticeAppliesOnU(t *testing.T) {
 	refreshUpdatesForApply = func(context.Context, string, string) (update.Result, error) {
 		return update.Result{
 			Latest: "v0.6.0",
-			URL:    "https://github.com/YoanWai/agent-manager/releases/tag/v0.6.0",
+			URL:    "https://github.com/PVLuanDinh/agent-fleet/releases/tag/v0.6.0",
 			Releases: []update.Release{
 				uiRelease("v0.6.0", "Newest release"),
 				uiRelease("v0.2.0", "Current release"),
@@ -1206,7 +1206,7 @@ func TestUpdateNoticeApplyFailureSurfaces(t *testing.T) {
 	refreshUpdatesForApply = func(context.Context, string, string) (update.Result, error) {
 		return update.Result{
 			Latest:   "v0.3.0",
-			URL:      "https://github.com/YoanWai/agent-manager/releases/tag/v0.3.0",
+			URL:      "https://github.com/PVLuanDinh/agent-fleet/releases/tag/v0.3.0",
 			Releases: []update.Release{uiRelease("v0.3.0", "Newest release"), uiRelease("v0.2.0", "Current release")},
 		}, nil
 	}
@@ -1313,7 +1313,7 @@ func uiRelease(version string, changes ...string) update.Release {
 func uiReleaseWithTotal(version string, total int, changes ...string) update.Release {
 	release := update.Release{
 		Version:      version,
-		URL:          "https://github.com/YoanWai/agent-manager/releases/tag/" + version,
+		URL:          "https://github.com/PVLuanDinh/agent-fleet/releases/tag/" + version,
 		TotalChanges: total,
 	}
 	for _, text := range changes {
@@ -1330,7 +1330,7 @@ func TestUpdateDelegatesToPackageManager(t *testing.T) {
 	origDetect := detectManager
 	defer func() { detectManager = origDetect }()
 	detectManager = func(string) update.Manager {
-		return update.Manager{Name: "Homebrew", Command: []string{"brew", "upgrade", "--cask", "yoanwai/tap/agent-manager"}}
+		return update.Manager{Name: "Homebrew", Command: []string{"brew", "upgrade", "--cask", "pvluandinh/tap/agent-fleet"}}
 	}
 
 	_, cmd := m.handleNoticesKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'u'}})
@@ -1343,10 +1343,10 @@ func TestUpdateDelegatesToPackageManager(t *testing.T) {
 }
 
 func TestDelegatedUpdateResult(t *testing.T) {
-	manager := update.Manager{Name: "Homebrew", Command: []string{"brew", "upgrade", "--cask", "yoanwai/tap/agent-manager"}}
+	manager := update.Manager{Name: "Homebrew", Command: []string{"brew", "upgrade", "--cask", "pvluandinh/tap/agent-fleet"}}
 	// A base name no PATH holds, so RestartTarget deterministically falls
 	// back to execPath on any machine.
-	execPath := "/x/agent-manager-delegated-test"
+	execPath := "/x/agent-fleet-delegated-test"
 
 	msg := delegatedUpdateResult(manager, execPath, nil)
 	if msg.err != nil {
@@ -1357,7 +1357,7 @@ func TestDelegatedUpdateResult(t *testing.T) {
 	}
 
 	failed := delegatedUpdateResult(manager, execPath, errors.New("exit status 1"))
-	if failed.err == nil || !strings.Contains(failed.err.Error(), "brew upgrade --cask yoanwai/tap/agent-manager") {
+	if failed.err == nil || !strings.Contains(failed.err.Error(), "brew upgrade --cask pvluandinh/tap/agent-fleet") {
 		t.Fatalf("failure should name the command, got %v", failed.err)
 	}
 	if failed.path != "" {
@@ -1372,7 +1372,7 @@ func TestUpdateWithoutRunnableManagerSurfacesAdvice(t *testing.T) {
 
 	origDetect := detectManager
 	defer func() { detectManager = origDetect }()
-	advice := "installed with pacman; install an AUR helper first, then: yay -S agent-manager-bin"
+	advice := "installed with pacman; install an AUR helper first, then: yay -S agent-fleet-bin"
 	detectManager = func(string) update.Manager {
 		return update.Manager{Name: "pacman", Advice: advice}
 	}

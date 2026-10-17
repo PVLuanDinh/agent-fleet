@@ -86,7 +86,7 @@ target a version range.
       "What users will observe.",
       "The safe action to take while a fix is prepared."
     ],
-    "url": "https://github.com/YoanWai/agent-manager/issues/234",
+    "url": "https://github.com/PVLuanDinh/agent-fleet/issues/234",
     "min_version": "v0.40.0",
     "max_version": "v0.40.0",
     "expires_at": "2026-08-09T12:00:00Z"

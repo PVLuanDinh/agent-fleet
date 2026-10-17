@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/YoanWai/agent-manager/internal/keybind"
+	"github.com/PVLuanDinh/agent-fleet/internal/keybind"
 	"io"
 	"strings"
 	"testing"
 
-	"github.com/YoanWai/agent-manager/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
 	"github.com/charmbracelet/x/ansi"
 )
 

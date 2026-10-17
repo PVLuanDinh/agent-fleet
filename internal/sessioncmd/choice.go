@@ -9,8 +9,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/YoanWai/agent-manager/internal/catalog"
-	"github.com/YoanWai/agent-manager/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/catalog"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
 )
 
 // loadCatalog stops asking on ctrl+c, so the CLI never outlives the command.

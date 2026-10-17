@@ -13,8 +13,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/deps"
-	"github.com/YoanWai/agent-manager/internal/keybind"
+	"github.com/PVLuanDinh/agent-fleet/internal/deps"
+	"github.com/PVLuanDinh/agent-fleet/internal/keybind"
 )
 
 const prefix = "am_"
@@ -23,7 +23,7 @@ const prefix = "am_"
 // on. A dedicated -L socket keeps agent sessions off the user's default
 // socket, where a shell tmux, a `go test`, or a stray kill-server would
 // otherwise share a server with the live agents and take them all down at once.
-const defaultSocket = "agentmgr"
+const defaultSocket = "agentfleet"
 
 // requestOption is the global tmux user option the in-session bindings set
 // on their way out, naming what the manager should do with the session they

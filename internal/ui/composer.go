@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/YoanWai/agent-manager/internal/clipboard"
+	"github.com/PVLuanDinh/agent-fleet/internal/clipboard"
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 )

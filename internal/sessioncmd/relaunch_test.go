@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/config"
-	"github.com/YoanWai/agent-manager/internal/tmux"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/tmux"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/google/uuid"
 )

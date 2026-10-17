@@ -8,8 +8,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/YoanWai/agent-manager/internal/keybind"
-	"github.com/YoanWai/agent-manager/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/keybind"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
 )
 
 // The key map is the one place every binding in the app is written down, so

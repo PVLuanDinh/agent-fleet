@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/YoanWai/agent-manager/internal/diff"
-	"github.com/YoanWai/agent-manager/internal/git"
+	"github.com/PVLuanDinh/agent-fleet/internal/diff"
+	"github.com/PVLuanDinh/agent-fleet/internal/git"
 	"github.com/charmbracelet/x/ansi"
 )
 

@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/git"
-	"github.com/YoanWai/agent-manager/internal/hooks"
-	"github.com/YoanWai/agent-manager/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/git"
+	"github.com/PVLuanDinh/agent-fleet/internal/hooks"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
 )
 
 var sessionIDPattern = regexp.MustCompile(`^[0-9a-f]+$`)

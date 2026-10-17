@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/config"
-	"github.com/YoanWai/agent-manager/internal/status"
-	"github.com/YoanWai/agent-manager/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/status"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
 )
 
 // Waiting on another session is one parked tool call instead of a polling

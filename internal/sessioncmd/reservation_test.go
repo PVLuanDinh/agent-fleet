@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
 )
 
 func TestReservationsSurfaceOverlapWithoutBlockingIt(t *testing.T) {

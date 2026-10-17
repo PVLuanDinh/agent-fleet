@@ -11,13 +11,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/agentsession"
-	"github.com/YoanWai/agent-manager/internal/config"
-	"github.com/YoanWai/agent-manager/internal/hooks"
-	"github.com/YoanWai/agent-manager/internal/launch"
-	"github.com/YoanWai/agent-manager/internal/status"
-	"github.com/YoanWai/agent-manager/internal/store"
-	"github.com/YoanWai/agent-manager/internal/tmux"
+	"github.com/PVLuanDinh/agent-fleet/internal/agentsession"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/hooks"
+	"github.com/PVLuanDinh/agent-fleet/internal/launch"
+	"github.com/PVLuanDinh/agent-fleet/internal/status"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/tmux"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 )
@@ -1944,7 +1944,7 @@ func TestUnstampedSessionsFollowTheLeadingManager(t *testing.T) {
 	if err := m.store.SetTmuxSocket(sess.ID, ""); err != nil {
 		t.Fatal(err)
 	}
-	if err := m.store.SetSetting(store.PollerSocketKey, "/tmp/another-manager/agentmgr"); err != nil {
+	if err := m.store.SetSetting(store.PollerSocketKey, "/tmp/another-manager/agentfleet"); err != nil {
 		t.Fatal(err)
 	}
 	stampHeartbeat(t, m.store, time.Now())

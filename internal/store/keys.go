@@ -6,8 +6,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/YoanWai/agent-manager/internal/config"
-	"github.com/YoanWai/agent-manager/internal/keybind"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/keybind"
 )
 
 const (

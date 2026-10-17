@@ -3,7 +3,7 @@
 
 
      ❯ This session is already named. You can rename it later with     4:47 PM
-       agent-manager rename "<name>" only if the user asks. Do not
+       agent-fleet rename "<name>" only if the user asks. Do not
        rename it now. Then do the task: …
 
                                          ▲

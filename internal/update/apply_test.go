@@ -23,7 +23,7 @@ func releaseArchive(t *testing.T, binary []byte) []byte {
 	var buf bytes.Buffer
 	zipper := gzip.NewWriter(&buf)
 	archive := tar.NewWriter(zipper)
-	if err := archive.WriteHeader(&tar.Header{Name: "agent-manager", Mode: 0o755, Size: int64(len(binary)), Typeflag: tar.TypeReg}); err != nil {
+	if err := archive.WriteHeader(&tar.Header{Name: "agent-fleet", Mode: 0o755, Size: int64(len(binary)), Typeflag: tar.TypeReg}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := archive.Write(binary); err != nil {
@@ -40,7 +40,7 @@ func releaseArchive(t *testing.T, binary []byte) []byte {
 
 func serveRelease(t *testing.T, tag string, archive []byte, sum string) {
 	t.Helper()
-	asset := fmt.Sprintf("agent-manager_%s_%s_%s.tar.gz", strings.TrimPrefix(tag, "v"), runtime.GOOS, runtime.GOARCH)
+	asset := fmt.Sprintf("agent-fleet_%s_%s_%s.tar.gz", strings.TrimPrefix(tag, "v"), runtime.GOOS, runtime.GOARCH)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/" + tag + "/checksums.txt":
@@ -64,20 +64,20 @@ func TestHomebrewManaged(t *testing.T) {
 		path   string
 		want   bool
 	}{
-		{"buildSource Homebrew", "Homebrew", "/usr/local/bin/agent-manager", true},
-		{"other buildSource", "binaryBuild", "/usr/local/bin/agent-manager", false},
-		{"cellar path", "", "/opt/homebrew/Cellar/agent-manager/0.18.0/bin/agent-manager", true},
-		{"caskroom path", "", "/opt/homebrew/Caskroom/agent-manager/0.18.0/agent-manager", true},
-		{"opt path", "", "/opt/homebrew/opt/agent-manager/bin/agent-manager", true},
-		{"linuxbrew opt", "", "/home/linuxbrew/.linuxbrew/opt/agent-manager/bin/agent-manager", true},
-		{"manual /opt install", "", "/opt/agent-manager/bin/agent-manager", false},
-		{"manual /opt flat install", "", "/opt/agent-manager/agent-manager", false},
-		{"linuxbrew cellar", "", "/home/linuxbrew/.linuxbrew/Cellar/agent-manager/0.18.0/bin/agent-manager", true},
-		{"local bin", "", "/home/user/.local/bin/agent-manager", false},
-		{"gopath bin", "", "/home/user/go/bin/agent-manager", false},
-		{"caskroom name only", "", "/Users/me/notes/Caskroom-guide/agent-manager", false},
+		{"buildSource Homebrew", "Homebrew", "/usr/local/bin/agent-fleet", true},
+		{"other buildSource", "binaryBuild", "/usr/local/bin/agent-fleet", false},
+		{"cellar path", "", "/opt/homebrew/Cellar/agent-fleet/0.18.0/bin/agent-fleet", true},
+		{"caskroom path", "", "/opt/homebrew/Caskroom/agent-fleet/0.18.0/agent-fleet", true},
+		{"opt path", "", "/opt/homebrew/opt/agent-fleet/bin/agent-fleet", true},
+		{"linuxbrew opt", "", "/home/linuxbrew/.linuxbrew/opt/agent-fleet/bin/agent-fleet", true},
+		{"manual /opt install", "", "/opt/agent-fleet/bin/agent-fleet", false},
+		{"manual /opt flat install", "", "/opt/agent-fleet/agent-fleet", false},
+		{"linuxbrew cellar", "", "/home/linuxbrew/.linuxbrew/Cellar/agent-fleet/0.18.0/bin/agent-fleet", true},
+		{"local bin", "", "/home/user/.local/bin/agent-fleet", false},
+		{"gopath bin", "", "/home/user/go/bin/agent-fleet", false},
+		{"caskroom name only", "", "/Users/me/notes/Caskroom-guide/agent-fleet", false},
 		{"caskroom other package", "", "/opt/homebrew/Caskroom/other-app/1.0.0/other-app", false},
-		{"empty source ordinary path", "", "/usr/local/bin/agent-manager", false},
+		{"empty source ordinary path", "", "/usr/local/bin/agent-fleet", false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.label, func(t *testing.T) {
@@ -90,15 +90,15 @@ func TestHomebrewManaged(t *testing.T) {
 
 func TestHomebrewManagedFollowsSymlink(t *testing.T) {
 	dir := t.TempDir()
-	cellar := filepath.Join(dir, "Cellar", "agent-manager", "0.18.0", "bin")
+	cellar := filepath.Join(dir, "Cellar", "agent-fleet", "0.18.0", "bin")
 	if err := os.MkdirAll(cellar, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	realBinary := filepath.Join(cellar, "agent-manager")
+	realBinary := filepath.Join(cellar, "agent-fleet")
 	if err := os.WriteFile(realBinary, []byte("brew build"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	link := filepath.Join(dir, "bin", "agent-manager")
+	link := filepath.Join(dir, "bin", "agent-fleet")
 	if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -106,13 +106,13 @@ func TestHomebrewManagedFollowsSymlink(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !homebrewManaged("", link) {
-		t.Fatal("symlink into Cellar/agent-manager should be managed")
+		t.Fatal("symlink into Cellar/agent-fleet should be managed")
 	}
 }
 
 func TestApplyAdviceFollowsTheCask(t *testing.T) {
 	dir := t.TempDir()
-	target := filepath.Join(dir, "Caskroom", "agent-manager", "0.37.0", "agent-manager")
+	target := filepath.Join(dir, "Caskroom", "agent-fleet", "0.37.0", "agent-fleet")
 	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func TestApplyAdviceFollowsTheCask(t *testing.T) {
 	if !errors.Is(err, errHomebrewManaged) {
 		t.Fatalf("want errHomebrewManaged, got %v", err)
 	}
-	if !strings.Contains(err.Error(), "brew upgrade --cask yoanwai/tap/agent-manager") {
+	if !strings.Contains(err.Error(), "brew upgrade --cask pvluandinh/tap/agent-fleet") {
 		t.Fatalf("a cask install should be told to upgrade the cask, got %v", err)
 	}
 }
@@ -133,7 +133,7 @@ func TestApplyRejectsHomebrew(t *testing.T) {
 	buildSource = "Homebrew"
 	t.Cleanup(func() { buildSource = orig })
 
-	target := filepath.Join(t.TempDir(), "agent-manager")
+	target := filepath.Join(t.TempDir(), "agent-fleet")
 	if err := os.WriteFile(target, []byte("old build"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -141,7 +141,7 @@ func TestApplyRejectsHomebrew(t *testing.T) {
 	if !errors.Is(err, errHomebrewManaged) {
 		t.Fatalf("want errHomebrewManaged, got %v", err)
 	}
-	if !strings.Contains(err.Error(), "brew upgrade agent-manager") {
+	if !strings.Contains(err.Error(), "brew upgrade agent-fleet") {
 		t.Fatalf("error should name the brew upgrade command, got %v", err)
 	}
 	untouched, readErr := os.ReadFile(target)
@@ -156,7 +156,7 @@ func TestApplySwapsBinary(t *testing.T) {
 	digest := sha256.Sum256(archive)
 	serveRelease(t, "v9.9.9", archive, hex.EncodeToString(digest[:]))
 
-	target := filepath.Join(t.TempDir(), "agent-manager")
+	target := filepath.Join(t.TempDir(), "agent-fleet")
 	if err := os.WriteFile(target, []byte("old build"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +190,7 @@ func TestApplyFollowsSymlink(t *testing.T) {
 	if err := os.WriteFile(target, []byte("old build"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	link := filepath.Join(dir, "agent-manager")
+	link := filepath.Join(dir, "agent-fleet")
 	if err := os.Symlink(target, link); err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +217,7 @@ func TestApplyRejectsChecksumMismatch(t *testing.T) {
 	archive := releaseArchive(t, []byte("new build bytes"))
 	serveRelease(t, "v9.9.9", archive, strings.Repeat("0", 64))
 
-	target := filepath.Join(t.TempDir(), "agent-manager")
+	target := filepath.Join(t.TempDir(), "agent-fleet")
 	if err := os.WriteFile(target, []byte("old build"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -246,12 +246,12 @@ func TestApplyRejectsArchiveWithoutBinary(t *testing.T) {
 	digest := sha256.Sum256(buf.Bytes())
 	serveRelease(t, "v9.9.9", buf.Bytes(), hex.EncodeToString(digest[:]))
 
-	target := filepath.Join(t.TempDir(), "agent-manager")
+	target := filepath.Join(t.TempDir(), "agent-fleet")
 	if err := os.WriteFile(target, []byte("old build"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	err := Apply(context.Background(), "v9.9.9", target)
-	if err == nil || !strings.Contains(err.Error(), "no agent-manager binary") {
+	if err == nil || !strings.Contains(err.Error(), "no agent-fleet binary") {
 		t.Fatalf("want missing-binary error, got %v", err)
 	}
 }

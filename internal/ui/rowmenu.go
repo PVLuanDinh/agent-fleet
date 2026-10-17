@@ -3,8 +3,8 @@ package ui
 import (
 	"strings"
 
-	"github.com/YoanWai/agent-manager/internal/keybind"
-	"github.com/YoanWai/agent-manager/internal/status"
+	"github.com/PVLuanDinh/agent-fleet/internal/keybind"
+	"github.com/PVLuanDinh/agent-fleet/internal/status"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"

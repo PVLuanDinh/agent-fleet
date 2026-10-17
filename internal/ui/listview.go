@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/clipboard"
-	"github.com/YoanWai/agent-manager/internal/keybind"
-	"github.com/YoanWai/agent-manager/internal/launch"
-	"github.com/YoanWai/agent-manager/internal/status"
-	"github.com/YoanWai/agent-manager/internal/store"
-	"github.com/YoanWai/agent-manager/internal/sysstat"
+	"github.com/PVLuanDinh/agent-fleet/internal/clipboard"
+	"github.com/PVLuanDinh/agent-fleet/internal/keybind"
+	"github.com/PVLuanDinh/agent-fleet/internal/launch"
+	"github.com/PVLuanDinh/agent-fleet/internal/status"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/sysstat"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 )

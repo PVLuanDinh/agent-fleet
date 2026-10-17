@@ -2,13 +2,13 @@ package ui
 
 import (
 	"fmt"
-	"github.com/YoanWai/agent-manager/internal/keybind"
+	"github.com/PVLuanDinh/agent-fleet/internal/keybind"
 	"os"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/status"
+	"github.com/PVLuanDinh/agent-fleet/internal/status"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/muesli/termenv"

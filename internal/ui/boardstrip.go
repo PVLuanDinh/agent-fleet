@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/status"
+	"github.com/PVLuanDinh/agent-fleet/internal/status"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )

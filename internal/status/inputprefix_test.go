@@ -3,7 +3,7 @@ package status
 import (
 	"testing"
 
-	"github.com/YoanWai/agent-manager/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
 )
 
 func TestInputPrefix(t *testing.T) {

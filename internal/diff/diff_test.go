@@ -9,7 +9,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/YoanWai/agent-manager/internal/git"
+	"github.com/PVLuanDinh/agent-fleet/internal/git"
 	"golang.org/x/sys/unix"
 )
 

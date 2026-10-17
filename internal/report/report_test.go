@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/YoanWai/agent-manager/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
 )
 
 // fakeCommands answers the commands a report shells out to, keyed by the

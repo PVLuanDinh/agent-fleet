@@ -20,7 +20,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/YoanWai/agent-manager/internal/atomicfile"
+	"github.com/PVLuanDinh/agent-fleet/internal/atomicfile"
 	"github.com/ebitengine/purego"
 	"github.com/ebitengine/purego/objc"
 )
@@ -34,13 +34,13 @@ import (
 // select the session. The user allows "agent-fleet" once, on the first
 // banner, the way any app asks.
 
-//go:embed agent-manager.icns
+//go:embed agent-fleet.icns
 var helperIcon []byte
 
 const (
 	helperBundle     = "agent-fleet.app"
-	helperExecutable = "agent-manager"
-	helperBundleID   = "dev.agent-manager.notifier"
+	helperExecutable = "agent-fleet"
+	helperBundleID   = "dev.agent-fleet.notifier"
 	// helperTimeout leaves room for the first-run permission prompt,
 	// which the helper waits on before it can post anything.
 	helperTimeout = 90 * time.Second
@@ -84,7 +84,7 @@ func runHelper(dir, sessionID, subtitle, body, sound string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), helperTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, helper, "post",
-		"agent-manager", subtitle, body, soundName, getenv("__CFBundleIdentifier"),
+		"agent-fleet", subtitle, body, soundName, getenv("__CFBundleIdentifier"),
 		sessionID, strconv.Itoa(os.Getpid()))
 	err = cmd.Run()
 	var exit *exec.ExitError
@@ -101,7 +101,7 @@ func installHelperSound(sound string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	name := "agent-manager-" + sound + ".aiff"
+	name := "agent-fleet-" + sound + ".aiff"
 	path := filepath.Join(home, "Library", "Sounds", name)
 	if _, err := os.Stat(path); err == nil {
 		return name, nil
@@ -226,7 +226,7 @@ func buildHelper(bundle, source, stamp string) error {
 	if err := copyFile(source, filepath.Join(macos, helperExecutable), 0o755); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(resources, "agent-manager.icns"), helperIcon, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(resources, "agent-fleet.icns"), helperIcon, 0o644); err != nil {
 		return err
 	}
 	if err := os.WriteFile(filepath.Join(bundle, "Contents", "Info.plist"), []byte(helperInfoPlist), 0o644); err != nil {
@@ -253,7 +253,7 @@ const helperInfoPlist = `<?xml version="1.0" encoding="UTF-8"?>
 	<key>CFBundleExecutable</key>
 	<string>` + helperExecutable + `</string>
 	<key>CFBundleIconFile</key>
-	<string>agent-manager</string>
+	<string>agent-fleet</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -330,7 +330,7 @@ func HelperMain(args []string) int {
 			info.Send(sel("setObject:forKey:"), nsString(strconv.Itoa(manager)), nsString("manager"))
 			content.Send(sel("setUserInfo:"), info)
 			request := objc.ID(objc.GetClass("UNNotificationRequest")).Send(sel("requestWithIdentifier:content:trigger:"),
-				nsString(fmt.Sprintf("agent-manager-%d", time.Now().UnixNano())), content, objc.ID(0))
+				nsString(fmt.Sprintf("agent-fleet-%d", time.Now().UnixNano())), content, objc.ID(0))
 			posted := objc.NewBlock(func(_ objc.Block, nserr objc.ID) {
 				if nserr != 0 {
 					exit <- 1
@@ -364,7 +364,7 @@ func HelperMain(args []string) int {
 var helperExit chan<- int
 
 func newHelperDelegate() (objc.ID, error) {
-	class, err := objc.RegisterClass("AgentManagerNotifierDelegate", objc.GetClass("NSObject"),
+	class, err := objc.RegisterClass("AgentFleetNotifierDelegate", objc.GetClass("NSObject"),
 		[]*objc.Protocol{objc.GetProtocol("UNUserNotificationCenterDelegate")}, nil,
 		[]objc.MethodDef{
 			{

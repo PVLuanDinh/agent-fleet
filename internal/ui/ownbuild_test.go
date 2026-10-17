@@ -10,7 +10,7 @@ func withOwnBuild(t *testing.T) {
 }
 
 // The agent-fleet build never asks upstream for releases or announcements,
-// so it can never offer to self-update into stock agent-manager.
+// so it can never offer to self-update into stock agent-fleet.
 func TestOwnBuildMakesNoUpstreamCalls(t *testing.T) {
 	withOwnBuild(t)
 	m := buildModel(t)

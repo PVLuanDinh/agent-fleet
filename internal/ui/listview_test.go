@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/config"
-	"github.com/YoanWai/agent-manager/internal/launch"
-	"github.com/YoanWai/agent-manager/internal/status"
-	"github.com/YoanWai/agent-manager/internal/store"
-	"github.com/YoanWai/agent-manager/internal/sysstat"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/launch"
+	"github.com/PVLuanDinh/agent-fleet/internal/status"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/sysstat"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
@@ -1214,7 +1214,7 @@ func TestRingLoaderWrapsThePhaseRoundTheRing(t *testing.T) {
 }
 
 func TestRowMarksSessionsOnAnotherServer(t *testing.T) {
-	const here, there = "/tmp/tmux-501/agentmgr", "/tmp/another-manager/agentmgr"
+	const here, there = "/tmp/tmux-501/agentfleet", "/tmp/another-manager/agentfleet"
 	for _, tc := range []struct {
 		name     string
 		socket   string
@@ -1252,7 +1252,7 @@ func TestRowsAreUnmarkedBeforeTheFirstPoll(t *testing.T) {
 	now := time.Now()
 	sess := store.Session{
 		ID: "away-1", Name: "away", Tool: "claude", Status: status.Working,
-		CreatedAt: now, LastStatusAt: now, TmuxSocket: "/tmp/another-manager/agentmgr",
+		CreatedAt: now, LastStatusAt: now, TmuxSocket: "/tmp/another-manager/agentfleet",
 	}
 	m := &Model{
 		width: 120, height: 40, mode: modeList,

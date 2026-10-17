@@ -1,149 +1,33 @@
-<h1 align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/wordmark-dark.svg">
-    <img src="docs/brand/wordmark-light.svg" alt="agent-manager" width="340">
-  </picture>
-</h1>
+# agent-fleet (terminal UI and CLI)
 
-<p align="center"><b>The fastest developer workflow for every AI coding agent.</b></p>
+The fleet layer of [agent-fleet](https://github.com/PVLuanDinh/agent-fleet): runs each coding agent
+(Claude Code, Codex, Gemini, OpenCode, ...) as a live tmux session, shows which one is working, waiting
+on you, finished or errored, and lets you prompt, review diffs, revive and coordinate them from one
+terminal. The `agent-fleet` skill drives it through `fleet.py`; a person drives it through the TUI.
 
-<p align="center">
-  <a href="https://peerlist.io/yoanwai/project/agent-manager" target="_blank" rel="noopener noreferrer">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/brand/peerlist-laurel-dark.webp">
-      <img src="docs/brand/peerlist-laurel-light.webp" alt="Live on Peerlist Launchpad" width="331" height="90">
-    </picture>
-  </a>
-</p>
+- **CLI only.** No MCP server is registered into sessions. Every operation an agent needs (`sessions`,
+  `send`, `read`, `spawn`, `task`, `reserve`, `wait`, `review-comment`, ...) is a subcommand; a spawned
+  session is told to run `agent-fleet help`.
+- **Self-contained.** No release checks, remote feed or self-update; issue reports go to
+  [PVLuanDinh/agent-fleet](https://github.com/PVLuanDinh/agent-fleet/issues).
+- **Board in the header.** With `AGENT_FLEET_BOARD` set to an agent-fleet message board, the header shows
+  open owner questions and claims.
 
-<p align="center">
-  <a href="https://trendshift.io/repositories/89312?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-89312" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/89312/daily?language=Go" alt="agent-manager on Trendshift" width="250" height="55"></a>
-  <a href="https://www.producthunt.com/products/agent-manager?utm_source=badge-featured&amp;utm_medium=badge" target="_blank" rel="noopener noreferrer"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1212310&amp;theme=dark" alt="agent-manager on Product Hunt" width="250" height="54"></a>
-</p>
+## Build
 
-<p align="center">
-  <a href="https://github.com/YoanWai/agent-manager/stargazers"><img src="https://img.shields.io/github/stars/YoanWai/agent-manager?style=for-the-badge&label=stars&labelColor=1f2328&color=96591f" alt="stars"></a>
-  <a href="https://github.com/YoanWai/agent-manager"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FYoanWai%2Fagent-manager%2Fbadges%2Fclones.json&style=for-the-badge&labelColor=1f2328" alt="clones in the last 14 days"></a>
-  <a href="https://github.com/YoanWai/agent-manager/releases/latest"><img src="https://img.shields.io/github/v/release/YoanWai/agent-manager?style=for-the-badge&label=release&labelColor=1f2328&color=2f5f8f" alt="latest release"></a>
-  <br>
-  <a href="https://github.com/YoanWai/agent-manager/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/YoanWai/agent-manager/ci.yml?branch=main&style=for-the-badge&label=build&labelColor=1f2328&color=2f7f62" alt="CI status"></a>
-  <a href="https://app.codecov.io/gh/YoanWai/agent-manager"><img src="https://img.shields.io/codecov/c/github/YoanWai/agent-manager?branch=main&style=for-the-badge&label=coverage&labelColor=1f2328" alt="test coverage"></a>
-  <a href="https://pkg.go.dev/github.com/YoanWai/agent-manager"><img src="https://img.shields.io/badge/go.dev-reference-007d9c?style=for-the-badge&logo=go&logoColor=white" alt="Go package reference"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/YoanWai/agent-manager?style=for-the-badge&label=license&labelColor=1f2328&color=59636e" alt="licence"></a>
-</p>
-
-![five prompts to five fresh agents without moving the cursor, one per CLI, the first on Opus at high effort picked in the prompt bar, then a session's diff opened in review](docs/demo.gif)
-
-Claude Code, Codex, OpenCode, Grok, Gemini CLI, Antigravity CLI, Pi, Command Code, Hermes Agent, Muse Code, and Oh My Pi run side by side. Each tool runs in its own persistent tmux session.
-
-agent-manager is a thin layer over the CLIs you already have. Each session launches your own installed tool as-is: your login, your subscription, your config files, your MCP servers, and every feature the tool ships all carry over, exactly as they behave in a plain terminal.
-
-Instead of hunting through terminal tabs to see which agent is done and which is stuck, every session shows up in one list with live status, grouped into a project tree you can fold and reorder. You answer any of them without attaching: `space` sends a prompt straight into a session's pane, or spawns a new agent in the selected group. A dead session revives on its own conversation with `v`. And `ctrl+r` opens a full-file diff of what an agent changed, syntax-highlighted, where the comments you leave on lines go back to the agent's pane as one review prompt when you press `C`.
-
-Press `f` on a session to continue its conversation in a separate named fork.
-
-The mouse works across the whole manager. The wheel moves the cursor, a click on a session focuses it, and a click on its row or the mouse back button brings you back. Drag a row by its `⠿` handle to reorder it or move it into another group, and the `[…]` at the end of every row opens its actions. The divider between the list and the preview drags, and while any message is left, a click on `messages` in the key legend opens it. In a focused pane a drag selects and copies text, and a click on a link opens it in your browser. Settings has a mouse toggle for terminals where you want native selection back.
-
-![the mouse in the list: the wheel moves the cursor, a click focuses a session, a click on its row comes back, the ⠿ handle drags a row within its group and into another one, and […] opens the row's actions](docs/demo-mouse.gif)
-
-The tools you use alongside agents live in the same list: `T` opens a shell under the selected agent, or in the selected group, for builds, Git, and one-off commands. An agent can spawn another, send it a message, and wait until it is done: every MCP-capable session carries those tools on launch.
-
-Not here yet: cost tracking.
-
-**Jump to:** [Install](#install) · [Usage](#usage) · [Keys](docs/usage.md#keys) · [Diff review](docs/usage.md#diff-review) · [Configuration](docs/configuration.md) · [Docs site](https://agent-manager.dev/docs/)
-
-## Supported tools
-
-Status detection supports **Claude Code**, **OpenCode**, **Codex**, **Grok Build**, **Gemini CLI**, **Antigravity CLI**, **Pi**, **Command Code**, **Hermes Agent**, **Muse Code**, and **Oh My Pi**. Each one's launch, revive, fork, and status rules ship in the binary (Hermes, Antigravity, and Oh My Pi have no fork), so an upgrade brings the current version of all of them (see [Configuration](docs/configuration.md#agent-clis)). A CLI that is not on the list is a [feature request](https://github.com/YoanWai/agent-manager/issues/new/choose).
-
-## Install
-
-Runs on macOS and Linux, and on Windows inside [WSL2](docs/install.md#windows).
-
-### Homebrew (macOS / Linux)
+Linux or macOS (on Windows: inside WSL), Go 1.27+, tmux 3.2+:
 
 ```bash
-brew install agent-manager
+git clone -b tui https://github.com/PVLuanDinh/agent-fleet.git agent-fleet-tui && cd agent-fleet-tui
+go build -ldflags "-X main.version=0.41.0" -o ~/.local/bin/agent-fleet .
+agent-fleet            # the TUI
+agent-fleet help       # the CLI
 ```
 
-Installs tmux with it if missing, and Homebrew runs on git, so both dependencies are covered. This is the homebrew-core formula, which builds from source. For the prebuilt binary, `brew install --cask yoanwai/tap/agent-manager`.
-
-### Install script (macOS / Linux)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/YoanWai/agent-manager/main/install.sh | sh
-```
-
-Downloads the latest release for your platform, verifies it against the published checksums, and installs it to `~/.local/bin`. Then it checks for tmux 3.1+ and git and offers to install whichever is missing through the package manager it finds (Homebrew, apt, dnf, pacman, zypper, or apk), printing the exact command when you decline. Set `AGENT_MANAGER_INSTALL_DIR` for another directory, `AGENT_MANAGER_VERSION` to pin a version, and `AGENT_MANAGER_INSTALL_DEPS=1` to answer the dependency prompt up front (`=0` to skip it).
-
-Arch Linux, mise, `go install`, prebuilt binaries, Windows (WSL2), dependencies, and updating: [docs/install.md](docs/install.md).
-
-## Usage
-
-```bash
-agent-manager
-```
-
-Sessions run inside tmux (`am_*` namespace), so they survive the manager quitting. Inside a session, **Ctrl+Q** detaches back to the manager when your terminal and tmux leave it available; **Ctrl+\\** is an alternate under the same rule. **Ctrl+R** opens the session's diff review and **F3** opens its directory in your editor; the **keybindings** row in Settings (`s`) moves any of them, or hands one back to the agent, and moves or turns off any action of the manager's own list, with `esc` and `ctrl+c` staying as they are (see [Key bindings](docs/configuration.md#key-bindings)). In a full-screen attach, the session footer also shows an inner tmux prefix followed by `d` when configured. When nested inside another tmux, send the inner prefix shown in the footer, then press `d`. If both tmux servers use the same prefix, invoke the outer tmux's `send-prefix` binding; if the outer tmux otherwise captures the inner prefix, configure it to forward that key. `agent-manager --version` prints the version.
-
-Agent sessions live on a private tmux server named `agentmgr`, so they never mix with the tmux you run yourself and a `kill-server` on your own socket leaves them alone. To reach one from a plain shell, name that server: `tmux -L agentmgr ls`, then `tmux -L agentmgr attach -t am_<id>`.
-
-The full reference, every key, quick prompt mode, killing and reviving, diff review, groups, status detection, stats, and themes, lives in [docs/usage.md](docs/usage.md). Tell your agent what you want to review in Agent Manager, and your agent will set it up for you to view in the review panel. You can also tell your agent to manage sessions and terminals in Agent Manager. The short version:
-
-| Key | Action |
-|-----|--------|
-| `n` | New session (name, tool, the model, effort and profile the tool reports, directory, optional starting prompt, group) |
-| `space` | Quick prompt mode: answer the selected session, or spawn an agent in the selected group |
-| `enter` | Focus the session in place; keys go to the agent while the list stays |
-| click / double click | Focus a session / fold or unfold a group. The full-screen layout selects on a click and focuses on a double click |
-| drag `⠿` | Reorder a row, drop it into another group, or nest a terminal under an agent |
-| `[…]` / right click | The row's actions: attach, prompt, review, fork, rename, move, archive, kill, delete and more |
-| click its row / mouse back | Focused: back to the list. A click on another row focuses that one |
-| `→` / `←` | Step in and out: `→` focuses the session or opens the group, `←` closes the group and, at the start of a focused agent's prompt, comes back to the list. In beta, and Settings can turn the pair off |
-| `ctrl+r` | Review the session's changes as full-file diffs; `c` comments a line, `C` sends a numbered review round, and sent comments stay visible as open or handled |
-| `x` / `v` | Kill a session to free its RAM / revive it on its own conversation |
-| `R` | Restart a session on an empty context: same name, group, directory and tool, fresh conversation |
-| `s` | Settings (default tool, theme or follow the OS light/dark mode, list density, mouse, review layout, desktop notifications, editor, keybindings) |
-| `?` | The key map for the current screen; review shows only review bindings |
-
-A session can spawn into its own git worktree (`<repo>-worktrees/<name>`, branch `am/<name>`), toggled on the `n` form, with `ctrl+t` in quick prompt mode, or by default in Settings.
-
-A session can start on a model, reasoning effort and profile of its own, picked on the `n` form, with `ctrl+l`, `ctrl+x` and `ctrl+y` in quick prompt mode, or with `spawn --model --effort --profile`. The lists come from each CLI at runtime, so a new model shows up the day the CLI ships it, and restart, revive and fork keep the choice (see [Model, effort and profile](docs/usage.md#model-effort-and-profile)).
-
-![the session tree, with a Claude Code session's latest answer in the preview](docs/screenshot-sessions.png)
-
-![the session list taking the whole terminal, one-line rows with the computer stats on the foot, then a session focused full screen](docs/demo-fullscreen.gif)
-
-![the same full-screen list at the comfortable density: every session on three lines, its task and the agent's last message under the name](docs/demo-fullscreen-comfortable.gif)
-
-![review, side by side, with the changed lines tinted in full file context](docs/screenshot-review.png)
-
-Configuration (Settings, the editor `o` opens, and the key tables) is in [docs/configuration.md](docs/configuration.md).
-
-## Development
-
-```bash
-go run .
-env -u TMUX TMUX_TMPDIR=/tmp/amtest go test ./...   # end-to-end tests drive a real tmux server
-```
-
-See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for the checks CI runs, and [AGENTS.md](AGENTS.md) if you point a coding agent at this repo.
-
-## Contributing
-
-Bug reports, feature ideas, and pull requests are welcome. See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for setup and the checks CI runs. Questions and setups worth sharing go in [Discussions](https://github.com/YoanWai/agent-manager/discussions). Security reports go through a [private advisory](https://github.com/YoanWai/agent-manager/security/advisories/new); see [SECURITY.md](.github/SECURITY.md).
-
-### Contributors
-
-<a href="https://github.com/YoanWai/agent-manager/graphs/contributors"><img src="https://raw.githubusercontent.com/YoanWai/agent-manager/badges/contributors.png" alt="Contributors"></a>
+Settings live in `~/.config/agent-fleet`. Usage, configuration and notifications: [docs/](docs/).
+Design system: [DESIGN.md](DESIGN.md).
 
 ## License
 
-[Apache-2.0](LICENSE)
-
----
-
-<p align="center">
-  <a href="https://peerlist.io/yoanwai/project/agent-manager" target="_blank" rel="noopener noreferrer"><img src="https://peerlist.io/api/v1/projects/embed/PRJHLKLOOER7EER9D1L6RPED7N8M8J?showUpvote=false&amp;theme=dark" alt="agent-manager on Peerlist Launchpad" width="184" height="54"></a>
-  <a href="https://www.producthunt.com/products/agent-manager?utm_source=badge-review&amp;utm_medium=badge" target="_blank" rel="noopener noreferrer"><img src="https://api.producthunt.com/widgets/embed-image/v1/review.svg?post_id=1212310&amp;theme=dark" alt="Review agent-manager on Product Hunt" width="250" height="54"></a>
-</p>
+Apache-2.0. This is a fork of an Apache-2.0 project; its origin, the unchanged `LICENSE` and `NOTICE`,
+and every change made here are listed in [FORK.md](FORK.md).

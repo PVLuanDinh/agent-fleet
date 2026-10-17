@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/sessioncmd"
-	"github.com/YoanWai/agent-manager/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/sessioncmd"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
 )
 
 const (

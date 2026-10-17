@@ -4,8 +4,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/YoanWai/agent-manager/internal/hooks"
-	"github.com/YoanWai/agent-manager/internal/report"
+	"github.com/PVLuanDinh/agent-fleet/internal/hooks"
+	"github.com/PVLuanDinh/agent-fleet/internal/report"
 )
 
 const (

@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/wsl"
+	"github.com/PVLuanDinh/agent-fleet/internal/wsl"
 )
 
 // On WSL2 /proc describes the guest VM (half the Windows RAM by default,

@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/hooks"
-	"github.com/YoanWai/agent-manager/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/hooks"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
 )
 
 const reviewTestComment = "0123456789abcdef"

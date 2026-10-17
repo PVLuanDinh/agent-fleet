@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/YoanWai/agent-manager/internal/tmux"
+	"github.com/PVLuanDinh/agent-fleet/internal/tmux"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -163,7 +163,7 @@ func (m *Model) wheelFocus(up bool, x, y int) tea.Cmd {
 
 // forwardFocusMouse sends an explicit Alt-modified click lifecycle to a
 // focused application that owns the mouse. Normal clicks remain available
-// for agent-manager's selection and clipboard behavior.
+// for agent-fleet's selection and clipboard behavior.
 func (m *Model) forwardFocusMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	row, col, ok := m.forwardedMouseCell(msg)
 	if !ok {

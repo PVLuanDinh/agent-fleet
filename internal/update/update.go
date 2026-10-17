@@ -1,4 +1,4 @@
-// Package update discovers agent-manager releases and keeps a bounded local
+// Package update discovers agent-fleet releases and keeps a bounded local
 // catalog of their user-facing changes. The TUI derives both update prompts
 // and post-update summaries from that one catalog.
 package update
@@ -19,7 +19,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/YoanWai/agent-manager/internal/atomicfile"
+	"github.com/PVLuanDinh/agent-fleet/internal/atomicfile"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -51,7 +51,7 @@ const (
 )
 
 // releasesURL is a var so tests can point the fetch at a local server.
-var releasesURL = "https://api.github.com/repos/YoanWai/agent-manager/releases?per_page=100"
+var releasesURL = "https://api.github.com/repos/PVLuanDinh/agent-fleet/releases?per_page=100"
 
 // userFacingTypes are the conventional commit types that change what the
 // program does for the person reading the digest. The rest are real work
@@ -439,7 +439,7 @@ func cleanChange(bullet string) (Change, bool) {
 	// Credit outside contributors on their digest lines; the maintainer's
 	// own handle and bot handles would be noise on every row.
 	if match := pullSuffix.FindStringSubmatch(bullet); match != nil {
-		if handle := match[1]; handle != "@YoanWai" && !strings.HasSuffix(handle, "[bot]") {
+		if handle := match[1]; handle != "@PVLuanDinh" && !strings.HasSuffix(handle, "[bot]") {
 			change.Author = handle
 		}
 	}

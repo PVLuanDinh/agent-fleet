@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-REPO="YoanWai/agent-manager"
-BINARY="agent-manager"
+REPO="PVLuanDinh/agent-fleet"
+BINARY="agent-fleet"
 
 say() {
 	printf '%s\n' "$*"
@@ -34,10 +34,10 @@ detect_arch() {
 }
 
 resolve_tag() {
-	if [ -n "${AGENT_MANAGER_VERSION:-}" ]; then
-		case $AGENT_MANAGER_VERSION in
-		v*) echo "$AGENT_MANAGER_VERSION" ;;
-		*) echo "v${AGENT_MANAGER_VERSION}" ;;
+	if [ -n "${AGENT_FLEET_VERSION:-}" ]; then
+		case $AGENT_FLEET_VERSION in
+		v*) echo "$AGENT_FLEET_VERSION" ;;
+		*) echo "v${AGENT_FLEET_VERSION}" ;;
 		esac
 		return
 	fi
@@ -144,7 +144,7 @@ have_tty() {
 # The script itself occupies stdin under `curl | sh`, so the prompt reads the
 # terminal directly and treats an unreachable one as a decline.
 confirm() {
-	case ${AGENT_MANAGER_INSTALL_DEPS:-} in
+	case ${AGENT_FLEET_INSTALL_DEPS:-} in
 	1 | y | yes | true) return 0 ;;
 	0 | n | no | false) return 1 ;;
 	esac
@@ -208,9 +208,9 @@ main() {
 	verify_checksum "$tmp" "$archive"
 	tar -xzf "${tmp}/${archive}" -C "$tmp" "$BINARY"
 
-	install_dir=${AGENT_MANAGER_INSTALL_DIR:-$HOME/.local/bin}
+	install_dir=${AGENT_FLEET_INSTALL_DIR:-$HOME/.local/bin}
 	mkdir -p "$install_dir" || err "could not create ${install_dir}"
-	mv "${tmp}/${BINARY}" "${install_dir}/${BINARY}" || err "could not write to ${install_dir}, set AGENT_MANAGER_INSTALL_DIR to a writable directory"
+	mv "${tmp}/${BINARY}" "${install_dir}/${BINARY}" || err "could not write to ${install_dir}, set AGENT_FLEET_INSTALL_DIR to a writable directory"
 	chmod 755 "${install_dir}/${BINARY}"
 
 	say "installed $("${install_dir}/${BINARY}" --version) to ${install_dir}"

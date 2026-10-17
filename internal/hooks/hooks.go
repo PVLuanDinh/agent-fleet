@@ -1,5 +1,5 @@
 // Package hooks wires Claude Code hook events into status files: each
-// managed session gets AGENT_MANAGER_STATUS_FILE in its environment, and
+// managed session gets AGENT_FLEET_STATUS_FILE in its environment, and
 // the generated settings file makes Claude Code write its lifecycle state
 // there. The poller reads these files as a tier-1 status source, ahead of
 // the pane-regex heuristics.
@@ -18,14 +18,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/status"
+	"github.com/PVLuanDinh/agent-fleet/internal/status"
 )
 
-const EnvStatusFile = "AGENT_MANAGER_STATUS_FILE"
+const EnvStatusFile = "AGENT_FLEET_STATUS_FILE"
 
 // EnvSessionID identifies the managed session to the rename subcommand;
 // every session gets it regardless of tool.
-const EnvSessionID = "AGENT_MANAGER_SESSION_ID"
+const EnvSessionID = "AGENT_FLEET_SESSION_ID"
 
 // StatusSourceClaude is the status_source config value that enables this
 // package for a tool.

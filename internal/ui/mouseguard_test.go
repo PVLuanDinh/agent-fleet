@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/tmux"
+	"github.com/PVLuanDinh/agent-fleet/internal/tmux"
 )
 
 func TestGuardedMouseCommandWrapsTheSend(t *testing.T) {

@@ -11,19 +11,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/clipboard"
-	"github.com/YoanWai/agent-manager/internal/config"
-	"github.com/YoanWai/agent-manager/internal/feed"
-	"github.com/YoanWai/agent-manager/internal/git"
-	"github.com/YoanWai/agent-manager/internal/hooks"
-	"github.com/YoanWai/agent-manager/internal/keybind"
-	"github.com/YoanWai/agent-manager/internal/mcpreg"
-	"github.com/YoanWai/agent-manager/internal/status"
-	"github.com/YoanWai/agent-manager/internal/store"
-	"github.com/YoanWai/agent-manager/internal/sysstat"
-	"github.com/YoanWai/agent-manager/internal/systheme"
-	"github.com/YoanWai/agent-manager/internal/tmux"
-	"github.com/YoanWai/agent-manager/internal/update"
+	"github.com/PVLuanDinh/agent-fleet/internal/clipboard"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/feed"
+	"github.com/PVLuanDinh/agent-fleet/internal/git"
+	"github.com/PVLuanDinh/agent-fleet/internal/hooks"
+	"github.com/PVLuanDinh/agent-fleet/internal/keybind"
+	"github.com/PVLuanDinh/agent-fleet/internal/mcpreg"
+	"github.com/PVLuanDinh/agent-fleet/internal/status"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/sysstat"
+	"github.com/PVLuanDinh/agent-fleet/internal/systheme"
+	"github.com/PVLuanDinh/agent-fleet/internal/tmux"
+	"github.com/PVLuanDinh/agent-fleet/internal/update"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
@@ -1093,7 +1093,7 @@ func (m *Model) refreshUpdates() tea.Msg {
 func (m *Model) fetchUpdates(force bool) tea.Msg {
 	if ownBuild {
 		// No release check: upstream's releases are not this build's, and
-		// installing one would replace agent-fleet with stock agent-manager.
+		// installing one would replace agent-fleet with stock agent-fleet.
 		return updateMsg{manual: force}
 	}
 	dir, err := config.Dir()

@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/catalog"
-	"github.com/YoanWai/agent-manager/internal/config"
-	"github.com/YoanWai/agent-manager/internal/keybind"
+	"github.com/PVLuanDinh/agent-fleet/internal/catalog"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/keybind"
 	bubblekey "github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"

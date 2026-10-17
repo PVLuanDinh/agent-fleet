@@ -8,7 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/YoanWai/agent-manager/internal/termseq"
+	"github.com/PVLuanDinh/agent-fleet/internal/termseq"
 )
 
 // remoteTerminal is swapped by tests to pin the session to one side of SSH.

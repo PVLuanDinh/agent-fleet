@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/config"
-	"github.com/YoanWai/agent-manager/internal/keybind"
-	"github.com/YoanWai/agent-manager/internal/status"
-	"github.com/YoanWai/agent-manager/internal/store"
-	"github.com/YoanWai/agent-manager/internal/sysstat"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/keybind"
+	"github.com/PVLuanDinh/agent-fleet/internal/status"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/sysstat"
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -175,7 +175,7 @@ func TestPreviewLine(t *testing.T) {
 // footer and stat rows off their positions.
 func TestPaneExactExpandsTabs(t *testing.T) {
 	const width = 60
-	rows := paneExact("ok  \tgithub.com/YoanWai/agent-manager/internal/ui\t73.163s\n", 4, width, -1)
+	rows := paneExact("ok  \tgithub.com/PVLuanDinh/agent-fleet/internal/ui\t73.163s\n", 4, width, -1)
 	if len(rows) != 1 || strings.ContainsRune(rows[0], '\t') {
 		t.Fatalf("tab reached the frame: %q", rows)
 	}
@@ -221,7 +221,7 @@ func TestPreviewLineKeepsAgentColors(t *testing.T) {
 }
 
 func TestTruncateRuneSafe(t *testing.T) {
-	hebrew := "/home/dev/פרויקטים/agent-manager"
+	hebrew := "/home/dev/פרויקטים/agent-fleet"
 	tail := truncateTail(hebrew, 10)
 	if !strings.HasPrefix(tail, "…") || len([]rune(tail)) != 10 {
 		t.Fatalf("truncateTail broken: %q (%d runes)", tail, len([]rune(tail)))

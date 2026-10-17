@@ -18,8 +18,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/atomicfile"
-	"github.com/YoanWai/agent-manager/internal/update"
+	"github.com/PVLuanDinh/agent-fleet/internal/atomicfile"
+	"github.com/PVLuanDinh/agent-fleet/internal/update"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -49,7 +49,7 @@ const (
 )
 
 // feedURL is a var so tests can point the fetch at a local server.
-var feedURL = "https://raw.githubusercontent.com/YoanWai/agent-manager/main/docs/messages.json"
+var feedURL = "https://raw.githubusercontent.com/PVLuanDinh/agent-fleet/main/docs/messages.json"
 
 var validFeedID = regexp.MustCompile(feedIDPattern)
 

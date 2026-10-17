@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/YoanWai/agent-manager/internal/termseq"
-	"github.com/YoanWai/agent-manager/internal/tmux"
+	"github.com/PVLuanDinh/agent-fleet/internal/termseq"
+	"github.com/PVLuanDinh/agent-fleet/internal/tmux"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )

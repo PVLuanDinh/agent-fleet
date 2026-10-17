@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/YoanWai/agent-manager/internal/keybind"
+	"github.com/PVLuanDinh/agent-fleet/internal/keybind"
 )
 
 func writeLegacyFile(t *testing.T, text string) string {

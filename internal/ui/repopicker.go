@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/YoanWai/agent-manager/internal/diff"
-	"github.com/YoanWai/agent-manager/internal/git"
+	"github.com/PVLuanDinh/agent-fleet/internal/diff"
+	"github.com/PVLuanDinh/agent-fleet/internal/git"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )

@@ -13,14 +13,14 @@
     "body": [
       "Pick the model and reasoning effort for every session, in the New Session modal and in quick prompt mode.",
       "In quick prompt mode, ctrl+l opens the model list and ctrl+x steps the effort.",
-      "Every choice is read live from the CLI, so a new model shows up without an Agent Manager update.",
+      "Every choice is read live from the CLI, so a new model shows up without an agent-fleet update.",
       "So the list is always up to date and never goes stale, like it unfortunately does in a lot of similar TUIs and programs.",
       "Each CLI remembers your last pick, and restart, revive and fork keep the session's choice.",
       "Effort works on Claude, Codex, Grok, Pi, Muse and Hermes. OpenCode and Gemini get the model picker.",
       "Thanks @calsmith1-nokia, @ipl31 and @pandysp for helping out.",
       "Press Enter for the full v0.40.0 release notes."
     ],
-    "url": "https://github.com/YoanWai/agent-manager/releases/tag/v0.40.0",
+    "url": "https://github.com/PVLuanDinh/agent-fleet/releases/tag/v0.40.0",
     "max_version": "0.40.0"
   },
   {
@@ -34,7 +34,7 @@
       "tab picks the CLI, shift+tab turns its own git worktree on or off.",
       "The bar stays open for the next prompt. Settings (s), after quick send, can close it instead."
     ],
-    "url": "https://github.com/YoanWai/agent-manager/blob/main/docs/usage.md#quick-prompt-mode",
+    "url": "https://github.com/PVLuanDinh/agent-fleet/blob/main/docs/usage.md#quick-prompt-mode",
     "min_version": "0.16.0",
     "max_version": "0.39.0",
     "expires_at": "2026-10-08T09:00:00Z"
@@ -53,7 +53,7 @@
       "• Archive confirm stays closed on a row that is already archived. Thanks @Michaelnogh.",
       "• An opencode turn that died on a provider error reads as errored."
     ],
-    "url": "https://github.com/YoanWai/agent-manager/releases/tag/v0.38.0",
+    "url": "https://github.com/PVLuanDinh/agent-fleet/releases/tag/v0.38.0",
     "max_version": "0.38.0"
   },
   {
@@ -70,7 +70,7 @@
       "• macOS notification sounds play again.",
       "• Left leaves a working pi, and grok in minimal mode. Thanks @pandysp."
     ],
-    "url": "https://github.com/YoanWai/agent-manager/releases/tag/v0.37.0",
+    "url": "https://github.com/PVLuanDinh/agent-fleet/releases/tag/v0.37.0",
     "max_version": "0.37.0"
   },
   {
@@ -83,9 +83,9 @@
       "Focus mode keeps up with a streaming pane, and Left leaves Command Code and pi again when they hide the cursor.",
       "A notification click lands on the session that sent it, on macOS, Linux and WSL.",
       "Which default keys got in your way? Say so in the discussion this entry opens, that thread decides what changes.",
-      "Update with `agent-manager update`, `brew upgrade yoanwai/tap/agent-manager`, or your package manager."
+      "Update with `agent-fleet update`, `brew upgrade pvluandinh/tap/agent-fleet`, or your package manager."
     ],
-    "url": "https://github.com/YoanWai/agent-manager/discussions/455",
+    "url": "https://github.com/PVLuanDinh/agent-fleet/discussions/455",
     "max_version": "0.36.0"
   },
   {
@@ -98,7 +98,7 @@
       "@pandysp asked for this in #357, then reviewed it against his own sessions until it was right. Thank you.",
       "The update message in this panel takes `u`, which updates through whatever installed you."
     ],
-    "url": "https://github.com/YoanWai/agent-manager/releases/tag/v0.34.0",
+    "url": "https://github.com/PVLuanDinh/agent-fleet/releases/tag/v0.34.0",
     "max_version": "0.34.0"
   },
   {
@@ -111,9 +111,9 @@
       "Deleting or archiving a session clears its row on the same frame instead of lingering until the next poll.",
       "A working pane whose turn died without an end marker settles after a quiet window instead of showing working forever.",
       "Thanks to @dolutech: asked for Command Code (#380), then built it (#385); #388 on reboot recovery is next.",
-      "Update with `agent-manager update`, `brew upgrade yoanwai/tap/agent-manager`, or your package manager."
+      "Update with `agent-fleet update`, `brew upgrade pvluandinh/tap/agent-fleet`, or your package manager."
     ],
-    "url": "https://github.com/YoanWai/agent-manager/releases/tag/v0.33.0",
+    "url": "https://github.com/PVLuanDinh/agent-fleet/releases/tag/v0.33.0",
     "max_version": "0.33.0"
   },
   {
@@ -124,17 +124,17 @@
       "Claude Code's agent teams run each teammate as a full CLI in a pane beside the leader, splitting the session's window.",
       "The preview, your keystrokes and the pane stats now address the agent's own pane, wherever the agent moves focus.",
       "A split window is sized from the room its teammates already hold, so the agent's pane fills the preview panel again.",
-      "Update with `agent-manager update`, `brew upgrade yoanwai/tap/agent-manager`, or your package manager."
+      "Update with `agent-fleet update`, `brew upgrade pvluandinh/tap/agent-fleet`, or your package manager."
     ],
-    "url": "https://github.com/YoanWai/agent-manager/releases/tag/v0.32.2",
+    "url": "https://github.com/PVLuanDinh/agent-fleet/releases/tag/v0.32.2",
     "max_version": "0.32.2"
   },
   {
     "id": "update-itself-and-review-that-remembers",
-    "banner": "new: agent-manager updates itself",
+    "banner": "new: agent-fleet updates itself",
     "title": "One command updates the binary, and review remembers every round",
     "body": [
-      "`agent-manager update` brings the binary to its newest release through whatever installed it, or swaps it in place.",
+      "`agent-fleet update` brings the binary to its newest release through whatever installed it, or swaps it in place.",
       "Review keeps its rounds, drafts and sent comments per session and repo, so feedback survives a restart.",
       "Agents mark a comment handled or reopen it over MCP and the CLI, closing the loop without erasing what was said.",
       "A reviewed file shows its control bytes now instead of obeying them: a hidden escape sequence cannot repaint the screen.",
@@ -143,7 +143,7 @@
       "@creatorrr fixed WSL pane selection, so box-drawing characters copy whole instead of as mojibake (#341).",
       "@pandysp's #349 is why left and right step in and out of a session; pi and opencode join that pair now."
     ],
-    "url": "https://github.com/YoanWai/agent-manager/releases/tag/v0.32.0",
+    "url": "https://github.com/PVLuanDinh/agent-fleet/releases/tag/v0.32.0",
     "max_version": "0.32.1"
   },
   {
@@ -154,12 +154,12 @@
       "A session can spawn another agent on its own task, so independent work runs beside you instead of behind you.",
       "Sessions list each other, read a pane, send a message that lands when that agent is at rest, and wait for one to stop.",
       "Declare the files you are about to edit and another agent in the same checkout finds out before both of you change them.",
-      "Every verb is an MCP tool for the agent in the pane and an agent-manager subcommand for anything you script.",
+      "Every verb is an MCP tool for the agent in the pane and an agent-fleet subcommand for anything you script.",
       "ctrl+v pastes a clipboard image into a new session's first task, and a missing agent CLI now names its own installer.",
       "Thanks to @roshaans for the image paste and @creatorrr for the report behind the repaint of RTL rows.",
       "@KyleBastien and @pandysp filed what is shaping the next one: #337, #349, #350 and #351."
     ],
-    "url": "https://github.com/YoanWai/agent-manager/releases/tag/v0.31.0",
+    "url": "https://github.com/PVLuanDinh/agent-fleet/releases/tag/v0.31.0",
     "max_version": "0.31.0"
   }
 ]

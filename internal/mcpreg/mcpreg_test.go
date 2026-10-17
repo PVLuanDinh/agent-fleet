@@ -11,9 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/YoanWai/agent-manager/internal/config"
-	"github.com/YoanWai/agent-manager/internal/hooks"
-	"github.com/YoanWai/agent-manager/internal/tmux"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/hooks"
+	"github.com/PVLuanDinh/agent-fleet/internal/tmux"
 )
 
 func TestStyleResolution(t *testing.T) {
@@ -84,7 +84,7 @@ func TestApplyClaudeWritesConfigAndFlag(t *testing.T) {
 	if server.Command != "/opt/bin/agent-fleet" || len(server.Args) != 1 || server.Args[0] != "mcp" {
 		t.Fatalf("server = %+v", server)
 	}
-	if server.Env["AGENT_MANAGER_SESSION_ID"] != "${AGENT_MANAGER_SESSION_ID}" {
+	if server.Env["AGENT_FLEET_SESSION_ID"] != "${AGENT_FLEET_SESSION_ID}" {
 		t.Fatalf("env = %v", server.Env)
 	}
 	if len(env) != 0 {
@@ -101,7 +101,7 @@ func TestApplyCodexAppendsOverrides(t *testing.T) {
 	for _, want := range []string{
 		`mcp_servers.agent-fleet.command="/opt/bin/agent-fleet"`,
 		`mcp_servers.agent-fleet.args=["mcp"]`,
-		`mcp_servers.agent-fleet.env_vars=["AGENT_MANAGER_SESSION_ID"]`,
+		`mcp_servers.agent-fleet.env_vars=["AGENT_FLEET_SESSION_ID"]`,
 	} {
 		if !strings.Contains(command, want) {
 			t.Fatalf("command %q missing %q", command, want)
@@ -128,7 +128,7 @@ func TestApplyOpencodeSetsEnvToConfigFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(content)
-	for _, want := range []string{`"/opt/bin/agent-fleet"`, `"mcp"`, "{env:AGENT_MANAGER_SESSION_ID}"} {
+	for _, want := range []string{`"/opt/bin/agent-fleet"`, `"mcp"`, "{env:AGENT_FLEET_SESSION_ID}"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("config %q missing %q", text, want)
 		}
@@ -200,7 +200,7 @@ func TestValidHermesMCPEntry(t *testing.T) {
 	entry := hermesMCPEntry{
 		Command: "/opt/bin/agent-fleet",
 		Args:    []string{"mcp"},
-		Env:     map[string]string{"AGENT_MANAGER_SESSION_ID": "${AGENT_MANAGER_SESSION_ID}"},
+		Env:     map[string]string{"AGENT_FLEET_SESSION_ID": "${AGENT_FLEET_SESSION_ID}"},
 		Enabled: &enabled,
 	}
 	if !validHermesMCPEntry(entry, "/opt/bin/agent-fleet") {
@@ -223,11 +223,11 @@ func TestApplyHermesRegistersAndVerifies(t *testing.T) {
 	}
 	script := `#!/bin/sh
 if [ "$1" = "config" ] && [ "$2" = "get" ]; then
-  if [ -n "$AGENT_MANAGER_SESSION_ID" ]; then
+  if [ -n "$AGENT_FLEET_SESSION_ID" ]; then
     touch "$FAKE_HERMES_LEAK"
   fi
   if [ -f "$FAKE_HERMES_STATE" ]; then
-    printf '{"command":"%s","args":["mcp"],"env":{"AGENT_MANAGER_SESSION_ID":"${AGENT_MANAGER_SESSION_ID}"},"enabled":true}\n' "$FAKE_HERMES_EXE"
+    printf '{"command":"%s","args":["mcp"],"env":{"AGENT_FLEET_SESSION_ID":"${AGENT_FLEET_SESSION_ID}"},"enabled":true}\n' "$FAKE_HERMES_EXE"
     exit 0
   fi
   exit 1
@@ -267,7 +267,7 @@ exit 1
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantArgs := "mcp\nadd\nagent-fleet\n--command\n/opt/bin/agent-fleet\n--env\nAGENT_MANAGER_SESSION_ID=${AGENT_MANAGER_SESSION_ID}\n--args\nmcp\n"
+	wantArgs := "mcp\nadd\nagent-fleet\n--command\n/opt/bin/agent-fleet\n--env\nAGENT_FLEET_SESSION_ID=${AGENT_FLEET_SESSION_ID}\n--args\nmcp\n"
 	if string(args) != wantArgs {
 		t.Fatalf("hermes args = %q want %q", args, wantArgs)
 	}

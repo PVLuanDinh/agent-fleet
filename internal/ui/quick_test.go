@@ -10,7 +10,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/YoanWai/agent-manager/internal/keybind"
+	"github.com/PVLuanDinh/agent-fleet/internal/keybind"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
@@ -150,7 +150,7 @@ func TestQuickChipRendersInlineInTheInput(t *testing.T) {
 
 	m := buildModel(t)
 	m.openQuickMode()
-	m.quick.attachments = []imageAttachment{{id: 1, path: "/tmp/agent-manager-pastes/paste-123.png"}}
+	m.quick.attachments = []imageAttachment{{id: 1, path: "/tmp/agent-fleet-pastes/paste-123.png"}}
 	m.quick.input.SetValue("look at " + imageToken(1) + " please")
 	m.quick.input.SetWidth(60)
 

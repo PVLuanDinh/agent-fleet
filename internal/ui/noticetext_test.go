@@ -111,8 +111,8 @@ func TestWrapRunsKeepsSpacingInsideARow(t *testing.T) {
 }
 
 func TestWrapRunsBreaksAfterAHyphen(t *testing.T) {
-	lines := wrapRuns([]textRun{{text: "github.com/YoanWai/agent-manager"}}, 28)
-	if len(lines) != 2 || runsText(lines[0]) != "github.com/YoanWai/agent-" || runsText(lines[1]) != "manager" {
+	lines := wrapRuns([]textRun{{text: "github.com/PVLuanDinh/agent-fleet"}}, 28)
+	if len(lines) != 2 || runsText(lines[0]) != "github.com/PVLuanDinh/agent-" || runsText(lines[1]) != "fleet" {
 		t.Fatalf("rows = %+v", lines)
 	}
 }
@@ -139,7 +139,7 @@ func TestRenderRunsStylesTheAccent(t *testing.T) {
 }
 
 func TestWrapRunsBreaksOnlyAtSpacesAndInsideHyphenatedWords(t *testing.T) {
-	text := "Press `ctrl+x`, then (`space`) to pick the `--model` flag with `agent-manager` now."
+	text := "Press `ctrl+x`, then (`space`) to pick the `--model` flag with `agent-fleet` now."
 	plain := strings.ReplaceAll(text, "`", "")
 	for width := 8; width <= 60; width++ {
 		lines := wrapRuns(markedRuns(text), width)
@@ -157,7 +157,7 @@ func TestWrapRunsBreaksOnlyAtSpacesAndInsideHyphenatedWords(t *testing.T) {
 		if joined.String() != plain {
 			t.Fatalf("width %d: rows re-join to %q, want %q", width, joined.String(), plain)
 		}
-		if got := strings.Join(accented(lines), ""); got != "ctrl+xspace--modelagent-manager" {
+		if got := strings.Join(accented(lines), ""); got != "ctrl+xspace--modelagent-fleet" {
 			t.Fatalf("width %d: accented %q, want every marked word", width, got)
 		}
 	}

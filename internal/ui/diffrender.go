@@ -7,8 +7,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/YoanWai/agent-manager/internal/diff"
-	"github.com/YoanWai/agent-manager/internal/git"
+	"github.com/PVLuanDinh/agent-fleet/internal/diff"
+	"github.com/PVLuanDinh/agent-fleet/internal/git"
 	"github.com/alecthomas/chroma/v2"
 	"github.com/alecthomas/chroma/v2/formatters"
 	"github.com/alecthomas/chroma/v2/lexers"

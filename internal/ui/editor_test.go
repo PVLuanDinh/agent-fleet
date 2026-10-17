@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/YoanWai/agent-manager/internal/tmux"
+	"github.com/PVLuanDinh/agent-fleet/internal/tmux"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -30,7 +30,7 @@ func captureEditor(t *testing.T, installed ...string) *[]string {
 		return nil
 	}
 	t.Cleanup(func() { lookPath, startEditor = prevLook, prevStart })
-	for _, key := range []string{"AGENT_MANAGER_EDITOR", "VISUAL", "EDITOR"} {
+	for _, key := range []string{"AGENT_FLEET_EDITOR", "VISUAL", "EDITOR"} {
 		t.Setenv(key, "")
 	}
 	return &launched
@@ -232,8 +232,8 @@ func TestResolveEditorPrecedence(t *testing.T) {
 		installed  []string
 		want       string
 	}{
-		{"Settings over environment", "cfg-edit", map[string]string{"AGENT_MANAGER_EDITOR": "env-edit"}, []string{"code"}, "cfg-edit"},
-		{"environment over PATH", "", map[string]string{"AGENT_MANAGER_EDITOR": "env-edit"}, []string{"code"}, "env-edit"},
+		{"Settings over environment", "cfg-edit", map[string]string{"AGENT_FLEET_EDITOR": "env-edit"}, []string{"code"}, "cfg-edit"},
+		{"environment over PATH", "", map[string]string{"AGENT_FLEET_EDITOR": "env-edit"}, []string{"code"}, "env-edit"},
 		{"first GUI editor on PATH wins", "", nil, []string{"zed", "cursor"}, "cursor"},
 		{"PATH over $VISUAL", "", map[string]string{"VISUAL": "vim"}, []string{"code"}, "code"},
 		{"$VISUAL over $EDITOR", "", map[string]string{"VISUAL": "vim", "EDITOR": "nano"}, nil, "vim"},

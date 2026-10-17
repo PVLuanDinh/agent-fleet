@@ -16,25 +16,25 @@ The mise, `go install`, and prebuilt-binary routes install the binary alone, so 
 ## Homebrew cask
 
 ```bash
-brew install --cask yoanwai/tap/agent-manager
+brew install --cask pvluandinh/tap/agent-fleet
 ```
 
-Installs the released binary rather than building it, and pulls in tmux. The [README](../README.md#install) covers `brew install agent-manager`, the homebrew-core formula that builds from source.
+Installs the released binary rather than building it, and pulls in tmux. The [README](../README.md#install) covers `brew install agent-fleet`, the homebrew-core formula that builds from source.
 
 ## Arch Linux
 
 ```bash
-yay -S agent-manager-bin
+yay -S agent-fleet-bin
 ```
 
-[![AUR version](https://img.shields.io/aur/version/agent-manager-bin?style=flat-square&logo=archlinux&logoColor=white&label=aur&color=6f9fd0)](https://aur.archlinux.org/packages/agent-manager-bin)
+[![AUR version](https://img.shields.io/aur/version/agent-fleet-bin?style=flat-square&logo=archlinux&logoColor=white&label=aur&color=6f9fd0)](https://aur.archlinux.org/packages/agent-fleet-bin)
 
-[agent-manager-bin](https://aur.archlinux.org/packages/agent-manager-bin) in the AUR installs the released binary and pulls in tmux and git.
+[agent-fleet-bin](https://aur.archlinux.org/packages/agent-fleet-bin) in the AUR installs the released binary and pulls in tmux and git.
 
 ## mise
 
 ```bash
-mise use -g ubi:YoanWai/agent-manager
+mise use -g ubi:PVLuanDinh/agent-fleet
 ```
 
 Reads the GitHub release directly, so it needs no registry entry. Install tmux and git with your own package manager.
@@ -42,18 +42,18 @@ Reads the GitHub release directly, so it needs no registry entry. Install tmux a
 ## Go
 
 ```bash
-go install github.com/YoanWai/agent-manager@latest
+go install github.com/PVLuanDinh/agent-fleet@latest
 ```
 
 Requires Go 1.27.2+, tmux 3.1+, and git; installs to `$(go env GOPATH)/bin`.
 
 ## Prebuilt binaries
 
-Download from [Releases](https://github.com/YoanWai/agent-manager/releases) (macOS and Linux, amd64/arm64), and install tmux and git with your package manager.
+Download from [Releases](https://github.com/PVLuanDinh/agent-fleet/releases) (macOS and Linux, amd64/arm64), and install tmux and git with your package manager.
 
 ## Windows
 
-Run inside [WSL2](https://learn.microsoft.com/windows/wsl/install): agent-manager lives on tmux, which is a Linux/macOS tool. In a WSL shell, install with the install script, with Homebrew, or grab the Linux binary from Releases.
+Run inside [WSL2](https://learn.microsoft.com/windows/wsl/install): agent-fleet lives on tmux, which is a Linux/macOS tool. In a WSL shell, install with the install script, with Homebrew, or grab the Linux binary from Releases.
 
 The agent CLIs belong in the distro too. WSL appends the Windows `PATH` to the distro's, so a CLI installed on the Windows side is visible in a WSL shell, and running it there starts a Windows process or fails for want of a Linux runtime. A spawn finding only that copy stops on the setup dialog, which names where the Windows copy is and the command that installs the CLI in the distro.
 
@@ -61,16 +61,16 @@ The agent CLIs belong in the distro too. WSL appends the Windows `PATH` to the d
 
 The manager checks GitHub Releases every ten minutes and shows a `↑ vX.Y.Z available` badge when a newer version is out. The badge sits in the header. With the header hidden, the same badge sits in the top edge of the frame. Press `u` on the update message (or `enter` on the version row in Settings) and what happens next follows the install. A Homebrew, mise, or AUR install hands the terminal to that package manager's own upgrade command, so its progress and any password prompt behave as they would in a shell. An install-script, `go install`, or manual download is updated in place, by downloading the release and swapping the binary. Either way the manager restarts into the new build with every session still running.
 
-Two cases update by hand. A pacman-owned install needs an AUR helper (`yay` or `paru`) on PATH, and without one the manager runs nothing and prints the command to use instead: `yay -S agent-manager-bin`. A Nix install lives in the read-only store, so the manager runs nothing and points you at Nix instead, such as `nix profile upgrade agent-manager` or your flake or NixOS config.
+Two cases update by hand. A pacman-owned install needs an AUR helper (`yay` or `paru`) on PATH, and without one the manager runs nothing and prints the command to use instead: `yay -S agent-fleet-bin`. A Nix install lives in the read-only store, so the manager runs nothing and points you at Nix instead, such as `nix profile upgrade agent-fleet` or your flake or NixOS config.
 
 The same commands work from a shell:
 
 ```bash
-brew upgrade agent-manager                                                                # Homebrew formula
-brew upgrade --cask yoanwai/tap/agent-manager                                             # Homebrew cask
-curl -fsSL https://raw.githubusercontent.com/YoanWai/agent-manager/main/install.sh | sh   # Install script
-mise upgrade --bump ubi:YoanWai/agent-manager                                             # mise
-go install github.com/YoanWai/agent-manager@latest                                        # Go
+brew upgrade agent-fleet                                                                # Homebrew formula
+brew upgrade --cask pvluandinh/tap/agent-fleet                                             # Homebrew cask
+curl -fsSL https://raw.githubusercontent.com/PVLuanDinh/agent-fleet/main/install.sh | sh   # Install script
+mise upgrade --bump ubi:PVLuanDinh/agent-fleet                                             # mise
+go install github.com/PVLuanDinh/agent-fleet@latest                                        # Go
 ```
 
-Later, `agent-manager update` brings the binary to the newest release without re-running any of these: it hands the update to the package manager that installed it, or downloads and swaps the binary itself.
+Later, `agent-fleet update` brings the binary to the newest release without re-running any of these: it hands the update to the package manager that installed it, or downloads and swaps the binary itself.

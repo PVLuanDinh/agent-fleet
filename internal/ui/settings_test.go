@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/YoanWai/agent-manager/internal/config"
-	"github.com/YoanWai/agent-manager/internal/launch"
-	"github.com/YoanWai/agent-manager/internal/update"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/launch"
+	"github.com/PVLuanDinh/agent-fleet/internal/update"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
@@ -435,7 +435,7 @@ func TestSettingsUpdateRowAppliesOnEnter(t *testing.T) {
 	refreshUpdatesForApply = func(context.Context, string, string) (update.Result, error) {
 		return update.Result{
 			Latest: "v0.6.0",
-			URL:    "https://github.com/YoanWai/agent-manager/releases/tag/v0.6.0",
+			URL:    "https://github.com/PVLuanDinh/agent-fleet/releases/tag/v0.6.0",
 			Releases: []update.Release{
 				uiRelease("v0.6.0", "Newest release"),
 				uiRelease("v0.2.0", "Current release"),
@@ -519,7 +519,7 @@ func TestSettingsUpdateRowApplyFailureSurfaces(t *testing.T) {
 	refreshUpdatesForApply = func(context.Context, string, string) (update.Result, error) {
 		return update.Result{
 			Latest:   "v0.3.0",
-			URL:      "https://github.com/YoanWai/agent-manager/releases/tag/v0.3.0",
+			URL:      "https://github.com/PVLuanDinh/agent-fleet/releases/tag/v0.3.0",
 			Releases: []update.Release{uiRelease("v0.3.0", "Newest release"), uiRelease("v0.2.0", "Current release")},
 		}, nil
 	}
@@ -558,7 +558,7 @@ func TestSettingsUpdateRowPersistsStagedSettings(t *testing.T) {
 	refreshUpdatesForApply = func(context.Context, string, string) (update.Result, error) {
 		return update.Result{
 			Latest:   "v0.3.0",
-			URL:      "https://github.com/YoanWai/agent-manager/releases/tag/v0.3.0",
+			URL:      "https://github.com/PVLuanDinh/agent-fleet/releases/tag/v0.3.0",
 			Releases: []update.Release{uiRelease("v0.3.0", "Newest release"), uiRelease("v0.2.0", "Current release")},
 		}, nil
 	}

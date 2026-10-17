@@ -1,6 +1,6 @@
 version: 2
 
-project_name: agent-manager
+project_name: agent-fleet
 
 builds:
   - env:
@@ -32,37 +32,37 @@ changelog:
 
 release:
   header: |
-    Run every AI coding agent from one terminal. Claude Code, Codex, OpenCode, Grok Build, Gemini CLI, Antigravity CLI, Pi, Command Code, Hermes Agent, Muse Code, and Oh My Pi run side by side, each in its own tmux session, with live status, a project tree, quick prompt mode, and full-file diff review. Runs on macOS and Linux, and on Windows inside WSL2. [See it running](https://github.com/YoanWai/agent-manager#agent-manager).
+    Run every AI coding agent from one terminal. Claude Code, Codex, OpenCode, Grok Build, Gemini CLI, Antigravity CLI, Pi, Command Code, Hermes Agent, Muse Code, and Oh My Pi run side by side, each in its own tmux session, with live status, a project tree, quick prompt mode, and full-file diff review. Runs on macOS and Linux, and on Windows inside WSL2. [See it running](https://github.com/PVLuanDinh/agent-fleet#agent-fleet).
 
   footer: |
     ## Install
 
     ```bash
     # macOS / Linux
-    brew install agent-manager
-    curl -fsSL https://raw.githubusercontent.com/YoanWai/agent-manager/main/install.sh | sh
-    mise use -g ubi:YoanWai/agent-manager
-    go install github.com/YoanWai/agent-manager@latest
+    brew install agent-fleet
+    curl -fsSL https://raw.githubusercontent.com/PVLuanDinh/agent-fleet/main/install.sh | sh
+    mise use -g ubi:PVLuanDinh/agent-fleet
+    go install github.com/PVLuanDinh/agent-fleet@latest
 
     # Arch Linux
-    yay -S agent-manager-bin
+    yay -S agent-fleet-bin
     ```
 
     Prebuilt macOS and Linux binaries are attached below. Windows runs it inside WSL2.
 
     ## Get involved
 
-    [Discussions](https://github.com/YoanWai/agent-manager/discussions) for questions and setups, [issues](https://github.com/YoanWai/agent-manager/issues) for bugs and ideas, [CONTRIBUTING.md](https://github.com/YoanWai/agent-manager/blob/main/.github/CONTRIBUTING.md) to send a patch.
+    [Discussions](https://github.com/PVLuanDinh/agent-fleet/discussions) for questions and setups, [issues](https://github.com/PVLuanDinh/agent-fleet/issues) for bugs and ideas, [CONTRIBUTING.md](https://github.com/PVLuanDinh/agent-fleet/blob/main/.github/CONTRIBUTING.md) to send a patch.
 
 homebrew_casks:
   - repository:
-      owner: YoanWai
+      owner: PVLuanDinh
       name: homebrew-tap
-    homepage: https://agent-manager.dev/
+    homepage: https://github.com/PVLuanDinh/agent-fleet/
     description: Run Claude Code, Codex, OpenCode and other AI coding agents in tmux
     license: Apache-2.0
     binaries:
-      - agent-manager
+      - agent-fleet
     dependencies:
       - formula: tmux
     # Strips Gatekeeper quarantine from the download. goreleaser renders hooks
@@ -71,7 +71,7 @@ homebrew_casks:
     custom_block: |
       postflight_steps do
         on_macos do
-          run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ "{{staged_path}}" }}/agent-manager"]
+          run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ "{{staged_path}}" }}/agent-fleet"]
         end
       end
 
@@ -79,22 +79,22 @@ homebrew_casks:
 # goreleaser skips the publish on an empty url, so a release without the key
 # still succeeds.
 aurs:
-  - name: agent-manager-bin
-    homepage: https://agent-manager.dev/
+  - name: agent-fleet-bin
+    homepage: https://github.com/PVLuanDinh/agent-fleet/
     description: Run Claude Code, Codex, OpenCode and other AI coding agents in tmux
     license: Apache-2.0
     maintainers:
-      - Yoan Wai <106609173+YoanWai@users.noreply.github.com>
+      - PVLuanDinh <290538172+PVLuanDinh@users.noreply.github.com>
     depends:
       - tmux
       - git
     provides:
-      - agent-manager
+      - agent-fleet
     conflicts:
-      - agent-manager
+      - agent-fleet
     private_key: '{{ index .Env "AUR_KEY" }}'
-    git_url: '{{ if index .Env "AUR_KEY" }}ssh://aur@aur.archlinux.org/agent-manager-bin.git{{ end }}'
+    git_url: '{{ if index .Env "AUR_KEY" }}ssh://aur@aur.archlinux.org/agent-fleet-bin.git{{ end }}'
     package: |-
-      install -Dm755 "./agent-manager" "${pkgdir}/usr/bin/agent-manager"
-      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/agent-manager-bin/LICENSE"
-      install -Dm644 "./NOTICE" "${pkgdir}/usr/share/licenses/agent-manager-bin/NOTICE"
+      install -Dm755 "./agent-fleet" "${pkgdir}/usr/bin/agent-fleet"
+      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/agent-fleet-bin/LICENSE"
+      install -Dm644 "./NOTICE" "${pkgdir}/usr/share/licenses/agent-fleet-bin/NOTICE"

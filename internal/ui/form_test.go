@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/config"
-	"github.com/YoanWai/agent-manager/internal/hooks"
-	"github.com/YoanWai/agent-manager/internal/launch"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/hooks"
+	"github.com/PVLuanDinh/agent-fleet/internal/launch"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
@@ -550,7 +550,7 @@ func TestFormChipRendersInTheCard(t *testing.T) {
 	m := buildModel(t)
 	m.openForm()
 	focusFormPrompt(t, m)
-	m.form.prompt.attachments = []imageAttachment{{id: 1, path: "/tmp/agent-manager-pastes/paste-123.png"}}
+	m.form.prompt.attachments = []imageAttachment{{id: 1, path: "/tmp/agent-fleet-pastes/paste-123.png"}}
 	m.form.prompt.input.SetValue("match " + imageToken(1))
 
 	view := m.viewForm()

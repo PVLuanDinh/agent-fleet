@@ -18,8 +18,8 @@ import (
 	"time"
 	"unicode/utf16"
 
-	"github.com/YoanWai/agent-manager/internal/termseq"
-	"github.com/YoanWai/agent-manager/internal/wsl"
+	"github.com/PVLuanDinh/agent-fleet/internal/termseq"
+	"github.com/PVLuanDinh/agent-fleet/internal/wsl"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -60,7 +60,7 @@ var (
 
 // pastesDir is the shared temp directory for clipboard image files.
 func pastesDir() string {
-	return filepath.Join(os.TempDir(), "agent-manager-pastes")
+	return filepath.Join(os.TempDir(), "agent-fleet-pastes")
 }
 
 // IsPastePath reports whether a word is one of the image paths a pasted

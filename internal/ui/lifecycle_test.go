@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/config"
-	"github.com/YoanWai/agent-manager/internal/status"
-	"github.com/YoanWai/agent-manager/internal/store"
-	"github.com/YoanWai/agent-manager/internal/tmux"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/status"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/tmux"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/google/uuid"
@@ -2114,10 +2114,10 @@ func TestReviveStartsTheAgentAgainInALivePane(t *testing.T) {
 	}
 	// The pane wraps the line it was sent at its own width.
 	typed := strings.ReplaceAll(pane, "\n", "")
-	if !strings.Contains(typed, "AGENT_MANAGER_SESSION_ID='"+sess.ID+"'") {
+	if !strings.Contains(typed, "AGENT_FLEET_SESSION_ID='"+sess.ID+"'") {
 		t.Fatalf("relaunch did not carry the session identity; pane:\n%s", pane)
 	}
-	if !strings.Contains(typed, "AGENT_MANAGER_STATUS_FILE='"+m.hooks.StatusFile(sess.ID)+"'") {
+	if !strings.Contains(typed, "AGENT_FLEET_STATUS_FILE='"+m.hooks.StatusFile(sess.ID)+"'") {
 		t.Fatalf("relaunch did not carry the hook status file; pane:\n%s", pane)
 	}
 	got, err := m.store.Get(sess.ID)
@@ -2138,7 +2138,7 @@ func TestReviveStartsTheAgentAgainInALivePane(t *testing.T) {
 	}
 	waitForAgent(t, m, sess.ID, false)
 	marker := filepath.Join(t.TempDir(), "env")
-	report := `printf '%s %s\n' "$AGENT_MANAGER_SESSION_ID" "$AGENT_MANAGER_STATUS_FILE" > ` + marker + `.part && mv ` + marker + `.part ` + marker
+	report := `printf '%s %s\n' "$AGENT_FLEET_SESSION_ID" "$AGENT_FLEET_STATUS_FILE" > ` + marker + `.part && mv ` + marker + `.part ` + marker
 	if err := m.tmux.SendKeys(sess.ID, report, "Enter"); err != nil {
 		t.Fatalf("read the shell environment: %v", err)
 	}

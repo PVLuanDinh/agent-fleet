@@ -1,4 +1,4 @@
-// Package deps reports how to install the external tools agent-manager runs,
+// Package deps reports how to install the external tools agent-fleet runs,
 // so a missing binary names the command that fixes it instead of a bare
 // "not found in PATH". Agent CLIs use the vendor's portable installer;
 // tmux and git use the package manager on this machine.

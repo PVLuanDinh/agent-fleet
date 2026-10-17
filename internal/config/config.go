@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/YoanWai/agent-manager/internal/tmux"
+	"github.com/PVLuanDinh/agent-fleet/internal/tmux"
 )
 
 // PollInterval is how often the manager reads every pane for status,
@@ -60,7 +60,7 @@ type Tool struct {
 	// minted itself when it has no SessionIDFlag ("codex", "opencode",
 	// "gemini", "hermes", "command-code", "muse", "antigravity" or "omp").
 	SessionStore string `toml:"session_store"`
-	// MCP picks how the agent-manager MCP server is registered into this
+	// MCP picks how the agent-fleet MCP server is registered into this
 	// tool's sessions: "claude", "codex", "opencode", "grok", "gemini",
 	// "hermes", "command-code", "muse", "antigravity" or "none".
 	// Empty uses the tool's config key when it names a known style.
@@ -166,7 +166,7 @@ func Dir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(base, "agent-manager"), nil
+	return filepath.Join(base, "agent-fleet"), nil
 }
 
 // WithChoice puts the choice's flags on every line that launches the tool.
@@ -633,7 +633,7 @@ profile_args = "-p {profile}"
 # Hermes only accepts startup text through chat -q, which is one-shot and
 # exits. Start the real REPL, then submit the prompt when its composer appears.
 prompt_mode = "send"
-# Hermes sessions carry the agent-manager MCP tools. Registration needs
+# Hermes sessions carry the agent-fleet MCP tools. Registration needs
 # Hermes's MCP SDK; when it is missing, the spawn stops and the manager
 # offers the pip line that adds it to the Python that runs Hermes.
 mcp = "hermes"

@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/YoanWai/agent-manager/internal/git"
-	"github.com/YoanWai/agent-manager/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/git"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )

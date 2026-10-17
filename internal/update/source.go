@@ -39,14 +39,14 @@ func DetectManager(execPath string) Manager {
 	slashPath := filepath.ToSlash(path)
 	switch {
 	case homebrewTree(slashPath) == "Caskroom":
-		return Manager{Name: "Homebrew", Command: []string{"brew", "upgrade", "--cask", "yoanwai/tap/agent-manager"}}
+		return Manager{Name: "Homebrew", Command: []string{"brew", "upgrade", "--cask", "pvluandinh/tap/agent-fleet"}}
 	case buildSource == "Homebrew" || homebrewTree(slashPath) != "":
-		return Manager{Name: "Homebrew", Command: []string{"brew", "upgrade", "agent-manager"}}
+		return Manager{Name: "Homebrew", Command: []string{"brew", "upgrade", "agent-fleet"}}
 	case miseManaged(slashPath):
-		return Manager{Name: "mise", Command: []string{"mise", "upgrade", "--bump", "ubi:YoanWai/agent-manager"}}
+		return Manager{Name: "mise", Command: []string{"mise", "upgrade", "--bump", "ubi:PVLuanDinh/agent-fleet"}}
 	case strings.HasPrefix(slashPath, "/nix/store/"):
 		// The store is read-only, and the user's Nix profile or config owns the install.
-		return Manager{Name: "Nix", Advice: "installed with Nix; update it through Nix, for example: nix profile upgrade agent-manager"}
+		return Manager{Name: "Nix", Advice: "installed with Nix; update it through Nix, for example: nix profile upgrade agent-fleet"}
 	case pacmanOwns(path):
 		return archManager()
 	}
@@ -58,14 +58,14 @@ func DetectManager(execPath string) Manager {
 func homebrewTree(slashPath string) string {
 	parts := strings.Split(slashPath, "/")
 	for i := 0; i+1 < len(parts); i++ {
-		if parts[i+1] != "agent-manager" {
+		if parts[i+1] != "agent-fleet" {
 			continue
 		}
 		switch parts[i] {
 		case "Cellar", "Caskroom":
 			return parts[i]
 		case "opt":
-			// Only brew's opt tree counts: /opt/agent-manager is a
+			// Only brew's opt tree counts: /opt/agent-fleet is a
 			// conventional manual-install prefix, not Homebrew.
 			if i > 0 && (parts[i-1] == "homebrew" || parts[i-1] == ".linuxbrew") {
 				return parts[i]
@@ -76,14 +76,14 @@ func homebrewTree(slashPath string) string {
 }
 
 // miseManaged matches mise's install layout regardless of MISE_DATA_DIR:
-// .../installs/ubi-yoan-wai-agent-manager/<version>/agent-manager.
+// .../installs/ubi-pvluandinh-agent-fleet/<version>/agent-fleet.
 func miseManaged(slashPath string) bool {
 	parts := strings.Split(slashPath, "/")
 	for i := 0; i+1 < len(parts); i++ {
 		if parts[i] != "installs" {
 			continue
 		}
-		if parts[i+1] == "ubi-yoan-wai-agent-manager" {
+		if parts[i+1] == "ubi-pvluandinh-agent-fleet" {
 			return true
 		}
 	}
@@ -102,14 +102,14 @@ func pacmanOwnsPath(path string) bool {
 }
 
 // archManager picks an installed AUR helper; pacman alone cannot build
-// agent-manager-bin from the AUR.
+// agent-fleet-bin from the AUR.
 func archManager() Manager {
 	for _, helper := range []string{"yay", "paru"} {
 		if _, err := lookPath(helper); err == nil {
-			return Manager{Name: helper, Command: []string{helper, "-S", "agent-manager-bin"}}
+			return Manager{Name: helper, Command: []string{helper, "-S", "agent-fleet-bin"}}
 		}
 	}
-	return Manager{Name: "pacman", Advice: "installed with pacman; install an AUR helper first, then: yay -S agent-manager-bin"}
+	return Manager{Name: "pacman", Advice: "installed with pacman; install an AUR helper first, then: yay -S agent-fleet-bin"}
 }
 
 // RestartTarget is the path main should exec after a delegated upgrade.

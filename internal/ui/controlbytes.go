@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/YoanWai/agent-manager/internal/diff"
+	"github.com/PVLuanDinh/agent-fleet/internal/diff"
 )
 
 func isControlByte(c byte) bool { return c < 0x20 || c == 0x7f }

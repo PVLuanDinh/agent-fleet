@@ -3,8 +3,8 @@ package launch
 import (
 	"testing"
 
-	"github.com/YoanWai/agent-manager/internal/config"
-	"github.com/YoanWai/agent-manager/internal/mcpreg"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/mcpreg"
 )
 
 // The agent-fleet build registers no MCP server into any session, and every

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/YoanWai/agent-manager/internal/git"
+	"github.com/PVLuanDinh/agent-fleet/internal/git"
 )
 
 func BenchmarkBuildSetManyFiles(b *testing.B) {

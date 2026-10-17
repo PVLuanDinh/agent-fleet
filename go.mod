@@ -1,4 +1,4 @@
-module github.com/YoanWai/agent-manager
+module github.com/PVLuanDinh/agent-fleet
 
 go 1.27.2
 

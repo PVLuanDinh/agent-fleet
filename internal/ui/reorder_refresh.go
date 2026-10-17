@@ -3,7 +3,7 @@ package ui
 import (
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
 )
 
 type sessionOrderKey struct {

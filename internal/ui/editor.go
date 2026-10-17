@@ -151,11 +151,11 @@ func (m *Model) resolveEditor() string {
 }
 
 // detectEditor is the editor an unset Settings row falls back to:
-// $AGENT_MANAGER_EDITOR, then a GUI editor this machine has. $VISUAL and
+// $AGENT_FLEET_EDITOR, then a GUI editor this machine has. $VISUAL and
 // $EDITOR come last because they usually name the editor set for git
 // commit messages, not the one a project is meant to open in.
 func detectEditor() string {
-	if line := strings.TrimSpace(os.Getenv("AGENT_MANAGER_EDITOR")); line != "" {
+	if line := strings.TrimSpace(os.Getenv("AGENT_FLEET_EDITOR")); line != "" {
 		return line
 	}
 	for _, name := range guiEditors {

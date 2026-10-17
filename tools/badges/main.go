@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	repo     = "YoanWai/agent-manager"
+	repo     = "PVLuanDinh/agent-fleet"
 	outDir   = "docs/badges"
 	cloneInk = "6a4a94"
 )

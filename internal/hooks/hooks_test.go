@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/status"
+	"github.com/PVLuanDinh/agent-fleet/internal/status"
 )
 
 func TestWriteSettingsWritesValidHookJSON(t *testing.T) {

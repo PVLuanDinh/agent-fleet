@@ -5,8 +5,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/store"
-	"github.com/YoanWai/agent-manager/internal/systheme"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/systheme"
 	tea "github.com/charmbracelet/bubbletea"
 )
 

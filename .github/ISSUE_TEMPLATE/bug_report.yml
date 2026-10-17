@@ -22,8 +22,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: agent-manager version
-      description: Output of `agent-manager --version`
+      label: agent-fleet version
+      description: Output of `agent-fleet --version`
       placeholder: v0.10.5
     validations:
       required: true

@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/config"
-	"github.com/YoanWai/agent-manager/internal/hooks"
-	"github.com/YoanWai/agent-manager/internal/mcpreg"
-	"github.com/YoanWai/agent-manager/internal/tmux"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/hooks"
+	"github.com/PVLuanDinh/agent-fleet/internal/mcpreg"
+	"github.com/PVLuanDinh/agent-fleet/internal/tmux"
 	"github.com/google/uuid"
 )
 

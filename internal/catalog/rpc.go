@@ -15,7 +15,7 @@ type rpcClient struct {
 }
 
 // Muse takes only lowercase letters, digits and underscores in the name.
-var clientInfo = map[string]string{"name": "agent_manager", "version": "catalog"}
+var clientInfo = map[string]string{"name": "agent_fleet", "version": "catalog"}
 
 type rpcError struct {
 	Code    int    `json:"code"`

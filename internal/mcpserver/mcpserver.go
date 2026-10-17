@@ -1,7 +1,7 @@
 // Package mcpserver exposes agent-fleet's session commands as MCP tools
 // over stdio, so any MCP-capable agent discovers and calls them natively.
 // The manager registers this server into every session it spawns; the
-// session id travels via the AGENT_MANAGER_SESSION_ID environment variable.
+// session id travels via the AGENT_FLEET_SESSION_ID environment variable.
 package mcpserver
 
 import (
@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/report"
-	"github.com/YoanWai/agent-manager/internal/sessioncmd"
-	"github.com/YoanWai/agent-manager/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/report"
+	"github.com/PVLuanDinh/agent-fleet/internal/sessioncmd"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

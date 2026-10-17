@@ -20,7 +20,7 @@ const (
 	// The marker never reaches the terminal. It travels through the same
 	// layout and clipping as the cursor cell, then View removes it after
 	// reading the cell's final screen coordinates.
-	cursorAnchorMarker = "\x1b]1337;agent-manager-ime-cursor\x07"
+	cursorAnchorMarker = "\x1b]1337;agent-fleet-ime-cursor\x07"
 )
 
 var (

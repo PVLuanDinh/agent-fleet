@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/atomicfile"
-	"github.com/YoanWai/agent-manager/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/atomicfile"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
 )
 
 // An upgrade outdates an answer at once, since each records its binary.

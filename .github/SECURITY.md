@@ -11,27 +11,27 @@ Security fixes land on the latest release. Upgrade to the newest version before 
 
 ## Reporting a vulnerability
 
-Report privately through GitHub: **[Report a vulnerability](https://github.com/YoanWai/agent-manager/security/advisories/new)**. That opens a private advisory visible only to the maintainer.
+Report privately through GitHub: **[Report a vulnerability](https://github.com/PVLuanDinh/agent-fleet/security/advisories/new)**. That opens a private advisory visible only to the maintainer.
 
 Please include:
 
 - What an attacker can do, and what they need to already have (local shell, a crafted repo, a malicious config, a hostile agent).
 - Steps to reproduce, with the smallest input that triggers it.
-- Version (`agent-manager --version`), OS, and tmux version.
+- Version (`agent-fleet --version`), OS, and tmux version.
 
 You get an acknowledgement within 72 hours and an assessment within a week. Fixes ship in the next release, with credit in the advisory if you want it.
 
 Keep the report private until a fix is released.
 
-## What agent-manager touches
+## What agent-fleet touches
 
 Useful context when judging whether something is a vulnerability:
 
 - **tmux sessions.** The manager creates and drives sessions on its own tmux socket, and reads the visible text of each pane to derive status and render the preview. Pane content is treated as data, not commands.
 - **Process spawning.** Sessions launch the CLI commands built into the binary, and the editor key runs the command set in Settings. Both run as you.
 - **Local state.** Settings and state (`state.db`, SQLite) live in your OS user config directory. Session names, group paths, working directories, and review targets are stored there.
-- **Generated agent config.** Launching Claude Code, Codex, OpenCode, Grok, Gemini, Antigravity, Command Code, Muse Code, or an MCP-enabled Hermes tool writes or registers generated settings or MCP configuration so the agent gets the agent-manager MCP tools. Claude Code also gets generated hook settings that report its status.
-- **MCP server.** `agent-manager mcp` speaks stdio to the agent in its own session and exposes session, group, task, reservation, terminal, messaging, and review operations. It identifies the calling session from its environment and scopes destructive terminal operations to the caller's own nested terminals.
+- **Generated agent config.** Launching Claude Code, Codex, OpenCode, Grok, Gemini, Antigravity, Command Code, Muse Code, or an MCP-enabled Hermes tool writes or registers generated settings or MCP configuration so the agent gets the agent-fleet MCP tools. Claude Code also gets generated hook settings that report its status.
+- **MCP server.** `agent-fleet mcp` speaks stdio to the agent in its own session and exposes session, group, task, reservation, terminal, messaging, and review operations. It identifies the calling session from its environment and scopes destructive terminal operations to the caller's own nested terminals.
 - **Git repositories.** Review mode runs read-only git commands against the repo a session declares or that ranking picks.
 - **Network.** One request a day to the GitHub Releases API to check for a newer version.
 

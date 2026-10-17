@@ -15,17 +15,17 @@ import (
 
 	"os"
 
-	"github.com/YoanWai/agent-manager/internal/agentsession"
-	"github.com/YoanWai/agent-manager/internal/config"
-	"github.com/YoanWai/agent-manager/internal/git"
-	"github.com/YoanWai/agent-manager/internal/hooks"
-	"github.com/YoanWai/agent-manager/internal/mcpreg"
-	"github.com/YoanWai/agent-manager/internal/notify"
-	"github.com/YoanWai/agent-manager/internal/sessioncmd"
-	"github.com/YoanWai/agent-manager/internal/status"
-	"github.com/YoanWai/agent-manager/internal/store"
-	"github.com/YoanWai/agent-manager/internal/sysstat"
-	"github.com/YoanWai/agent-manager/internal/tmux"
+	"github.com/PVLuanDinh/agent-fleet/internal/agentsession"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/git"
+	"github.com/PVLuanDinh/agent-fleet/internal/hooks"
+	"github.com/PVLuanDinh/agent-fleet/internal/mcpreg"
+	"github.com/PVLuanDinh/agent-fleet/internal/notify"
+	"github.com/PVLuanDinh/agent-fleet/internal/sessioncmd"
+	"github.com/PVLuanDinh/agent-fleet/internal/status"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/sysstat"
+	"github.com/PVLuanDinh/agent-fleet/internal/tmux"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 )
@@ -149,7 +149,7 @@ var managerEchoOpenings = []string{
 	"This session is already named.",
 	"Other agent sessions may be running beside you",
 	"[agent-fleet] ",
-	"[agent-manager] ", // echoes sent before the rename
+	"[agent-fleet] ", // echoes sent before the rename
 }
 
 func isManagerEcho(line string) bool {

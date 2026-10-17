@@ -9,7 +9,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/YoanWai/agent-manager/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
 )
 
 func testEngine(t *testing.T) *Engine {
@@ -1745,7 +1745,7 @@ func TestGrokQuoteSkipsMultilinePromptParagraphs(t *testing.T) {
 
 func TestGrokQuoteSkipsWorkspaceHeader(t *testing.T) {
 	engine := defaultEngine(t)
-	header := "  am/grok-test worktree ~/d/agent-manager-worktrees/grok-test 44K / 256K │ [Dashboard]\n\n"
+	header := "  am/grok-test worktree ~/d/agent-fleet-worktrees/grok-test 44K / 256K │ [Dashboard]\n\n"
 	pane := header + "     ❯ When this is done say hello\n\n  │ ❯ │\n"
 	if line, _, ok := engine.LastMessage("grok", pane); !ok || line != "" {
 		t.Fatalf("header before reply quote = %q ok=%v", line, ok)

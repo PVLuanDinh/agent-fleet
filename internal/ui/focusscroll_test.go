@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/config"
-	"github.com/YoanWai/agent-manager/internal/store"
-	"github.com/YoanWai/agent-manager/internal/tmux"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/tmux"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -599,7 +599,7 @@ func focusedMouseApp(t *testing.T, tool, name string) (*Model, store.Session) {
 	return m, sess
 }
 
-// Ordinary clicks still select and copy inside agent-manager. Holding Alt is
+// Ordinary clicks still select and copy inside agent-fleet. Holding Alt is
 // the deliberate handoff gesture for an agent that owns the mouse.
 func TestAltClickReachesMouseTrackingApp(t *testing.T) {
 	m, sess := focusedMouseApp(t, "mouse-tool", "clickapp")

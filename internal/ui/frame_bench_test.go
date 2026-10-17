@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/YoanWai/agent-manager/internal/diff"
-	"github.com/YoanWai/agent-manager/internal/git"
+	"github.com/PVLuanDinh/agent-fleet/internal/diff"
+	"github.com/PVLuanDinh/agent-fleet/internal/git"
 )
 
 func BenchmarkListFrame(b *testing.B) {

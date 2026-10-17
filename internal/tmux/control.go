@@ -51,11 +51,11 @@ type reply struct {
 
 // tmux before 3.7 crashes if a control client is notified mid-handshake
 // (tmux/tmux#4980). attachGate orders this process, and a lock file beside
-// the socket orders every agent-manager process on that server.
+// the socket orders every agent-fleet process on that server.
 var attachGate sync.RWMutex
 
 // enterGate lets a tmux command run beside others until release. Exclusive,
-// it holds off every agent-manager command on the server instead.
+// it holds off every agent-fleet command on the server instead.
 func enterGate(socket string, exclusive bool) (release func(), err error) {
 	lock, unlock := attachGate.RLock, attachGate.RUnlock
 	if exclusive {

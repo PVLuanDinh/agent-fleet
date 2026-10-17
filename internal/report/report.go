@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/config"
-	"github.com/YoanWai/agent-manager/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
 )
 
 // The agent-fleet build files against its own repository: a report about this

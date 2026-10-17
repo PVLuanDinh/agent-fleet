@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/clipboard"
+	"github.com/PVLuanDinh/agent-fleet/internal/clipboard"
 
-	"github.com/YoanWai/agent-manager/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
 	"github.com/charmbracelet/x/ansi"
 )
 

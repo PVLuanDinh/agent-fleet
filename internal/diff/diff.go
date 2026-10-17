@@ -10,7 +10,7 @@ import (
 	"sync"
 	"unicode/utf8"
 
-	"github.com/YoanWai/agent-manager/internal/git"
+	"github.com/PVLuanDinh/agent-fleet/internal/git"
 	udiff "github.com/aymanbagabas/go-udiff"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )

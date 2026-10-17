@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/YoanWai/agent-manager/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
 	"github.com/charmbracelet/x/ansi"
 )
 

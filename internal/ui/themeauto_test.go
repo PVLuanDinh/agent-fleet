@@ -3,7 +3,7 @@ package ui
 import (
 	"testing"
 
-	"github.com/YoanWai/agent-manager/internal/systheme"
+	"github.com/PVLuanDinh/agent-fleet/internal/systheme"
 )
 
 func TestAutoThemeName(t *testing.T) {

@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/status"
-	"github.com/YoanWai/agent-manager/internal/store"
-	"github.com/YoanWai/agent-manager/internal/tmux"
+	"github.com/PVLuanDinh/agent-fleet/internal/status"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/tmux"
 	"github.com/google/uuid"
 )
 
@@ -247,7 +247,7 @@ func TestTerminalCommandsRejectUnsafeTargetsAndInvalidInput(t *testing.T) {
 	if _, err := h.terminals.Read(h.caller.ID, terminal.ID); err == nil || !strings.Contains(err.Error(), "not running") {
 		t.Fatalf("dead read error = %v", err)
 	}
-	if _, err := h.terminals.List(""); err == nil || !strings.Contains(err.Error(), "AGENT_MANAGER_SESSION_ID") {
+	if _, err := h.terminals.List(""); err == nil || !strings.Contains(err.Error(), "AGENT_FLEET_SESSION_ID") {
 		t.Fatalf("missing caller error = %v", err)
 	}
 }

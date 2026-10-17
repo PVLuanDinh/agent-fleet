@@ -8,7 +8,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/YoanWai/agent-manager/internal/update"
+	"github.com/PVLuanDinh/agent-fleet/internal/update"
 )
 
 const usageUpdate = "update [--json]"
@@ -29,7 +29,7 @@ func updateSection(version string) section {
 			{
 				name:  "update",
 				usage: usageUpdate,
-				about: "bring agent-manager to its newest release, through its package manager or in place",
+				about: "bring agent-fleet to its newest release, through its package manager or in place",
 				run: func(args []string, _ func() string, configDir string) error {
 					return runUpdate(version)(os.Stdout, args, configDir)
 				},

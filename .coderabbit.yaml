@@ -171,7 +171,7 @@ reviews:
         kill-session that is not pinned to an isolated socket as critical.
     - path: "internal/tmux/**"
       instructions: |
-        This package owns the dedicated agentmgr socket, and Driver.args is what
+        This package owns the dedicated agentfleet socket, and Driver.args is what
         pins it. Flag an exec path that bypasses that helper, and any global
         option or key binding written to a server this process does not own.
     - path: "internal/ui/**"

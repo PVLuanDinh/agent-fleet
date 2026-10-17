@@ -8,7 +8,7 @@ made.
 
 ## Product boundary
 
-Keep agent-manager a thin wrapper around the supported TUIs. Preserve upstream
+Keep agent-fleet a thin wrapper around the supported TUIs. Preserve upstream
 defaults and user configuration; avoid hardcoded models, version-specific
 behavior, and recreating upstream settings. Apply the
 [Thin Wrapper Principle](PRODUCT.md#thin-wrapper-principle) to every integration,
@@ -91,7 +91,7 @@ Rules the code depends on that no compiler checks. Each one has broken a
 release or a user's sessions before.
 
 - **Every tmux call names its socket.** Go through `Driver` in
-  `internal/tmux`, whose `args` pins `-L agentmgr`. A bare
+  `internal/tmux`, whose `args` pins `-L agentfleet`. A bare
   `exec.Command("tmux", ...)` resolves through `$TMUX` to the developer's own
   server. A global option, `kill-session`, or `set-hook` on a socket this
   process does not own is data loss.

@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/diff"
-	"github.com/YoanWai/agent-manager/internal/git"
-	"github.com/YoanWai/agent-manager/internal/keybind"
-	"github.com/YoanWai/agent-manager/internal/status"
-	"github.com/YoanWai/agent-manager/internal/store"
+	"github.com/PVLuanDinh/agent-fleet/internal/diff"
+	"github.com/PVLuanDinh/agent-fleet/internal/git"
+	"github.com/PVLuanDinh/agent-fleet/internal/keybind"
+	"github.com/PVLuanDinh/agent-fleet/internal/status"
+	"github.com/PVLuanDinh/agent-fleet/internal/store"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 )
@@ -684,8 +684,8 @@ func agentPaneSize(t *testing.T, id string) (int, int) {
 // The rows are marked against the server the poll read panes from, so the
 // refresh has to hand that socket to the model it renders from.
 func TestRefreshCarriesTheSocketItReadPanesFrom(t *testing.T) {
-	for _, socket := range []string{"/tmp/first/agentmgr", "/tmp/second/agentmgr", ""} {
-		m := &Model{collapsed: map[string]bool{}, tmuxSocket: "/tmp/stale/agentmgr"}
+	for _, socket := range []string{"/tmp/first/agentfleet", "/tmp/second/agentfleet", ""} {
+		m := &Model{collapsed: map[string]bool{}, tmuxSocket: "/tmp/stale/agentfleet"}
 		m.Update(refreshMsg{tmuxSocket: socket, leadingManager: true, listedAt: time.Now()})
 		if m.tmuxSocket != socket {
 			t.Fatalf("model socket = %q, want the poll's %q", m.tmuxSocket, socket)

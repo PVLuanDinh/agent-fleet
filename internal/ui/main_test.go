@@ -2,12 +2,12 @@ package ui
 
 import (
 	"fmt"
-	"github.com/YoanWai/agent-manager/internal/mcpreg"
+	"github.com/PVLuanDinh/agent-fleet/internal/mcpreg"
 	"os"
 	"os/exec"
 	"testing"
 
-	"github.com/YoanWai/agent-manager/internal/notify"
+	"github.com/PVLuanDinh/agent-fleet/internal/notify"
 )
 
 // testSocket is an isolated tmux server for this package's tests, so they

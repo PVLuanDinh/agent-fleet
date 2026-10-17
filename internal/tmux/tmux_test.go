@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/keybind"
+	"github.com/PVLuanDinh/agent-fleet/internal/keybind"
 )
 
 // testSocket is an isolated tmux server for this package's tests, so they
@@ -161,7 +161,7 @@ func TestResolvedOptionPropagatesTheGlobalFallbackError(t *testing.T) {
 func TestEnsureBindingsIgnoresAMissingServer(t *testing.T) {
 	dir := t.TempDir()
 	stub := dir + "/tmux"
-	script := "#!/bin/sh\ncase \"$*\" in *list-keys*) exit 0;; esac\necho 'no server running on /tmp/agentmgr' >&2; exit 1\n"
+	script := "#!/bin/sh\ncase \"$*\" in *list-keys*) exit 0;; esac\necho 'no server running on /tmp/agentfleet' >&2; exit 1\n"
 	if err := os.WriteFile(stub, []byte(script), 0o700); err != nil {
 		t.Fatalf("stub: %v", err)
 	}
@@ -1113,14 +1113,14 @@ func waitForPane(t *testing.T, driver *Driver, id, want string) {
 // agent drops the pane onto the shell the script execs, and an agent
 // started again from that shell belongs to this managed session only if it
 // inherits these values: the rename subcommand and the MCP server both
-// identify the session by AGENT_MANAGER_SESSION_ID alone.
+// identify the session by AGENT_FLEET_SESSION_ID alone.
 func TestCreateExportsSessionEnvIntoTheShell(t *testing.T) {
 	driver := requireTmux(t)
 	id := "senv" + strings.ReplaceAll(time.Now().Format("150405.000000"), ".", "")
 	marker := t.TempDir() + "/env"
 	env := map[string]string{
-		"AGENT_MANAGER_SESSION_ID":  "abc123",
-		"AGENT_MANAGER_STATUS_FILE": "/tmp/status-abc123",
+		"AGENT_FLEET_SESSION_ID":  "abc123",
+		"AGENT_FLEET_STATUS_FILE": "/tmp/status-abc123",
 	}
 	// A launch command that returns at once stands in for the user quitting
 	// the agent back to the pane's shell.
@@ -1132,7 +1132,7 @@ func TestCreateExportsSessionEnvIntoTheShell(t *testing.T) {
 
 	// Written whole and moved into place, so the read cannot land between
 	// the two values.
-	report := `printf '%s %s\n' "$AGENT_MANAGER_SESSION_ID" "$AGENT_MANAGER_STATUS_FILE" > ` +
+	report := `printf '%s %s\n' "$AGENT_FLEET_SESSION_ID" "$AGENT_FLEET_STATUS_FILE" > ` +
 		marker + `.part && mv ` + marker + `.part ` + marker
 	if err := driver.SendKeys(id, report, "Enter"); err != nil {
 		t.Fatalf("SendKeys: %v", err)

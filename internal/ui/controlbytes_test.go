@@ -8,7 +8,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/YoanWai/agent-manager/internal/diff"
+	"github.com/PVLuanDinh/agent-fleet/internal/diff"
 )
 
 // The reviewed repo is code the user did not write. Our own rendering emits

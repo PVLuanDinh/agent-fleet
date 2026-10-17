@@ -1,12 +1,12 @@
-# Contributing to agent-manager
+# Contributing to agent-fleet
 
 Thanks for taking an interest. Bug reports, feature ideas, and pull requests are all welcome.
 
 ## Ways to help
 
-- **Report a bug** with the [bug report form](https://github.com/YoanWai/agent-manager/issues/new?template=bug_report.yml).
-- **Suggest a feature** with the [feature request form](https://github.com/YoanWai/agent-manager/issues/new?template=feature_request.yml).
-- **Ask a question or show what you built** in [Discussions](https://github.com/YoanWai/agent-manager/discussions).
+- **Report a bug** with the [bug report form](https://github.com/PVLuanDinh/agent-fleet/issues/new?template=bug_report.yml).
+- **Suggest a feature** with the [feature request form](https://github.com/PVLuanDinh/agent-fleet/issues/new?template=feature_request.yml).
+- **Ask a question or show what you built** in [Discussions](https://github.com/PVLuanDinh/agent-fleet/discussions).
 - **Add or fix status rules for a CLI** you use. Every CLI's launch command and detection rules ship in the binary, in `internal/config/config.go`, so a pull request there reaches everyone running that agent. An issue with the CLI's version and the pane text it draws is the next best thing.
 
 ## Before you open a pull request
@@ -19,7 +19,7 @@ Follow the [Thin Wrapper Principle](../PRODUCT.md#thin-wrapper-principle): prese
 each agent TUI's defaults and user configuration, keep shared features generic,
 and avoid integrations that need updates whenever an upstream tool changes.
 For example, a model picker needs reliable dynamic discovery across supported
-tools; a maintained list of model names does not belong in agent-manager.
+tools; a maintained list of model names does not belong in agent-fleet.
 
 A change is done when it holds on the whole matrix: every supported CLI, every
 platform we build plus WSL2, every terminal including over SSH, keyboard and
@@ -32,8 +32,8 @@ each of these with the reason behind it.
 You need Go 1.27.2+ and tmux.
 
 ```bash
-git clone https://github.com/YoanWai/agent-manager.git
-cd agent-manager
+git clone https://github.com/PVLuanDinh/agent-fleet.git
+cd agent-fleet
 go run .
 ```
 
@@ -96,21 +96,21 @@ everything else on your screen and cannot show a mouse gesture at all. Drive a
 built binary on its own tmux socket instead and capture the frames it paints.
 
 ```bash
-go build -o /tmp/amcap/bin/agent-manager .   # build first, before HOME moves
+go build -o /tmp/amcap/bin/agent-fleet .   # build first, before HOME moves
 
 mkdir -p /tmp/amcap/home /tmp/amcap/sock
 export HOME=/tmp/amcap/home          # throwaway config and store
 export TMUX_TMPDIR=/tmp/amcap/sock   # keep it short, see AGENTS.md
 unset TMUX
-tmux -L outer new-session -d -x 110 -y 30 /tmp/amcap/bin/agent-manager
+tmux -L outer new-session -d -x 110 -y 30 /tmp/amcap/bin/agent-fleet
 ```
 
 `unset TMUX` and a short `TMUX_TMPDIR` matter for the same reason they matter
 to the suite; see Build and test in [AGENTS.md](../AGENTS.md). The socket
 directory also has to exist before tmux starts. When it does not, tmux falls
 back to your default socket without saying so, and the run lands on your real
-sessions. The manager starts its own `agentmgr` server under that directory,
-so `tmux -L agentmgr` reaches the sessions it spawns without touching your
+sessions. The manager starts its own `agentfleet` server under that directory,
+so `tmux -L agentfleet` reaches the sessions it spawns without touching your
 own.
 
 Keys go in with `send-keys`, mouse events as raw SGR bytes through `send-keys -H`:
@@ -141,7 +141,7 @@ Two clauses are worth knowing as a contributor. Section 3 licenses the patent cl
 
 [REVIEW.md](../REVIEW.md) states what a review here covers, so you can see what a finding will be about before you open the PR. CodeRabbit reviews every pull request automatically, usually within minutes. Work through its findings first: fix what it got right, and reply on the comment when you disagree, so the thread records why. Maintainer review starts once the CodeRabbit round is handled; a PR with open, unanswered findings waits.
 
-@YoanWai reviews and merges everything (see [CODEOWNERS](CODEOWNERS)). Expect a first response within a few days.
+@PVLuanDinh reviews and merges everything (see [CODEOWNERS](CODEOWNERS)). Expect a first response within a few days.
 
 ## Code of Conduct
 

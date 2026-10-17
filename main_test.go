@@ -17,15 +17,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/hooks"
-	"github.com/YoanWai/agent-manager/internal/sessioncmd"
-	"github.com/YoanWai/agent-manager/internal/tmux"
+	"github.com/PVLuanDinh/agent-fleet/internal/hooks"
+	"github.com/PVLuanDinh/agent-fleet/internal/sessioncmd"
+	"github.com/PVLuanDinh/agent-fleet/internal/tmux"
 )
 
 // prepareMainProcess recognizes tests re-executed by mainTestCommand and
 // replaces test flags with the agent-fleet arguments following "--".
 func prepareMainProcess() bool {
-	if os.Getenv("AGENT_MANAGER_MAIN_TEST") != "1" {
+	if os.Getenv("AGENT_FLEET_MAIN_TEST") != "1" {
 		return false
 	}
 	for i, arg := range os.Args {
@@ -48,7 +48,7 @@ func mainTestCommand(t *testing.T, args ...string) *exec.Cmd {
 	commandArgs = append(commandArgs, "--")
 	commandArgs = append(commandArgs, args...)
 	cmd := exec.CommandContext(ctx, os.Args[0], commandArgs...)
-	cmd.Env = append(os.Environ(), "AGENT_MANAGER_MAIN_TEST=1")
+	cmd.Env = append(os.Environ(), "AGENT_FLEET_MAIN_TEST=1")
 	cmd.WaitDelay = time.Second
 	return cmd
 }
@@ -360,7 +360,7 @@ func TestCallerSessionOutsideTmuxLeavesTheCommandToExplainIt(t *testing.T) {
 	if err == nil {
 		t.Fatal("a command with no caller succeeded")
 	}
-	for _, want := range []string{"session or terminal", "AGENT_MANAGER_SESSION_ID is unset", "not one agent-fleet runs"} {
+	for _, want := range []string{"session or terminal", "AGENT_FLEET_SESSION_ID is unset", "not one agent-fleet runs"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Fatalf("error %q does not mention %q", err, want)
 		}

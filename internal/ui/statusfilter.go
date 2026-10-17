@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/YoanWai/agent-manager/internal/status"
+import "github.com/PVLuanDinh/agent-fleet/internal/status"
 
 // statusFilter is which status set the list shows. The zero value is all
 // sessions. To add a mode: define a const, append it to statusFilterCycle,

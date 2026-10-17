@@ -91,7 +91,7 @@ components:
 
 **Creative North Star: "The Native Departures Board"**
 
-agent-fleet is a fork of agent-manager v0.41.0 that refuses the generic tmux-tool look. The default world reads like a sidebar-and-content window of a native desktop app: graphite surfaces, the system state colors, a four-step label hierarchy, a source-list selection band, and hairline separators instead of drawn boxes. Inside that window the session rail behaves like a split-flap departures board: columns never move, and a state change restyles its own cell.
+agent-fleet is a fork of agent-fleet v0.41.0 that refuses the generic tmux-tool look. The default world reads like a sidebar-and-content window of a native desktop app: graphite surfaces, the system state colors, a four-step label hierarchy, a source-list selection band, and hairline separators instead of drawn boxes. Inside that window the session rail behaves like a split-flap departures board: columns never move, and a state change restyles its own cell.
 
 It stays a dense instrument used for hours. Structure comes from fixed columns, consistent 2-column insets and tonal fills; color is spent on state and focus, and the frame stays quiet until an agent needs you. Every color resolves through the active `Theme`, so the bundled themes (classic, solarized, catppuccin, tokyo night, gruvbox, nord, dracula, rosé pine, monochrome, kanagawa, paper and their light sides) stay selectable on the same structure. `fleet` is the default and leads the picker; `fleet light` is its counterpart, and auto-detect falls back to `fleet` / `fleet light` when a stored theme has no counterpart.
 

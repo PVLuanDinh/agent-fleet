@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/YoanWai/agent-manager/internal/config"
-	"github.com/YoanWai/agent-manager/internal/status"
+	"github.com/PVLuanDinh/agent-fleet/internal/config"
+	"github.com/PVLuanDinh/agent-fleet/internal/status"
 	_ "modernc.org/sqlite"
 )
 
@@ -99,7 +99,7 @@ type Store struct {
 }
 
 // busyTimeout is how long a writer waits for the lock before giving up.
-// The manager and every `agent-manager mcp` process share this database,
+// The manager and every `agent-fleet mcp` process share this database,
 // so without it a collision between the poller's write and a session
 // tool's write fails instantly with SQLITE_BUSY instead of waiting.
 // _txlock=immediate takes the write lock at BEGIN, so a multi-statement
