@@ -42,6 +42,8 @@ WSL_LEASES = (
     "print(json.dumps(c.execute(sys.argv[1],(time.time_ns(),)).fetchall()))\n")
 
 
+# The fleet binary: agent-fleet (this skill's build of agent-manager), else a stock agent-manager.
+AM = '"$(command -v agent-fleet || command -v agent-manager)"'
 TMUX_SOCKET = "agentmgr"  # agent-manager's own tmux server; each session is tmux session am_<id>
 # Runs inside WSL: mark folders trusted in Claude Code's ~/.claude.json, written atomically.
 WSL_TRUST = (
@@ -119,11 +121,11 @@ def ui_board() -> str:
 def ui_start() -> str:
     if ui_running():
         return "running"
-    if in_wsl(["bash", "-lc", "command -v agent-manager"]).returncode != 0:
-        return "agent-manager not installed"
+    if in_wsl(["bash", "-lc", "command -v agent-fleet || command -v agent-manager"]).returncode != 0:
+        return "agent-fleet (or agent-manager) not installed"
     board = ui_board()
     env = ["-e", f"AGENT_FLEET_BOARD={board}"] if board else []
-    ui_tmux("new-session", "-d", "-s", UI_SESSION, "-x", "200", "-y", "50", *env, "bash -lc 'exec agent-manager'")
+    ui_tmux("new-session", "-d", "-s", UI_SESSION, "-x", "200", "-y", "50", *env, f"bash -lc 'exec {AM}'")
     time.sleep(3)
     return "started" if ui_running() else "failed to start"
 
@@ -170,9 +172,9 @@ def archive_dead() -> list:
 
 
 def sessions() -> list:
-    p = in_wsl(["bash", "-lc", "exec agent-manager sessions --json"])
+    p = in_wsl(["bash", "-lc", f"exec {AM} sessions --json"])
     if p.returncode != 0:
-        raise RuntimeError(f"fleet: agent-manager sessions failed: {p.stderr.strip()[:300]}")
+        raise RuntimeError(f"fleet: {AM} sessions failed: {p.stderr.strip()[:300]}")
     rows = json.loads(p.stdout or "[]")
     for r in rows:
         r["blocked"] = ""
@@ -363,7 +365,7 @@ def main(argv=None):
 
     if args.cmd == "am":
         # bash -lc: agent-manager lives in ~/.local/bin, which only a login shell puts on PATH.
-        return subprocess.call(wsl_prefix() + ["bash", "-lc", 'exec agent-manager "$@"', "am"] + rest)
+        return subprocess.call(wsl_prefix() + ["bash", "-lc", f'exec {AM} "$@"', "am"] + rest)
     if args.cmd == "spawn":
         # A folder WSL claude has never opened parks the new session on the trust prompt, unseen.
         if "--directory" not in rest or rest.index("--directory") + 1 >= len(rest):
@@ -400,7 +402,7 @@ def main(argv=None):
             except Exception as e:
                 print(f"fleet: spawn refused, claim guard could not be installed ({e})", file=sys.stderr)
                 return 1
-        return subprocess.call(wsl_prefix() + ["bash", "-lc", 'exec agent-manager spawn "$@"', "am"] + rest)
+        return subprocess.call(wsl_prefix() + ["bash", "-lc", f'exec {AM} spawn "$@"', "am"] + rest)
     if rest:
         ap.error(f"unrecognized arguments: {' '.join(rest)}")
     if args.cmd == "trust":
@@ -476,9 +478,9 @@ def main(argv=None):
             print(f"{len(ls)} live lease(s)")
         return 0
     if args.cmd == "mcp-config":
-        cmd = wsl_prefix() + ["bash", "-lc", "exec agent-manager mcp"]
-        print(json.dumps({"agent-manager": {"type": "stdio", "command": cmd[0], "args": cmd[1:]}}, indent=2))
-        print("claude mcp add -s user agent-manager -- " + " ".join(
+        cmd = wsl_prefix() + ["bash", "-lc", f"exec {AM} mcp"]
+        print(json.dumps({"agent-fleet": {"type": "stdio", "command": cmd[0], "args": cmd[1:]}}, indent=2))
+        print("claude mcp add -s user agent-fleet -- " + " ".join(
             c if " " not in c else f"'{c}'" for c in cmd))
         return 0
     if args.cmd in ("on", "off"):

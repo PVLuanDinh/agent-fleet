@@ -1,6 +1,6 @@
 ---
 name: agent-fleet
-description: Run and coordinate many coding agents at once. Two layers in one skill - (1) a durable file message board with claims, owner questions, peer review and an anti-gaming scorer, reachable from Claude Desktop (Code tab), terminal Claude, subagents, Agent-Teams teammates and Codex; (2) agent-manager (tmux fleet, in WSL on Windows) to spawn agents as live sessions, see which is working/blocked, answer without attaching, review diffs - driven from a terminal TUI or from any session through its MCP server. One claim domain covers both. Also (3) memtrim, which keeps memory files (a START-HERE, the auto-loaded MEMORY.md index) under a byte budget by moving text, never deleting it, with a verifier that proves no line was lost. Replaces agent-board. Use when agents in different sessions or tools must coordinate, when SendMessage can't reach a participant, when you want to spawn/watch a fleet of agent CLIs, or when a multi-agent task needs a cheat-resistant pass/fail. Triggers - "message board", "agent board", "agent fleet", "agent-manager", "spawn agents", "coordinate agents", "OWNER_QUESTIONS", "claim a file", "score the agents", "prevent gaming/cheating", "memory trim", "START-HERE too big", "MEMORY.md truncated".
+description: Run and coordinate many coding agents at once. Two layers in one skill - (1) a durable file message board with claims, owner questions, peer review and an anti-gaming scorer, reachable from Claude Desktop (Code tab), terminal Claude, subagents, Agent-Teams teammates and Codex; (2) agent-manager (tmux fleet, in WSL on Windows) to spawn agents as live sessions, see which is working/blocked, answer without attaching, review diffs - driven from a terminal TUI or from any session through its CLI (agent-fleet binary, no MCP server). One claim domain covers both. Also (3) memtrim, which keeps memory files (a START-HERE, the auto-loaded MEMORY.md index) under a byte budget by moving text, never deleting it, with a verifier that proves no line was lost. Replaces agent-board. Use when agents in different sessions or tools must coordinate, when SendMessage can't reach a participant, when you want to spawn/watch a fleet of agent CLIs, or when a multi-agent task needs a cheat-resistant pass/fail. Triggers - "message board", "agent board", "agent fleet", "agent-manager", "spawn agents", "coordinate agents", "OWNER_QUESTIONS", "claim a file", "score the agents", "prevent gaming/cheating", "memory trim", "START-HERE too big", "MEMORY.md truncated".
 ---
 
 # agent-fleet
@@ -11,7 +11,7 @@ survive the session or reach another process. Use agent-manager to start and wat
 | Layer | What it owns | Runs from |
 |---|---|---|
 | board (`board.py`, `view.py`, `review.py`, `score.py`, `keepalive.py`) | the record: messages, **the one claim system**, owner questions, reviews, scores | anywhere Python runs: Desktop, terminal, Codex, WSL |
-| fleet (`fleet.py` -> agent-manager) | live agent sessions: spawn, status colours, answer, revive, diff review | TUI: a real terminal only. MCP + CLI: Desktop or terminal (section 7) |
+| fleet (`fleet.py` -> agent-fleet binary) | live agent sessions: spawn, status colours, answer, revive, diff review | TUI: a real terminal only. CLI: Desktop or terminal (section 7) |
 
 Scripts are stdlib Python 3.10+ (`python` on PATH; `python3` inside WSL):
 
@@ -199,20 +199,24 @@ recording `board.py head` only once instead of at every read; and a claim taken 
 Note for scripts that call `board.py claim` in a loop: `already claimed` also contains the word "claimed"
 -- test the exit code, not the text.
 
-## 7. The fleet: agent-manager
+## 7. The fleet: the agent-fleet binary (CLI only)
 
-agent-manager (github.com/YoanWai/agent-manager, Apache-2.0) runs each agent CLI as a real tmux
-session and colours it working / waiting / finished / idle / errored. tmux is Linux/macOS only, so on
-Windows it lives in WSL. Install it inside WSL from its releases page (verify `checksums.txt`; tested with v0.41.0) and
-install the agent CLIs (`claude`, `codex`, ...) inside WSL too: it spawns those. A Windows-only CLI
-seen through WSL's PATH does not work there.
+The fleet layer runs each agent CLI as a real tmux session and colours it working / waiting /
+finished / idle / errored. The binary is `agent-fleet`, this skill's own build of agent-manager
+(branch `tui` of this repo; Apache-2.0 fork of github.com/YoanWai/agent-manager v0.41.0): redesigned
+TUI, no upstream release checks, feed or self-update, issue reports to this repo, and NO MCP server in
+sessions (every MCP tool has a CLI subcommand with identical behavior; sessions are told to run
+`agent-fleet help`). `fleet.py` falls back to a stock `agent-manager` where no `agent-fleet` is
+installed. tmux is Linux/macOS only, so on Windows it lives in WSL: build the `tui` branch there (see
+README) and install the agent CLIs (`claude`, `codex`, ...) inside WSL too: it spawns those. A
+Windows-only CLI seen through WSL's PATH does not work there.
 
 | Where you are | How to use it |
 |---|---|
-| a terminal (Windows Terminal WSL tab, or `wsl -d Ubuntu`) | `agent-manager`: the full TUI. `space` prompt bar spawns or answers, `tab` picks the CLI, `ctrl+t` fresh worktree, `ctrl+r` diff review with line comments, `v` revive, `y` copy last reply |
-| this Desktop session, terminal Claude, Codex | `python $B/fleet.py` (`spawn`, `sessions`, `kill`, `archive-dead`, `ui`, `leases`), or `fleet.py am <subcommand>` (any agent-manager CLI command, run in WSL with argv intact). The MCP server (`fleet.py mcp-config`) does NOT serve these callers: every tool, `list_sessions` included, refuses with "not inside an Agent Manager session or terminal" unless the server's env names a REAL session in `AGENT_MANAGER_SESSION_ID` (a fake id is refused too; measured 2026-10-14, obs 2346). Owner chose CLI only from outside |
+| a terminal (Windows Terminal WSL tab, or `wsl -d Ubuntu`) | `agent-fleet`: the full TUI. `space` prompt bar spawns or answers, `tab` picks the CLI, `ctrl+t` fresh worktree, `ctrl+r` diff review with line comments, `v` revive, `y` copy last reply |
+| this Desktop session, terminal Claude, Codex | `python $B/fleet.py` (`spawn`, `sessions`, `kill`, `archive-dead`, `ui`, `leases`), or `fleet.py am <subcommand>` (any `agent-fleet` CLI command, run in WSL with argv intact). CLI only: no MCP server is registered anywhere; `fleet.py mcp-config` still prints an opt-in entry, but its tools refuse unless a REAL session id is in `AGENT_MANAGER_SESSION_ID` |
 | skills inside a WSL lane | WSL claude reads WSL's own `~/.claude`, which starts with no skills, no hooks and no global CLAUDE.md. Link the skills once: `ln -s /mnt/c/Users/<you>/.claude/skills ~/.claude/skills` (move any existing folder aside first). Plugins must be installed in WSL claude separately. Windows hooks can run in lanes through a WSL bridge (`python3 win_hook.py ps1 <C:\hook.ps1>` in WSL settings: path translation both ways, exit code kept). A lane writes under any `.claude` folder with Bash only (Claude Code refuses Write/Edit there as a sensitive file). Every hard rule a lane must obey still goes in its brief |
-| inside an agent-manager session | its MCP tools are already wired in. Side effect to know: when it launches a CLI, agent-manager writes an `agent-manager` entry into that CLI's own MCP config inside WSL (`claude mcp add`, codex `config.toml`) |
+| inside an agent-fleet session | the launch note points the agent at `agent-fleet help`: `sessions`, `send`, `read`, `spawn`, `task`, `reserve`, `wait`, `review-comment` and the rest, the same operations the MCP tools offered (parity-tested) |
 
 `fleet.py` speaks to WSL with `wsl.exe -d <distro> --exec`, never `--`: `--` re-joins argv into one
 shell string and silently drops the quoting (`am --version` opened the TUI). Distro: `AGENT_FLEET_WSL_DISTRO`.

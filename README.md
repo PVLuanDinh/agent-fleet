@@ -104,7 +104,7 @@ which one is working, waiting or blocked. On Windows it runs inside WSL. `script
 
 ```bash
 python $B/fleet.py am --version            # any agent-manager command, argv intact (wsl.exe --exec on Windows)
-python $B/fleet.py mcp-config              # MCP server entry + `claude mcp add` line, so any session can drive the fleet
+python $B/fleet.py am help                 # the agent-fleet CLI: sessions, send, read, spawn, task, reserve, wait, ...
 python $B/fleet.py --board <root> on       # one claim domain: board claims refuse paths a fleet session leases
 python $B/fleet.py leases                  # live agent-manager leases
 python $B/fleet.py spawn --directory <dir> --name w1 --tool claude --prompt "..."   # pre-trusts the folder, then spawns
@@ -122,12 +122,12 @@ stay on the board: a green row in the TUI is not a pass. Optional Claude Code ho
 The [`tui` branch](https://github.com/PVLuanDinh/agent-fleet/tree/tui) holds a fork of agent-manager v0.41.0
 (Apache-2.0, upstream history and NOTICE kept; changes listed in its `FORK.md`) with a redesigned interface:
 native-desktop palette (`fleet` / `fleet light` themes), states aligned in one column, hairline frame, and a
-header strip showing the board's open owner questions and claims. Same binary name, CLI, MCP server, keys and
-actions as upstream. `fleet.py ui start` passes the board path (`AGENT_FLEET_BOARD`) to it.
+header strip showing the board's open owner questions and claims. The binary is `agent-fleet` (CLI only: every upstream MCP tool
+has a parity-tested CLI subcommand, and no MCP server is registered into sessions); keys and actions match upstream. `fleet.py ui start` passes the board path (`AGENT_FLEET_BOARD`) to it.
 
 ```bash
 git clone -b tui https://github.com/PVLuanDinh/agent-fleet.git agent-fleet-tui && cd agent-fleet-tui
-go build -ldflags "-X main.version=0.41.0" -o ~/.local/bin/agent-manager .
+go build -ldflags "-X main.version=0.41.0" -o ~/.local/bin/agent-fleet .
 ```
 ## Lane preflight (any project)
 
