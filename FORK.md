@@ -30,10 +30,15 @@ Modified files, all under `internal/ui/`, plus `DESIGN.md` and `.impeccable/desi
   behind the `ownBuild` flag and its tests run with the flag off.
 
 - Binary, CLI and MCP server renamed to `agent-fleet` (command vocabulary, launch notes, help and usage,
-  tmux footer, notifications, issue reports). The config directory keeps upstream's name so existing
-  sessions carry over; the `AGENT_MANAGER_SESSION_ID` variable is unchanged.
+  tmux footer, notifications, issue reports). Existing configuration was migrated to the new directory.
 - `internal/mcpreg`: `CLIOnly` (default on) registers no MCP server into sessions; they are told to run
   `agent-fleet help`. `internal/report`: issues are filed against PVLuanDinh/agent-fleet.
+
+- Naming: the Go module is `github.com/PVLuanDinh/agent-fleet`; the config directory is
+  `~/.config/agent-fleet`, environment variables are `AGENT_FLEET_*`, the tmux socket is `agentfleet`, and
+  docs, assets and repository settings name this project. Upstream's published skill pages
+  (`skills/agent-manager*`) are removed. Upstream's name remains only in this file, `LICENSE`, `NOTICE`
+  and the inherited git history.
 
 Build: `go build -ldflags "-X main.version=0.41.0" -o agent-fleet .`
 There is no in-app update: new versions of this build come from this branch.
