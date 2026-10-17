@@ -105,12 +105,25 @@ def ui_running() -> bool:
     return ui_tmux("has-session", "-t", UI_SESSION).returncode == 0
 
 
+def ui_board() -> str:
+    """The board the TUI's header strip reads: $AGENT_FLEET_BOARD, else the first project that names one."""
+    board = os.environ.get("AGENT_FLEET_BOARD", "")
+    if not board:
+        try:
+            board = next((p["board"] for p in load_requirements().get("projects", []) if p.get("board")), "")
+        except RequirementsError:
+            board = ""
+    return to_wsl_path(board) if board else ""
+
+
 def ui_start() -> str:
     if ui_running():
         return "running"
     if in_wsl(["bash", "-lc", "command -v agent-manager"]).returncode != 0:
         return "agent-manager not installed"
-    ui_tmux("new-session", "-d", "-s", UI_SESSION, "-x", "200", "-y", "50", "bash -lc 'exec agent-manager'")
+    board = ui_board()
+    env = ["-e", f"AGENT_FLEET_BOARD={board}"] if board else []
+    ui_tmux("new-session", "-d", "-s", UI_SESSION, "-x", "200", "-y", "50", *env, "bash -lc 'exec agent-manager'")
     time.sleep(3)
     return "started" if ui_running() else "failed to start"
 
