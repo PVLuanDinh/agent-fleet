@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-16T00:00:00Z",
+  "title": "Design System: agent-fleet",
+  "extensions": {
+    "colorMeta": {
+      "backdrop": { "role": "neutral", "displayName": "Graphite Backdrop", "canonical": "oklch(22.7% 0.004 286.1)", "light": "#f5f5f7", "tonalRamp": ["#0b0b0d", "#252527", "#424244", "#616163", "#828284", "#a5a5a7", "#c9c9cb", "#eeeef1"] },
+      "surface": { "role": "neutral", "displayName": "Raised Graphite", "canonical": "oklch(34.9% 0.003 286.2)", "light": "#d9d9de", "tonalRamp": ["#0b0b0d", "#252527", "#424244", "#616163", "#828284", "#a5a5a7", "#c9c9cb", "#eeeef1"] },
+      "overlay": { "role": "neutral", "displayName": "Gauge Track Gray", "canonical": "oklch(40.2% 0.003 286.3)", "light": "#c7c7cc", "tonalRamp": ["#0b0b0c", "#252527", "#424244", "#616163", "#828284", "#a5a5a7", "#c9c9cb", "#eeeef1"] },
+      "border": { "role": "neutral", "displayName": "Seam Gray", "canonical": "oklch(34.1% 0.003 286.2)", "light": "#d1d1d6", "tonalRamp": ["#0b0b0d", "#252527", "#424244", "#616163", "#828284", "#a5a5a7", "#c9c9cb", "#eeeef1"] },
+      "bright": { "role": "neutral", "displayName": "Title White", "canonical": "oklch(97.1% 0.003 286.4)", "light": "#1d1d1f", "tonalRamp": ["#0b0b0c", "#252526", "#424243", "#616163", "#828284", "#a5a5a7", "#c9c9cb", "#eeeef0"] },
+      "text": { "role": "neutral", "displayName": "Body Silver", "canonical": "oklch(86.2% 0.007 286.3)", "light": "#3a3a3c", "tonalRamp": ["#0b0b0e", "#252528", "#414146", "#616165", "#828286", "#a4a4a9", "#c8c8cd", "#eeeef3"] },
+      "dim": { "role": "neutral", "displayName": "Secondary Gray", "canonical": "oklch(75.2% 0.006 286.3)", "light": "#515154", "tonalRamp": ["#0b0b0d", "#252528", "#424245", "#616164", "#828286", "#a4a4a8", "#c9c9cd", "#eeeef2"] },
+      "subtle": { "role": "neutral", "displayName": "Tertiary Gray", "canonical": "oklch(66.8% 0.007 286.2)", "light": "#66666b", "tonalRamp": ["#0b0b0e", "#252529", "#414146", "#616165", "#828287", "#a4a4a9", "#c8c8ce", "#eeeef3"] },
+      "accent": { "role": "primary", "displayName": "System Blue", "canonical": "oklch(62.4% 0.206 255.5)", "light": "#0066cc", "tonalRamp": ["#0a0060", "#000084", "#0033aa", "#005ad1", "#007ef9", "#3ba4ff", "#63caff", "#89f1ff"] },
+      "accent-secondary": { "role": "secondary", "displayName": "Sky Cyan", "canonical": "oklch(81.7% 0.119 227.7)", "light": "#0071a4", "tonalRamp": ["#000c31", "#002b51", "#004b72", "#006c95", "#008fba", "#41b3df", "#6bd8ff", "#92ffff"] },
+      "working": { "role": "state", "displayName": "Working Orange", "canonical": "oklch(78.2% 0.171 67.2)", "light": "#b25000", "tonalRamp": ["#300000", "#540000", "#782000", "#9d4500", "#c36800", "#ea8c00", "#ffb031", "#ffd660"] },
+      "waiting": { "role": "state", "displayName": "Waiting Purple", "canonical": "oklch(65.6% 0.227 312.4)", "light": "#8944ab", "tonalRamp": ["#29004c", "#480070", "#690095", "#8b1cba", "#af49e1", "#d470ff", "#fb96ff", "#ffbcff"] },
+      "finished": { "role": "state", "displayName": "Finished Green", "canonical": "oklch(75.6% 0.208 147.0)", "light": "#1f7a35", "tonalRamp": ["#001900", "#003900", "#005a00", "#007d00", "#00a124", "#1ac64d", "#54ec72", "#80ff97"] },
+      "errored": { "role": "state", "displayName": "Errored Red", "canonical": "oklch(66.3% 0.224 28.3)", "light": "#d70015", "tonalRamp": ["#440000", "#6e0000", "#970000", "#c00000", "#ea2d27", "#ff5b4d", "#ff8371", "#ffaa95"] },
+      "idle": { "role": "state", "displayName": "Idle Gray", "canonical": "oklch(66.8% 0.007 286.2)", "light": "#66666b" },
+      "rail-fill": { "role": "neutral", "displayName": "Rail Graphite", "canonical": "mix(backdrop, surface, 0.55)" },
+      "block-fill": { "role": "neutral", "displayName": "Block Graphite", "canonical": "mix(backdrop, surface, 0.35)" },
+      "hairline": { "role": "neutral", "displayName": "Hairline", "canonical": "mix(backdrop, text, 0.22)" },
+      "selection-band": { "role": "primary", "displayName": "Source-List Band", "canonical": "mix(surface, accent, 0.20)" },
+      "lifted-band": { "role": "primary", "displayName": "Lifted Band", "canonical": "mix(surface, accent, 0.45)" },
+      "drop-band": { "role": "secondary", "displayName": "Drop Band", "canonical": "mix(surface, accent-secondary, 0.30)" },
+      "search-band": { "role": "primary", "displayName": "Search Band", "canonical": "mix(rail-fill, accent, 0.20)" },
+      "card-frame": { "role": "neutral", "displayName": "Card Frame", "canonical": "mix(border, accent, 0.35)" },
+      "lead-fill": { "role": "primary", "displayName": "Lead Fill", "canonical": "mix(backdrop, accent, 0.28)" }
+    },
+    "typographyMeta": {
+      "title": { "displayName": "Title", "purpose": "Wordmark, selected names, legend tier titles, card titles; bold, one cell." },
+      "body": { "displayName": "Body", "purpose": "Names, prompts, replies, values; regular, one cell." },
+      "label": { "displayName": "Label", "purpose": "Field labels, meta columns, separators in the subtle and dim steps." },
+      "key": { "displayName": "Key", "purpose": "Every key binding, bold bright, foreground only." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "wordmark-sweep", "value": "22 frames x 110ms, repeat every 30s", "purpose": "Accent-tinted highlight passes over the wordmark on launch and every 30 s, then rests." },
+      { "name": "board-scan", "value": "15s", "purpose": "Board strip rescans $AGENT_FLEET_BOARD off the update path." }
+    ],
+    "breakpoints": [
+      { "name": "rail-default", "value": "30% of width" },
+      { "name": "rail-min-side", "value": "30 columns" },
+      { "name": "meta-full", "value": "meta block 24 columns (state 8, tool 8, age 4, two 2-column gaps) plus a 2-column gap beside the widest row head" },
+      { "name": "meta-state-age", "value": "meta block 14 columns (state 8, age 4, one gap) plus a 2-column gap beside the widest row head" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Session Row (selected)",
+      "kind": "custom",
+      "refersTo": "session-row-selected",
+      "description": "The cursor's row on the rail: source-list band, bold bright name, state cell in its state color, fixed meta columns.",
+      "html": "<div class=\"ds-rail\"><div class=\"ds-row\"><span class=\"ds-glyph ds-wait\">◆</span> <span class=\"ds-name\">db-migrations</span><span class=\"ds-meta\"><span class=\"ds-state ds-wait\">waiting </span>  opencode  <span class=\"ds-age\">  3m</span></span></div><div class=\"ds-row ds-row-selected\"><span class=\"ds-glyph ds-work\">◐</span> <span class=\"ds-name\">add-rate-limiting</span><span class=\"ds-meta\"><span class=\"ds-state ds-work\">working </span>  claude    <span class=\"ds-age\"> 12m</span></span></div></div>",
+      "css": ".ds-rail { background: #2d2d2f; font-family: ui-monospace, monospace; color: #d1d1d6; padding: 0 0 0 2ch; white-space: pre; } .ds-row { display: flex; padding-right: 2ch; } .ds-row:hover { background: #3a3a3c; } .ds-row-selected, .ds-row-selected:hover { background: #304963; color: #f5f5f7; } .ds-row-selected .ds-name { font-weight: 700; color: #f5f5f7; } .ds-meta { margin-left: auto; color: #949499; } .ds-row-selected .ds-meta { color: #d1d1d6; } .ds-work { color: #ff9f0a; } .ds-wait { color: #bf5af2; }"
+    },
+    {
+      "name": "Board Strip",
+      "kind": "custom",
+      "refersTo": "header",
+      "description": "Header piece reading the agent-fleet board: open owner questions in waiting purple, claims quiet.",
+      "html": "<span class=\"ds-board\"><span class=\"ds-board-label\">board </span><span class=\"ds-board-q\"><b>◆ 2</b> questions</span><span class=\"ds-board-sep\"> · </span><span class=\"ds-board-n\">14</span><span class=\"ds-board-label\"> claims</span></span>",
+      "css": ".ds-board { font-family: ui-monospace, monospace; background: #1c1c1e; white-space: pre; } .ds-board-label, .ds-board-sep { color: #949499; } .ds-board-q { color: #bf5af2; } .ds-board-q b { font-weight: 700; } .ds-board-n { color: #d1d1d6; }"
+    },
+    {
+      "name": "Legend Keycap",
+      "kind": "button",
+      "refersTo": "keycap",
+      "description": "One binding: key in bold bright, action in text; foreground only so it never punches through a band.",
+      "html": "<span class=\"ds-legend\"><span class=\"ds-tier\">Session</span>   <span class=\"ds-key\">r</span> <span class=\"ds-act\">rename</span>  <span class=\"ds-key\">m</span> <span class=\"ds-act\">move</span>  <span class=\"ds-key\">d</span> <span class=\"ds-act\">delete</span></span>",
+      "css": ".ds-legend { font-family: ui-monospace, monospace; background: #1c1c1e; white-space: pre; } .ds-tier { color: #f5f5f7; font-weight: 700; padding: 0 1ch; } .ds-key { color: #f5f5f7; font-weight: 700; } .ds-act { color: #d1d1d6; } .ds-key:hover + .ds-act { color: #f5f5f7; }"
+    },
+    {
+      "name": "Legend Lead Binding",
+      "kind": "button",
+      "refersTo": "legend-lead",
+      "description": "A tier's primary action on an accent-tinted lead chip: key in accent, label in bright.",
+      "html": "<span class=\"ds-lead\"><span class=\"ds-lead-key\">space</span><span class=\"ds-lead-label\">quick prompt mode</span></span>",
+      "css": ".ds-lead { font-family: ui-monospace, monospace; white-space: pre; } .ds-lead-key { background: #17395d; color: #0a84ff; font-weight: 700; padding-left: 1ch; } .ds-lead-label { background: #17395d; color: #f5f5f7; padding: 0 1ch; } .ds-lead:hover .ds-lead-key, .ds-lead:hover .ds-lead-label { background: #245b94; }"
+    },
+    {
+      "name": "Divider",
+      "kind": "custom",
+      "refersTo": "divider",
+      "description": "Section rule: quiet bold label, then a hairline out to the edge.",
+      "html": "<div class=\"ds-divider\"><span class=\"ds-divider-label\"> details </span><span class=\"ds-divider-rule\"></span></div>",
+      "css": ".ds-divider { display: flex; align-items: center; font-family: ui-monospace, monospace; background: #1c1c1e; } .ds-divider-label { color: #949499; font-weight: 700; white-space: pre; } .ds-divider-rule { flex: 1; border-top: 1px solid #38383a; }"
+    },
+    {
+      "name": "Modal Card",
+      "kind": "card",
+      "refersTo": "modal-card",
+      "description": "The one framed form: rounded card-frame border, block fill, accent title set into the top edge, key foot under a hairline.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-title\">New Group</div><div class=\"ds-card-body\">name  <span class=\"ds-card-field\">backend</span></div><div class=\"ds-card-foot\"><span class=\"ds-key\">enter</span> <span class=\"ds-act\">create</span>  <span class=\"ds-key\">esc</span> <span class=\"ds-act\">cancel</span></div></div>",
+      "css": ".ds-card { font-family: ui-monospace, monospace; background: #272729; color: #d1d1d6; border: 1px solid #28537f; border-radius: 6px; max-width: 48ch; white-space: pre; } .ds-card-title { color: #0a84ff; font-weight: 700; margin: -0.7em 0 0 2ch; background: #272729; display: inline-block; padding: 0 1ch; } .ds-card-body { padding: 1em 3ch; } .ds-card-field { color: #f5f5f7; background: #263e59; } .ds-card-field:focus-visible { outline: 1px solid #0a84ff; } .ds-card-foot { border-top: 1px solid #28537f; padding: 0 3ch; } .ds-card .ds-key { color: #f5f5f7; font-weight: 700; }"
+    },
+    {
+      "name": "Wordmark",
+      "kind": "nav",
+      "refersTo": "wordmark",
+      "description": "Plain bold lowercase product name in bright; an accent highlight sweeps it on launch and every 30 s.",
+      "html": "<span class=\"ds-wordmark\">agent-fleet</span>",
+      "css": ".ds-wordmark { font-family: ui-monospace, monospace; font-weight: 700; color: #f5f5f7; background: linear-gradient(90deg, #f5f5f7 0%, #f5f5f7 40%, #0a84ff 50%, #f5f5f7 60%, #f5f5f7 100%) 200% 0 / 300% 100% no-repeat; -webkit-background-clip: text; background-clip: text; } .ds-wordmark:hover { -webkit-text-fill-color: transparent; animation: ds-sweep 2.4s steps(22) 1; } @keyframes ds-sweep { from { background-position: 200% 0; } to { background-position: -100% 0; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Native Departures Board",
+    "overview": "agent-fleet is a fork of agent-manager v0.41.0 that refuses the generic tmux-tool look. The default world reads like a sidebar-and-content window of a native desktop app: graphite surfaces, the system state colors, a four-step label hierarchy, a source-list selection band, and hairline separators instead of drawn boxes. Inside that window the session rail behaves like a split-flap departures board: columns never move, and a state change restyles its own cell.\n\nIt stays a dense instrument used for hours. Structure comes from fixed columns, consistent 2-column insets and tonal fills; color is spent on state and focus, and the frame stays quiet until an agent needs you. Every color resolves through the active Theme, so the bundled themes stay selectable on the same structure. fleet is the default and leads the picker; fleet light is its counterpart, and auto-detect falls back to fleet / fleet light when a stored theme has no counterpart.",
+    "keyCharacteristics": [
+      "Native split view: rail fill, a single │ hairline separator, full-width hairline rows above and below the body.",
+      "Split-flap rail: state, tool and age in fixed right-aligned columns that never shift when a row changes.",
+      "System palette: graphite neutrals, one blue accent, the OS state colors, red reserved for failure.",
+      "Weight over chrome: keys, titles and the wordmark are bold Bright text, never filled buttons.",
+      "Terminal-native: one monospace face, one row per header, keyboard first."
+    ],
+    "rules": [
+      { "name": "The Source-List Rule", "body": "The selection band is surface tinted 20% toward the accent (selection-band), never a plain gray; a row lifted for reordering goes to 45% (lifted-band); a drop target tints 30% toward accent-secondary (drop-band).", "section": "colors" },
+      { "name": "The Red Is Failure Rule", "body": "Errored red appears only for an agent that errored or died. Resource gauges ramp finished → working and stop at working at 85% and above, so a scan for red finds failures only.", "section": "colors" },
+      { "name": "The Waiting Means You Rule", "body": "Open owner questions on the board strip take the waiting color and the waiting glyph, because they wait on you exactly as a waiting agent does.", "section": "colors" },
+      { "name": "The Plain Wordmark Rule", "body": "The wordmark is agent-fleet, lowercase, bold, in bright, one row: a window title, not a splash. An accent-tinted highlight sweeps it left to right on launch (22 frames at 110 ms) and again every 30 s, then holds still so the header can be selected with the mouse. A terminal too narrow for the lit wordmark shows the name in the accent alone.", "section": "typography" },
+      { "name": "The Weight Not Buttons Rule", "body": "A key is set apart from its action by weight, the way a native menu shows a shortcut, not by a drawn keycap.", "section": "typography" },
+      { "name": "The Split-Flap Rule", "body": "Session rows set state (8 columns), tool (8) and age (4, right-aligned bare age such as 12m) in fixed columns right-aligned to the rail. The rail picks ONE meta level for every row from the widest visible row head (full, state + age, state only), so states start in one column down the list. A state change restyles its cell; it never shifts the grid.", "section": "layout" },
+      { "name": "The Badges Never Move Rows Rule", "body": "Inbox and after-turn badges are left out of the meta-level calculation; a badged row that no longer fits sheds its own meta. Name and inbox badge outrank meta: a tight row shortens the name before it drops a badge.", "section": "layout" },
+      { "name": "The Two Quiet Lines Rule", "body": "The body is framed by a hairline above and below and the rail's │ separator; nothing else draws a border around a working surface.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do resolve every color through the active theme; derive in-between tones with mix from the anchors.",
+      "Do keep session meta in the fixed 8 / 8 / 4 columns and pick one meta level for the whole rail.",
+      "Do pair every state color with its glyph, and the state word on session rows.",
+      "Do set keys in bold bright, foreground only, on any row that can carry a band.",
+      "Do frame working surfaces with hairlines (hairline tone) and the single │ separator.",
+      "Do reserve errored red for failed agents and stop gauges at the working tone."
+    ],
+    "donts": [
+      "Don't shift columns when a row's state, badges or name change.",
+      "Don't draw boxes around the rail or content; only modal cards are framed.",
+      "Don't set the wordmark in tracked capitals, gradients or more than one row.",
+      "Don't fill a mark (badge, keycap) that sits on a selection band; a fill punches through it.",
+      "Don't animate without state meaning; the wordmark sweep is the one ambient motion and it rests between sweeps."
+    ]
+  }
+}
