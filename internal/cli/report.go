@@ -23,7 +23,7 @@ func reportSection(version string) section {
 	return section{
 		title: "Bugs and ideas",
 		commands: []command{
-			{name: "issue", usage: usageIssue, about: "file a bug report on agent-manager's GitHub repo; without --confirm it only prints the preview to show the user", run: reportCommand(open, runIssue)},
+			{name: "issue", usage: usageIssue, about: "file a bug report on agent-fleet's GitHub repo; without --confirm it only prints the preview to show the user", run: reportCommand(open, runIssue)},
 			{name: "feature", usage: usageFeature, about: "file a feature request the same way; --confirm takes the preview id and posts through gh, or prints the prefilled form url when gh is not logged in", run: reportCommand(open, runFeature)},
 		},
 	}

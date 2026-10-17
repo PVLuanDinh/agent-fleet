@@ -20,24 +20,24 @@ import (
 // RenameDirective asks the agent, as the first line of its first prompt,
 // to name its own session via the rename tool. Injected only for
 // auto-named sessions that launch with a prompt, so it fires exactly once.
-const RenameDirective = `First, run this exact shell command once, replacing <name> with a short 2-4 word kebab-case name for the broad feature or theme of this whole session (not one subtask of a larger feature): agent-manager rename "<name>". Run rename only this once. Do not rename again later in the conversation unless the user explicitly asks you to rename; if they do, pick a broad name from context, not a narrow step. Then do the task:`
+const RenameDirective = `First, run this exact shell command once, replacing <name> with a short 2-4 word kebab-case name for the broad feature or theme of this whole session (not one subtask of a larger feature): agent-fleet rename "<name>". Run rename only this once. Do not rename again later in the conversation unless the user explicitly asks you to rename; if they do, pick a broad name from context, not a narrow step. Then do the task:`
 
 // DeferredRenameDirective is the standalone message sent into sessions
 // whose first prompt could not carry the directive: slash-command
 // prompts (the command must open the message) and promptless launches.
-const DeferredRenameDirective = `Run this exact shell command once, replacing <name> with a short 2-4 word kebab-case name for the broad feature or theme of this whole session (not one subtask of a larger feature): agent-manager rename "<name>". Run rename only this once. Do not rename again later in the conversation unless the user explicitly asks you to rename; if they do, pick a broad name from context, not a narrow step. Then continue.`
+const DeferredRenameDirective = `Run this exact shell command once, replacing <name> with a short 2-4 word kebab-case name for the broad feature or theme of this whole session (not one subtask of a larger feature): agent-fleet rename "<name>". Run rename only this once. Do not rename again later in the conversation unless the user explicitly asks you to rename; if they do, pick a broad name from context, not a narrow step. Then continue.`
 
 // RenameAvailableNote tells a custom-named session that rename exists for
 // later use without asking it to rename now.
-const RenameAvailableNote = `This session is already named. You can rename it later with agent-manager rename "<name>" only if the user asks. Do not rename it now. Then do the task:`
+const RenameAvailableNote = `This session is already named. You can rename it later with agent-fleet rename "<name>" only if the user asks. Do not rename it now. Then do the task:`
 
 // The coordination notes point a session at the subcommands, in the mode
 // the user picked. Only tools whose agent has no MCP client get one; the
 // rest hear the same from the MCP server's instructions. Both open alike,
 // which is how the poller tells either echo for the manager's own words.
-const ProactiveCoordinationNote = `Other agent sessions may be running beside you in Agent Manager: run "agent-manager help" in your shell for the subcommands that list them, message them, share a task list and reserve the files you are about to edit.`
+const ProactiveCoordinationNote = `Other agent sessions may be running beside you in agent-fleet: run "agent-fleet help" in your shell for the subcommands that list them, message them, share a task list and reserve the files you are about to edit.`
 
-const OnRequestCoordinationNote = `Other agent sessions may be running beside you in Agent Manager. Work with them only when the user asks: on your own, do not list, message, spawn or wait on sessions, or claim tasks from the shared list. When the user does ask, run "agent-manager help" in your shell for the subcommands.`
+const OnRequestCoordinationNote = `Other agent sessions may be running beside you in agent-fleet. Work with them only when the user asks: on your own, do not list, message, spawn or wait on sessions, or claim tasks from the shared list. When the user does ask, run "agent-fleet help" in your shell for the subcommands.`
 
 func coordinationNote(toolName string, tool config.Tool, proactive bool) string {
 	if mcpreg.Style(toolName, tool.MCP) != mcpreg.StyleNone {
@@ -214,5 +214,5 @@ func Executable() string {
 	if exe, err := os.Executable(); err == nil {
 		return exe
 	}
-	return "agent-manager"
+	return "agent-fleet"
 }

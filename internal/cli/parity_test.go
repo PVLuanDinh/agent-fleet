@@ -253,7 +253,7 @@ func TestEachFrontNamesTheCommandsItsCallerHas(t *testing.T) {
 	if fromCLI == nil {
 		t.Fatal("finishing a task that does not exist should be refused")
 	}
-	if !strings.Contains(fromCLI.Error(), "agent-manager task list") {
+	if !strings.Contains(fromCLI.Error(), "agent-fleet task list") {
 		t.Fatalf("the shell front does not name a subcommand: %q", fromCLI)
 	}
 	if strings.Contains(fromCLI.Error(), `task with action "list"`) {
@@ -264,7 +264,7 @@ func TestEachFrontNamesTheCommandsItsCallerHas(t *testing.T) {
 	if !isError {
 		t.Fatalf("finishing a missing task = %q, want a tool error", fromMCP)
 	}
-	if !strings.Contains(fromMCP, `task with action "list"`) || strings.Contains(fromMCP, "agent-manager") {
+	if !strings.Contains(fromMCP, `task with action "list"`) || strings.Contains(fromMCP, "agent-fleet") {
 		t.Fatalf("the MCP front does not speak in tools: %q", fromMCP)
 	}
 }
@@ -284,7 +284,7 @@ func TestTheCLIVocabularyNamesRealSubcommands(t *testing.T) {
 		phrase := words.Field(index).String()
 		field := words.Type().Field(index).Name
 		parts := strings.Fields(phrase)
-		if len(parts) < 2 || parts[0] != "agent-manager" {
+		if len(parts) < 2 || parts[0] != "agent-fleet" {
 			t.Fatalf("%s is %q, which is not a command an agent can run", field, phrase)
 		}
 		if table[parts[1]] == nil {

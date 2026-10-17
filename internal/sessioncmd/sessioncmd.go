@@ -29,7 +29,7 @@ func RequireCaller(sessionID string) error {
 
 func validSession(sessionID string) error {
 	if sessionID == "" {
-		return fmt.Errorf("not inside an Agent Manager session or terminal (%s is unset and this pane is not one Agent Manager runs)", hooks.EnvSessionID)
+		return fmt.Errorf("not inside an agent-fleet session or terminal (%s is unset and this pane is not one agent-fleet runs)", hooks.EnvSessionID)
 	}
 	if !sessionIDPattern.MatchString(sessionID) {
 		return fmt.Errorf("invalid session id %q", sessionID)
@@ -81,7 +81,7 @@ func Rename(ctx context.Context, configDir, sessionID, name string) (string, err
 		return "", err
 	}
 	if !awake {
-		return fmt.Sprintf("rename to %q is queued: no Agent Manager is running to apply it; it takes effect when one opens", name), nil
+		return fmt.Sprintf("rename to %q is queued: no agent-fleet is running to apply it; it takes effect when one opens", name), nil
 	}
 	// The manager answers the name as it will take it, so the wait
 	// recognizes its own answer by that name rather than the typed one.
@@ -113,7 +113,7 @@ func Rename(ctx context.Context, configDir, sessionID, name string) (string, err
 		case <-time.After(renameResultPoll):
 		}
 	}
-	return fmt.Sprintf("rename to %q is queued: Agent Manager is running but has not applied it yet", name), nil
+	return fmt.Sprintf("rename to %q is queued: agent-fleet is running but has not applied it yet", name), nil
 }
 
 // renameWasReplaced reports that a later rename took this one's place in

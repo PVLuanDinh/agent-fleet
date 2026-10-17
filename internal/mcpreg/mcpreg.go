@@ -1,4 +1,4 @@
-// Package mcpreg registers the agent-manager MCP server into the sessions
+// Package mcpreg registers the agent-fleet MCP server into the sessions
 // the manager spawns, per tool. Each supported tool has a registration
 // style: a launch flag, a generated config file, or a one-time global
 // registration. Generated artifacts live under the manager's hooks
@@ -22,7 +22,7 @@ import (
 	"github.com/YoanWai/agent-manager/internal/tmux"
 )
 
-const serverName = "agent-manager"
+const serverName = "agent-fleet"
 
 const StyleNone = "none"
 
@@ -72,7 +72,7 @@ func Style(toolName, explicit string) string {
 
 // Apply mutates a session launch so the tool sees the MCP server: it may
 // append flags to command, add environment variables, write a config file
-// under hooksDir, or run a one-time registration. exe is the agent-manager
+// under hooksDir, or run a one-time registration. exe is the agent-fleet
 // binary the generated configs point at.
 func Apply(style, exe, hooksDir, command string, env map[string]string) (string, error) {
 	switch style {
@@ -366,7 +366,7 @@ func ensureHermesRegistered(exe, hooksDir string) error {
 	}
 	entry, ok := readHermesMCPEntry()
 	if !ok || !validHermesMCPEntry(entry, exe) {
-		return fmt.Errorf("hermes mcp add did not save an enabled agent-manager server: %s", out)
+		return fmt.Errorf("hermes mcp add did not save an enabled agent-fleet server: %s", out)
 	}
 	if err := os.MkdirAll(hooksDir, 0o755); err != nil {
 		return err

@@ -203,7 +203,7 @@ func compose(draft Draft, gathered Context) string {
 	}
 	return sections(
 		"What happened", body,
-		"agent-manager version", gathered.Version,
+		"agent-fleet version", gathered.Version,
 		"Operating system", gathered.OS,
 		"tmux version", gathered.Tmux,
 		"Which agent CLI", gathered.Tool,
@@ -223,7 +223,7 @@ func sections(pairs ...string) string {
 }
 
 func (c Context) summary() string {
-	line := "agent-manager " + c.Version + " on " + c.OS
+	line := "agent-fleet " + c.Version + " on " + c.OS
 	if c.Tool != "" {
 		line += ", reported from a " + c.Tool + " session"
 	}

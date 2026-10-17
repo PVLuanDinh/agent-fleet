@@ -78,13 +78,13 @@ func main() {
 				err = printHelp(os.Stdout, dir)
 			}
 			if err != nil {
-				fmt.Fprintln(os.Stderr, "agent-manager:", err)
+				fmt.Fprintln(os.Stderr, "agent-fleet:", err)
 				os.Exit(1)
 			}
 			return
 		}
 		if os.Args[1] == "--version" || os.Args[1] == "-v" {
-			fmt.Println("agent-manager", version)
+			fmt.Println("agent-fleet", version)
 			return
 		}
 		if command, ok := subcommands()[os.Args[1]]; ok {
@@ -94,14 +94,14 @@ func main() {
 				if errors.Is(err, cli.ErrUsageShown) {
 					return
 				}
-				fmt.Fprintln(os.Stderr, "agent-manager:", err)
+				fmt.Fprintln(os.Stderr, "agent-fleet:", err)
 				os.Exit(1)
 			}
 			return
 		}
 	}
 	if err := run(); err != nil {
-		fmt.Fprintln(os.Stderr, "agent-manager:", err)
+		fmt.Fprintln(os.Stderr, "agent-fleet:", err)
 		os.Exit(1)
 	}
 }

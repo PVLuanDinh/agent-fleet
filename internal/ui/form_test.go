@@ -788,7 +788,7 @@ func TestDeferredDirectiveSentWhenPaneReady(t *testing.T) {
 	if err != nil {
 		t.Fatalf("capture: %v", err)
 	}
-	if !strings.Contains(pane, "agent-manager rename") {
+	if !strings.Contains(pane, "agent-fleet rename") {
 		t.Fatalf("pane should hold the directive, got:\n%s", pane)
 	}
 }

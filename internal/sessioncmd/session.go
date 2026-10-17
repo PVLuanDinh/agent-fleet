@@ -22,7 +22,7 @@ import (
 )
 
 // worktreeSetting is the store key holding the global spawn-in-worktree
-// default the Agent Manager settings screen writes.
+// default the agent-fleet settings screen writes.
 const worktreeSetting = "worktree_default"
 
 // baseFetchSetting is the store key that, set to "off", skips the fetch
@@ -31,14 +31,14 @@ const baseFetchSetting = "worktree_fetch"
 
 type Session struct {
 	ID        string `json:"id" jsonschema:"agent session id"`
-	Name      string `json:"name" jsonschema:"session name shown in Agent Manager"`
+	Name      string `json:"name" jsonschema:"session name shown in agent-fleet"`
 	Tool      string `json:"tool" jsonschema:"agent CLI the session runs"`
 	Group     string `json:"group" jsonschema:"group path holding the session; empty is the root"`
 	Directory string `json:"directory" jsonschema:"session's current working directory, or its launch directory when stopped"`
-	Status    string `json:"status" jsonschema:"Agent Manager status: starting, working, waiting, finished, idle, errored or dead"`
+	Status    string `json:"status" jsonschema:"agent-fleet status: starting, working, waiting, finished, idle, errored or dead"`
 	Running   bool   `json:"running" jsonschema:"whether the session currently has a live tmux pane"`
 	Archived  bool   `json:"archived" jsonschema:"whether the session is archived out of the active list"`
-	Branch    string `json:"branch,omitempty" jsonschema:"branch of the worktree Agent Manager created for this session, when it has one"`
+	Branch    string `json:"branch,omitempty" jsonschema:"branch of the worktree agent-fleet created for this session, when it has one"`
 	Self      bool   `json:"self" jsonschema:"whether this row is the calling session itself"`
 }
 
@@ -120,10 +120,10 @@ func (r *runtime) deliverable(target store.Session) error {
 		return fmt.Errorf("session %s is not running; revive it with %s first", target.ID, r.words.Revive)
 	}
 	if target.Archived {
-		return fmt.Errorf("session %s is archived, so Agent Manager no longer polls it; restore it with %s first", target.ID, r.words.Restore)
+		return fmt.Errorf("session %s is archived, so agent-fleet no longer polls it; restore it with %s first", target.ID, r.words.Restore)
 	}
 	if r.cfg.Tools[target.Tool].ActivityCutoff == "" {
-		return fmt.Errorf("Agent Manager cannot tell when %s is ready to read a message: %s", target.ID, unreadableTool(r.cfg, target.Tool))
+		return fmt.Errorf("agent-fleet cannot tell when %s is ready to read a message: %s", target.ID, unreadableTool(r.cfg, target.Tool))
 	}
 	return nil
 }
@@ -530,7 +530,7 @@ func (r *runtime) groupBase(group string) (string, error) {
 type SendResult struct {
 	MessageID     int64 `json:"message_id" jsonschema:"pass to message_status to see whether it arrived"`
 	QueuePosition int   `json:"queue_position" jsonschema:"this message's place in the recipient's queue; 1 means it is next"`
-	ManagerAwake  bool  `json:"manager_awake" jsonschema:"whether Agent Manager is running to deliver it; a message queued while it is closed waits until it opens again"`
+	ManagerAwake  bool  `json:"manager_awake" jsonschema:"whether agent-fleet is running to deliver it; a message queued while it is closed waits until it opens again"`
 }
 
 // maxMessageBytes bounds one message. An instruction to another agent is
@@ -625,7 +625,7 @@ func (s *Sessions) MessageStatus(sessionID string, messageID int64) (MessageStat
 	// will ever type leaves the queue, and is read first for that reason.
 	case !msg.DroppedAt.IsZero():
 		state.State = "dropped"
-		state.Reason = "Agent Manager could not type it into the pane, and never retries a message; send it again"
+		state.Reason = "agent-fleet could not type it into the pane, and never retries a message; send it again"
 	case !msg.ReadAt.IsZero():
 		state.State = "answered"
 		state.DeliveredAt = msg.DeliveredAt.Format(time.RFC3339)
@@ -657,13 +657,13 @@ func (r *runtime) heldReason(sessionID string) (string, error) {
 		return "", err
 	}
 	if target.Archived {
-		return fmt.Sprintf("session %s is archived, so Agent Manager no longer polls it and nothing will type this in; restore it with %s", sessionID, r.words.Restore), nil
+		return fmt.Sprintf("session %s is archived, so agent-fleet no longer polls it and nothing will type this in; restore it with %s", sessionID, r.words.Restore), nil
 	}
 	if !r.driver.Exists(target.ID) {
 		return fmt.Sprintf("session %s is not running, so nothing will type this in; revive it with %s", sessionID, r.words.Revive), nil
 	}
 	if r.cfg.Tools[target.Tool].ActivityCutoff == "" {
-		return fmt.Sprintf("Agent Manager cannot tell when %s is ready, so nothing will type this in: %s", sessionID, unreadableTool(r.cfg, target.Tool)), nil
+		return fmt.Sprintf("agent-fleet cannot tell when %s is ready, so nothing will type this in: %s", sessionID, unreadableTool(r.cfg, target.Tool)), nil
 	}
 	// The poller types into a resting session, and an errored one is not
 	// resting: it is showing whatever stopped it, often a limit its agent
@@ -897,7 +897,7 @@ type AfterTurn struct {
 	Pending      string `json:"pending,omitempty" jsonschema:"archive or kill, which the manager runs once this turn ends; empty when nothing is pending"`
 	Replaced     string `json:"replaced,omitempty" jsonschema:"the action this call replaced"`
 	Canceled     string `json:"canceled,omitempty" jsonschema:"the action this call withdrew"`
-	ManagerAwake bool   `json:"manager_awake" jsonschema:"whether Agent Manager is running; it carries the action out, so while it is closed the action waits for it to open"`
+	ManagerAwake bool   `json:"manager_awake" jsonschema:"whether agent-fleet is running; it carries the action out, so while it is closed the action waits for it to open"`
 }
 
 // EndAfterTurn asks the manager to archive or kill the calling session once

@@ -1076,7 +1076,7 @@ func TestServerWithNoCallerKeepsTheWorkspaceClosed(t *testing.T) {
 		{"list_groups", map[string]any{}},
 	} {
 		text, isError := callText(t, session, call.name, call.args)
-		if !isError || !strings.Contains(text, "not inside an Agent Manager session") {
+		if !isError || !strings.Contains(text, "not inside an agent-fleet session") {
 			t.Fatalf("%s with no caller = %q, isError=%v", call.name, text, isError)
 		}
 	}

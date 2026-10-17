@@ -23,14 +23,14 @@ import (
 )
 
 // prepareMainProcess recognizes tests re-executed by mainTestCommand and
-// replaces test flags with the agent-manager arguments following "--".
+// replaces test flags with the agent-fleet arguments following "--".
 func prepareMainProcess() bool {
 	if os.Getenv("AGENT_MANAGER_MAIN_TEST") != "1" {
 		return false
 	}
 	for i, arg := range os.Args {
 		if arg == "--" {
-			os.Args = append([]string{"agent-manager"}, os.Args[i+1:]...)
+			os.Args = append([]string{"agent-fleet"}, os.Args[i+1:]...)
 			return true
 		}
 	}
@@ -84,7 +84,7 @@ func TestPrintHelpDoesNotRequireATerminal(t *testing.T) {
 		t.Fatalf("printHelp: %v", err)
 	}
 	for _, want := range []string{
-		"Usage: agent-manager [command]",
+		"Usage: agent-fleet [command]",
 		"Run the interactive manager when no command is given.",
 		"-h, --help",
 		"-v, --version",
@@ -119,10 +119,10 @@ func TestMainPrintsHelpWithoutStartingTUI(t *testing.T) {
 			cmd.Env = replaceEnv(cmd.Env, "HOME", home, "XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 			out, err := cmd.CombinedOutput()
 			if err != nil {
-				t.Fatalf("agent-manager %s: %v\n%s", helpFlag, err, out)
+				t.Fatalf("agent-fleet %s: %v\n%s", helpFlag, err, out)
 			}
-			if !strings.Contains(string(out), "Usage: agent-manager [command]") {
-				t.Fatalf("agent-manager %s did not print help:\n%s", helpFlag, out)
+			if !strings.Contains(string(out), "Usage: agent-fleet [command]") {
+				t.Fatalf("agent-fleet %s did not print help:\n%s", helpFlag, out)
 			}
 		})
 	}
@@ -138,17 +138,17 @@ func TestMainDispatchesNonInteractiveCommands(t *testing.T) {
 		args []string
 		want string
 	}{
-		{"version", []string{"--version"}, "agent-manager dev"},
-		{"subcommand help", []string{"sessions", "-h"}, "usage: agent-manager sessions"},
+		{"version", []string{"--version"}, "agent-fleet dev"},
+		{"subcommand help", []string{"sessions", "-h"}, "usage: agent-fleet sessions"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			out, err := mainTestCommand(t, tt.args...).CombinedOutput()
 			if err != nil {
-				t.Fatalf("agent-manager %s: %v\n%s", strings.Join(tt.args, " "), err, out)
+				t.Fatalf("agent-fleet %s: %v\n%s", strings.Join(tt.args, " "), err, out)
 			}
 			if !strings.Contains(string(out), tt.want) {
-				t.Fatalf("agent-manager %s output does not contain %q:\n%s", strings.Join(tt.args, " "), tt.want, out)
+				t.Fatalf("agent-fleet %s output does not contain %q:\n%s", strings.Join(tt.args, " "), tt.want, out)
 			}
 		})
 	}
@@ -186,10 +186,10 @@ func TestMainReportsHeadlessStartupFailure(t *testing.T) {
 	)
 	out, err := cmd.CombinedOutput()
 	if err == nil {
-		t.Fatalf("agent-manager unexpectedly started without a controlling terminal:\n%s", out)
+		t.Fatalf("agent-fleet unexpectedly started without a controlling terminal:\n%s", out)
 	}
 	if !strings.Contains(string(out), "could not open a new TTY") {
-		t.Fatalf("agent-manager reported the wrong startup failure:\n%s", out)
+		t.Fatalf("agent-fleet reported the wrong startup failure:\n%s", out)
 	}
 }
 
@@ -360,7 +360,7 @@ func TestCallerSessionOutsideTmuxLeavesTheCommandToExplainIt(t *testing.T) {
 	if err == nil {
 		t.Fatal("a command with no caller succeeded")
 	}
-	for _, want := range []string{"session or terminal", "AGENT_MANAGER_SESSION_ID is unset", "not one Agent Manager runs"} {
+	for _, want := range []string{"session or terminal", "AGENT_MANAGER_SESSION_ID is unset", "not one agent-fleet runs"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Fatalf("error %q does not mention %q", err, want)
 		}

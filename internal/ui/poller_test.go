@@ -1698,7 +1698,7 @@ func TestPendingInputWaitsForTheLaunchPrompt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("capture: %v", err)
 	}
-	if !strings.Contains(pane, "agent-manager rename") {
+	if !strings.Contains(pane, "agent-fleet rename") {
 		t.Fatalf("pane should hold the directive, got:\n%s", pane)
 	}
 }
@@ -1753,7 +1753,7 @@ func TestPendingInputWaitsForBetweenTurn(t *testing.T) {
 				time.Sleep(50 * time.Millisecond)
 				m.applyCmd(t, m.refreshCmd())
 			}
-			settledPane(t, m, sess.ID, "agent-manager rename")
+			settledPane(t, m, sess.ID, "agent-fleet rename")
 		})
 	}
 }
@@ -1793,7 +1793,7 @@ func TestPendingInputWaitsForTypedText(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 		m.applyCmd(t, m.refreshCmd())
 	}
-	settledPane(t, m, sess.ID, "agent-manager rename")
+	settledPane(t, m, sess.ID, "agent-fleet rename")
 }
 
 func TestPendingInputLandsOnAnErroredPane(t *testing.T) {
@@ -1828,7 +1828,7 @@ func TestPendingInputLandsOnAnErroredPane(t *testing.T) {
 		time.Sleep(50 * time.Millisecond)
 		m.applyCmd(t, m.refreshCmd())
 	}
-	settledPane(t, m, sess.ID, "agent-manager rename")
+	settledPane(t, m, sess.ID, "agent-fleet rename")
 }
 
 // A prompt that never reaches the pane, because it scrolled out or the agent

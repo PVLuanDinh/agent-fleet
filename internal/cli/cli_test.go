@@ -326,7 +326,7 @@ func TestMissingSessionIDIsAUsageError(t *testing.T) {
 			if err == nil {
 				t.Fatal("a command with no session id should not reach the layer")
 			}
-			if !strings.HasPrefix(err.Error(), "usage: agent-manager "+name) {
+			if !strings.HasPrefix(err.Error(), "usage: agent-fleet "+name) {
 				t.Fatalf("error = %q, want the usage line", err)
 			}
 			if fake.callerID != "" {
@@ -343,7 +343,7 @@ func TestHelpFlagPrintsUsageAndStops(t *testing.T) {
 	if !errors.Is(err, ErrUsageShown) {
 		t.Fatalf("-h should return ErrUsageShown, got %v", err)
 	}
-	if !strings.Contains(out.String(), "usage: agent-manager "+usageSessions) {
+	if !strings.Contains(out.String(), "usage: agent-fleet "+usageSessions) {
 		t.Fatalf("-h output = %q", out.String())
 	}
 	if fake.callCount != 0 {
@@ -370,7 +370,7 @@ func TestTaskGroupRejectsAnUnknownVerb(t *testing.T) {
 	}
 
 	bare := dispatch(&bytes.Buffer{}, "task", taskVerbs(), nil, func() string { return "cafe0001" }, t.TempDir())
-	if bare == nil || bare.Error() != "usage: agent-manager task <list|create|claim|finish|release|delete>" {
+	if bare == nil || bare.Error() != "usage: agent-fleet task <list|create|claim|finish|release|delete>" {
 		t.Fatalf("a bare group should print its verbs, got %v", bare)
 	}
 }
@@ -443,7 +443,7 @@ func TestJSONIsPromisedOnlyWhereTheCommandTakesIt(t *testing.T) {
 			return runIssue(out, sampleReporter(), append([]string{"t", "--body", "b"}, args...), "cafe0001")
 		}},
 		{usageUpdate, func(out *bytes.Buffer, args []string) error {
-			swapUpdateSeams(t, "agent-manager", update.Manager{},
+			swapUpdateSeams(t, "agent-fleet", update.Manager{},
 				update.Result{Releases: []update.Release{{Version: "v0.31.0"}}}, nil)
 			return runUpdate("0.31.0")(out, args, t.TempDir())
 		}},

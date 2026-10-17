@@ -579,7 +579,7 @@ func TestTerminalHarnessCleanupRemovesSocket(t *testing.T) {
 // A command can be the first thing to run on a machine, before a manager
 // ever made the config directory, and still has to reach its own answer.
 func TestOpenMakesTheConfigDirectoryAFirstCommandFinds(t *testing.T) {
-	configDir := filepath.Join(t.TempDir(), "agent-manager")
+	configDir := filepath.Join(t.TempDir(), "agent-fleet")
 	driver, err := tmux.NewWithSocket("amtermtest-" + uuid.NewString()[:8])
 	if err != nil {
 		t.Fatalf("tmux driver: %v", err)

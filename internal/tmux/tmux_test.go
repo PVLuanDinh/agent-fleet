@@ -26,7 +26,7 @@ const testSocket = "amtmuxtest"
 // exit-empty shutdown that takes the next test's fresh session down with it
 // ("server exited unexpectedly").
 func TestMain(m *testing.M) {
-	// startOtherProcess runs this binary again as a second agent-manager
+	// startOtherProcess runs this binary again as a second agent-fleet
 	// process, with the tmux binary and the session as its arguments.
 	if action := os.Getenv(otherProcessEnv); action != "" {
 		os.Exit(repeatUntilStdinCloses(&Driver{bin: os.Args[1], socket: testSocket}, action, os.Args[2]))
@@ -1641,10 +1641,10 @@ func TestAttachStatusRightNamesTheKeyTable(t *testing.T) {
 		keys                     keybind.Table
 		want                     string
 	}{
-		{"defaults", "C-b", "None", keybind.DefaultSession(), ` agent-manager · Ctrl+r = review · F3 = editor · Ctrl+q / Ctrl+\ / C-b d = back `},
-		{"no prefix", "None", "None", keybind.DefaultSession(), ` agent-manager · Ctrl+r = review · F3 = editor · Ctrl+q / Ctrl+\ = back `},
-		{"custom", "C-b", "None", custom, " agent-manager · Ctrl+g = review · F9 / Alt+q / C-b d = back "},
-		{"prefix shadows a custom key", "M-q", "None", custom, " agent-manager · Ctrl+g = review · F9 / M-q d = back "},
+		{"defaults", "C-b", "None", keybind.DefaultSession(), ` agent-fleet · Ctrl+r = review · F3 = editor · Ctrl+q / Ctrl+\ / C-b d = back `},
+		{"no prefix", "None", "None", keybind.DefaultSession(), ` agent-fleet · Ctrl+r = review · F3 = editor · Ctrl+q / Ctrl+\ = back `},
+		{"custom", "C-b", "None", custom, " agent-fleet · Ctrl+g = review · F9 / Alt+q / C-b d = back "},
+		{"prefix shadows a custom key", "M-q", "None", custom, " agent-fleet · Ctrl+g = review · F9 / M-q d = back "},
 	} {
 		if got := attachStatusRight(tc.primary, tc.secondary, tc.keys); got != tc.want {
 			t.Errorf("%s:\n got %q\nwant %q", tc.name, got, tc.want)

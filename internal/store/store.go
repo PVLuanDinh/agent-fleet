@@ -52,7 +52,7 @@ type Session struct {
 	// from ones that merely predate the launch.
 	RelaunchSnapshot map[string]int64
 	// WorktreeRepo and WorktreeBranch are set for sessions running in a
-	// worktree Agent Manager created. Forks share these values so the last
+	// worktree agent-fleet created. Forks share these values so the last
 	// session to leave can clean up the worktree and its am/ branch.
 	WorktreeRepo        string
 	WorktreeBranch      string

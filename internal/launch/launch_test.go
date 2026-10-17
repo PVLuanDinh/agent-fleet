@@ -293,7 +293,7 @@ func TestEnvironmentKeepsGrokOffTheSharedLeader(t *testing.T) {
 
 func TestAssembleCarriesTheDirectiveOverAPastedImagePath(t *testing.T) {
 	flagged := config.Tool{Command: "claude", PromptFlag: "-p"}
-	prompt := "/var/folders/_b/T/agent-manager-pastes/paste-268.png why is this session working?"
+	prompt := "/var/folders/_b/T/agent-fleet-pastes/paste-268.png why is this session working?"
 	plan := Assemble("claude", flagged, prompt, true, true)
 	if len(plan.PendingInputs) != 0 {
 		t.Fatalf("a prompt led by an image path is no slash command, got %v", plan.PendingInputs)

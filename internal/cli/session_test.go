@@ -258,7 +258,7 @@ func TestWaitCollectsStatesAndFailsOnTimeout(t *testing.T) {
 
 func TestMessageStatusRefusesANonNumericID(t *testing.T) {
 	err := runMessageStatus(&bytes.Buffer{}, &fakeSessions{}, []string{"seven"}, "cafe0001")
-	if err == nil || !strings.Contains(err.Error(), "agent-manager send prints the id it queued") {
+	if err == nil || !strings.Contains(err.Error(), "agent-fleet send prints the id it queued") {
 		t.Fatalf("error = %v, want it to say where the id comes from", err)
 	}
 }

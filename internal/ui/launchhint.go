@@ -66,7 +66,7 @@ func (m *Model) reportLaunchError(err error, retry func() error) {
 			step = "Run `" + hermesMCP.PipCommand + "` to add the mcp package to the Python that runs Hermes, then spawn again."
 		}
 		m.openLaunchHint(launchFix{
-			text: "Hermes sessions carry the agent-manager MCP tools, and this Hermes cannot load them: its MCP SDK is not installed.\n\n" +
+			text: "Hermes sessions carry the agent-fleet MCP tools, and this Hermes cannot load them: its MCP SDK is not installed.\n\n" +
 				step,
 			command: hermesMCP.PipCommand,
 			binary:  "hermes",

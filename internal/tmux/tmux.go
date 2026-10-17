@@ -344,7 +344,7 @@ func launchScriptPath(id string) string {
 
 // relaunchHint lands in the pane the moment the agent exits, which is where
 // the user is looking when they wonder how to get it back.
-const relaunchHint = "agent-manager: agent exited - press v in Agent Manager to relaunch it here."
+const relaunchHint = "agent-fleet: agent exited - press v in agent-fleet to relaunch it here."
 
 func writeLaunchScript(id string, env map[string]string, command, colorFgBg string) (string, error) {
 	path := launchScriptPath(id)
@@ -473,7 +473,7 @@ func (d *Driver) styleStatusBar(name string) error {
 // and every way back. A detach key the inner prefix shadows is left off,
 // since the prefix takes it first, and the prefix itself follows with d.
 func attachStatusRight(primary, secondary string, keys keybind.Table) string {
-	parts := []string{"agent-manager"}
+	parts := []string{"agent-fleet"}
 	if label := titledLabel(keys.Binding(keybind.Review)); label != "" {
 		parts = append(parts, label+" = review")
 	}

@@ -1764,7 +1764,7 @@ func (m *Model) sendAnnotations() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	prompt := fmt.Sprintf(
-		"Code review of %s. Address each numbered point, then mark its comment handled with the review_comment tool (or `agent-manager review-comment <comment-id>`), and summarize what you changed per point: %s",
+		"Code review of %s. Address each numbered point, then mark its comment handled with the review_comment tool (or `agent-fleet review-comment <comment-id>`), and summarize what you changed per point: %s",
 		reviewSubject(m.diff.scope, m.diff.set, m.diff.repoSel), strings.Join(parts, "; "))
 	round.Number = nextRound
 	round.Scope = m.diff.scope.String()

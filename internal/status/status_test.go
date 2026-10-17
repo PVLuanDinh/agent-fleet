@@ -714,7 +714,7 @@ func TestGeminiPanes(t *testing.T) {
 }
 
 // Hermes fixtures follow the classic prompt_toolkit interface in Hermes Agent
-// v0.20.0. Agent Manager launches --cli explicitly so user TUI preferences do
+// v0.20.0. agent-fleet launches --cli explicitly so user TUI preferences do
 // not change these status surfaces underneath the detector.
 func TestHermesPanes(t *testing.T) {
 	engine := defaultEngine(t)

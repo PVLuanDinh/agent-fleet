@@ -35,7 +35,7 @@ func windowsToast(subtitle, body, sound string) error {
 		shell = powershellFallback
 	}
 	return runEnv(map[string]string{
-		"AM_TOAST_TITLE":    "agent-manager",
+		"AM_TOAST_TITLE":    "agent-fleet",
 		"AM_TOAST_SUBTITLE": subtitle,
 		"AM_TOAST_BODY":     body,
 		"AM_TOAST_SOUND":    sound,

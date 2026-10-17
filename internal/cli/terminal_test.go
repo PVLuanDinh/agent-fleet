@@ -81,7 +81,7 @@ func TestMissingTerminalIDIsAUsageError(t *testing.T) {
 			if err == nil {
 				t.Fatal("a command with no terminal id should not reach the layer")
 			}
-			if !strings.HasPrefix(err.Error(), "usage: agent-manager terminal "+name) {
+			if !strings.HasPrefix(err.Error(), "usage: agent-fleet terminal "+name) {
 				t.Fatalf("error = %q, want the usage line", err)
 			}
 			if fake.callerID != "" {

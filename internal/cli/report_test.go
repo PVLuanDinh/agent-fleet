@@ -109,10 +109,10 @@ func TestReportJSONPrintsTheRecord(t *testing.T) {
 
 func TestReportUsageErrors(t *testing.T) {
 	fake := sampleReporter()
-	if err := runIssue(&bytes.Buffer{}, fake, []string{"--body", "b"}, "cafe0001"); err == nil || !strings.Contains(err.Error(), "usage: agent-manager "+usageIssue) {
+	if err := runIssue(&bytes.Buffer{}, fake, []string{"--body", "b"}, "cafe0001"); err == nil || !strings.Contains(err.Error(), "usage: agent-fleet "+usageIssue) {
 		t.Fatalf("issue without a title = %v", err)
 	}
-	if err := runFeature(&bytes.Buffer{}, fake, []string{"one", "two"}, "cafe0001"); err == nil || !strings.Contains(err.Error(), "usage: agent-manager "+usageFeature) {
+	if err := runFeature(&bytes.Buffer{}, fake, []string{"one", "two"}, "cafe0001"); err == nil || !strings.Contains(err.Error(), "usage: agent-fleet "+usageFeature) {
 		t.Fatalf("feature with two titles = %v", err)
 	}
 	out := &bytes.Buffer{}

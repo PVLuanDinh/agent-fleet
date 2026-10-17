@@ -36,7 +36,7 @@ type WaitResult struct {
 	Reached      bool    `json:"reached" jsonschema:"true when the session reached one of the awaited states"`
 	Outcome      string  `json:"outcome" jsonschema:"reached (it arrived at an awaited state), died (its pane is gone and dead was not among them), or timed_out"`
 	Waited       string  `json:"waited" jsonschema:"how long the wait lasted"`
-	ManagerAwake bool    `json:"manager_awake" jsonschema:"whether Agent Manager is running; session status only advances while it is, so a wait against a closed manager can only ever observe dead"`
+	ManagerAwake bool    `json:"manager_awake" jsonschema:"whether agent-fleet is running; session status only advances while it is, so a wait against a closed manager can only ever observe dead"`
 }
 
 func normalizeWaitStates(until []string) ([]string, error) {

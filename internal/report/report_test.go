@@ -54,7 +54,7 @@ func loggedIn() *fakeCommands {
 
 func bugBody() string {
 	return "### What happened\n\n1. Pressed space\n2. Prompt landed in the first session\n\n" +
-		"### agent-manager version\n\n0.31.0\n\n" +
+		"### agent-fleet version\n\n0.31.0\n\n" +
 		"### Operating system\n\nmacOS\n\n" +
 		"### tmux version\n\ntmux 3.5a\n\n" +
 		"### Which agent CLI\n\nClaude Code\n\n" +
@@ -338,7 +338,7 @@ func TestFormURLFillsTheTemplateFields(t *testing.T) {
 		"template": "feature_request.yml",
 		"title":    "Show overlapping files",
 		"problem":  "I keep several agents on one repo.",
-		"extra":    "agent-manager 0.31.0 on Linux.",
+		"extra":    "agent-fleet 0.31.0 on Linux.",
 	} {
 		if got := query.Get(field); got != want {
 			t.Errorf("%s = %q, want %q", field, got, want)
@@ -361,7 +361,7 @@ func TestBlankContextFieldsLeaveNoEmptyHeading(t *testing.T) {
 
 func TestAFeatureRequestSaysWhereItCameFrom(t *testing.T) {
 	body := compose(Draft{Kind: Feature, Title: "t", Body: "  I want a panel.  "}, Context{Version: "0.31.0", OS: "macOS", Tool: "Codex"})
-	want := "### What are you trying to do\n\nI want a panel.\n\n### Anything else\n\nagent-manager 0.31.0 on macOS, reported from a Codex session.\n"
+	want := "### What are you trying to do\n\nI want a panel.\n\n### Anything else\n\nagent-fleet 0.31.0 on macOS, reported from a Codex session.\n"
 	if body != want {
 		t.Fatalf("body =\n%s\nwant\n%s", body, want)
 	}

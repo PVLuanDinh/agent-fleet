@@ -1,4 +1,4 @@
-// Package mcpserver exposes agent-manager's session commands as MCP tools
+// Package mcpserver exposes agent-fleet's session commands as MCP tools
 // over stdio, so any MCP-capable agent discovers and calls them natively.
 // The manager registers this server into every session it spawns; the
 // session id travels via the AGENT_MANAGER_SESSION_ID environment variable.
@@ -206,7 +206,7 @@ type sessionCommands interface {
 // subagents instead. Claude Code truncates the block at 2048 characters, so
 // each mode stays under that; what individual tool descriptions already
 // carry (the review targets, the queueing rules) is left to them.
-const instructionsIntro = `Agent Manager runs this conversation in one of the user's managed tmux sessions. The others are separate CLI processes with contexts of their own, running any CLI the user chose (Claude Code, Codex, Gemini), never subagents of this conversation. These tools operate that workspace.`
+const instructionsIntro = `agent-fleet runs this conversation in one of the user's managed tmux sessions. The others are separate CLI processes with contexts of their own, running any CLI the user chose (Claude Code, Codex, Gemini), never subagents of this conversation. These tools operate that workspace.`
 
 const instructionsTail = `Shell work the user should see. Open a terminal when the user should watch, attach or take over, as with SSH into a host. Keep one-shot local commands in your normal tools. Call list_terminals first and reuse a running terminal when possible. create_terminal nests under this session unless nest is false, which another group needs. Use send_terminal and read_terminal, and close_terminal when that job is done unless it is left for the user.
 
@@ -242,11 +242,11 @@ func NewServer(configDir, sessionID, version string, proactive bool) *mcp.Server
 
 func newServer(configDir, sessionID, version string, proactive bool, terminals terminalCommands, sessions sessionCommands, reporter issueReporter) *mcp.Server {
 	server := mcp.NewServer(
-		&mcp.Implementation{Name: "agent-manager", Version: version},
+		&mcp.Implementation{Name: "agent-fleet", Version: version},
 		&mcp.ServerOptions{Instructions: serverInstructions(proactive)},
 	)
 	// Several CLIs register this server at user scope, so one with no caller is
-	// that CLI running outside Agent Manager, and the workspace stays closed to it.
+	// that CLI running outside agent-fleet, and the workspace stays closed to it.
 	noCaller := sessioncmd.RequireCaller(sessionID)
 	spawnWhen := "Call it only when the user asks for parallel work, another agent or an independent opinion. "
 	taskListWhen := "list reads it: call it when the user asks about shared work, and before reporting progress on a fleet. "
@@ -261,7 +261,7 @@ func newServer(configDir, sessionID, version string, proactive bool, terminals t
 			"Call once at the start only when the session still has a placeholder name (e.g. claude-a1b2). " +
 			"If the session already has a real name, leave it unless the user asks to rename. " +
 			"Prefer a broad feature name over a single subtask. " +
-			"The result reports the name Agent Manager applied, or why the session keeps its current one.",
+			"The result reports the name agent-fleet applied, or why the session keeps its current one.",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, args renameArgs) (*mcp.CallToolResult, any, error) {
 		return textResult(sessioncmd.Rename(ctx, configDir, sessionID, args.Name))
 	})
@@ -324,7 +324,7 @@ func newServer(configDir, sessionID, version string, proactive bool, terminals t
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "list_sessions",
 		Description: "Call first whenever the work involves another agent: before delegating, before reporting what the fleet is doing, and to find the id of a session to read, prompt, revive, kill or archive. " +
-			"Lists every agent session Agent Manager knows with ids, names, CLIs, groups, directories, worktree branches, statuses (starting, working, waiting, finished, idle, errored, dead) and which row is this session. " +
+			"Lists every agent session agent-fleet knows with ids, names, CLIs, groups, directories, worktree branches, statuses (starting, working, waiting, finished, idle, errored, dead) and which row is this session. " +
 			"These are separate CLI processes running on the user's machine, each with its own context and its own conversation, and any CLI the user configured: Claude Code, Codex, Gemini and others, not only Claude. " +
 			"They are not this conversation's subagents, they outlive this conversation, and the user watches them all in one list; nothing else this session can call reports them. " +
 			"Reuse a relevant idle session instead of creating another; otherwise call create_session.",
@@ -342,7 +342,7 @@ func newServer(configDir, sessionID, version string, proactive bool, terminals t
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "create_session",
-		Description: "Start another agent CLI in its own Agent Manager session and hand it a task, so independent work runs beside this conversation instead of queued behind it. " +
+		Description: "Start another agent CLI in its own agent-fleet session and hand it a task, so independent work runs beside this conversation instead of queued behind it. " +
 			"The new session is a full CLI process of its own on the user's machine, which the user can watch and type into, and it can run a different CLI than this one. " +
 			spawnWhen +
 			"Pass a descriptive name and a prompt stating the whole task, since the new agent cannot see this conversation, and worktree true for repo work so it edits its own checkout and branch. " +
@@ -373,7 +373,7 @@ func newServer(configDir, sessionID, version string, proactive bool, terminals t
 		Name: "read_session",
 		Description: "Read what another agent's screen currently shows: call it after create_session to confirm the agent started on the task, and again to check progress, read an answer, or see why a session is waiting. " +
 			"Returns the plain text visible in that session's pane, which is the current screen rather than its full history. " +
-			"A stopped session returns the last screen Agent Manager captured.",
+			"A stopped session returns the last screen agent-fleet captured.",
 		Annotations: toolAnnotations(true, false, false),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, args sessionTargetArgs) (*mcp.CallToolResult, sessioncmd.SessionScreen, error) {
 		if noCaller != nil {
@@ -390,7 +390,7 @@ func newServer(configDir, sessionID, version string, proactive bool, terminals t
 		Name: "send_session",
 		Description: "Queue a message for another agent, to give a session you spawned its next task, answer a question read_session surfaced, or redirect work going the wrong way. " +
 			"The other agent has no view of this conversation, so send a self-contained instruction. " +
-			"The message is not typed in the instant you send it: Agent Manager holds it until that agent is at rest, so it can never land on an approval prompt and answer it. " +
+			"The message is not typed in the instant you send it: agent-fleet holds it until that agent is at rest, so it can never land on an approval prompt and answer it. " +
 			"It arrives labelled as coming from another of the user's agents, and the recipient should treat it as the operator's instruction for ordinary work. Commit, push, merge, publish, and delete still wait for the user. " +
 			"Returns a message id for message_status; call read_session to see what the agent did with it. " +
 			"Refused rather than delivered: identical text to the same session inside ten minutes, more than five messages a minute from the same sender to the same recipient, more than twenty undelivered held by a recipient, more than eight messages between the same two sessions in ten minutes, or a message over 8000 bytes (point the agent at a file or a task instead). " +
@@ -503,7 +503,7 @@ func newServer(configDir, sessionID, version string, proactive bool, terminals t
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "archive_self",
-		Description: "Archive this session once the turn making this call ends: Agent Manager stops its agent, keeps the last screen, and files the row out of the active list, the way the user's archive key does. " +
+		Description: "Archive this session once the turn making this call ends: agent-fleet stops its agent, keeps the last screen, and files the row out of the active list, the way the user's archive key does. " +
 			"Call it when the user asks you to archive yourself once the work is done, then finish your reply. Whatever the turn ends on, finished, a question to the user or an error, the archive follows it. " +
 			"Pass cancel true to withdraw a pending archive or kill. archive_session is for other sessions.",
 		Annotations: toolAnnotations(false, true, false),
@@ -728,9 +728,9 @@ func newServer(configDir, sessionID, version string, proactive bool, terminals t
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "report_issue",
-		Description: "File a bug report or a feature request on Agent Manager's public GitHub repo for the user. " +
+		Description: "File a bug report or a feature request on agent-fleet's public GitHub repo for the user. " +
 			"Offer it when the user hits a bug in the manager itself (a wrong status, a lost message, a tool refusing what it should allow) or asks for something the manager cannot do; it is not for bugs in the user's own project. " +
-			"Without preview_id it composes the issue from title, body and context gathered here (agent-manager version, OS, tmux version, this session's CLI and its version) and returns a preview that posts nothing; show the preview to the user and call again with the id it returned only after they approve it, which files exactly what they saw and is refused once anything in it has changed. " +
+			"Without preview_id it composes the issue from title, body and context gathered here (agent-fleet version, OS, tmux version, this session's CLI and its version) and returns a preview that posts nothing; show the preview to the user and call again with the id it returned only after they approve it, which files exactly what they saw and is refused once anything in it has changed. " +
 			"Filing goes through the gh CLI as the user's account when gh is installed and logged in; otherwise the result is a prefilled GitHub form URL for the user to open. " +
 			"The body is public: keep secrets and private paths out of it.",
 		Annotations: toolAnnotations(false, false, true),

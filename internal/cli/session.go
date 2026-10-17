@@ -156,7 +156,7 @@ func runRead(out io.Writer, sessions sessionCommands, args []string, sessionID s
 }
 
 // runWait exits non-zero when the session never reached an awaited state, so
-// `agent-manager wait <id> && next-step` reads the outcome the way a shell
+// `agent-fleet wait <id> && next-step` reads the outcome the way a shell
 // caller expects. The result still goes out first, JSON included.
 func runWait(out io.Writer, sessions sessionCommands, args []string, sessionID string) error {
 	set := newFlagSet(usageWait)
@@ -193,7 +193,7 @@ func runMessageStatus(out io.Writer, sessions sessionCommands, args []string, se
 	}
 	messageID, err := strconv.ParseInt(operands[0], 10, 64)
 	if err != nil {
-		return fmt.Errorf("message id %q is not a number; agent-manager send prints the id it queued", operands[0])
+		return fmt.Errorf("message id %q is not a number; agent-fleet send prints the id it queued", operands[0])
 	}
 	state, err := sessions.MessageStatus(sessionID, messageID)
 	if err != nil {

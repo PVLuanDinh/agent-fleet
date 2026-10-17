@@ -106,7 +106,7 @@ func TestNotifyDarwinGhosttyUsesOSC777(t *testing.T) {
 		return nil
 	}
 	Notify(Event{Session: "deploy", Tool: "claude", Kind: Waiting})
-	if len(emitted) != 1 || emitted[0] != "\x1b]777;notify;agent-manager;◆ Waiting for your input — deploy · claude\a" {
+	if len(emitted) != 1 || emitted[0] != "\x1b]777;notify;agent-fleet;◆ Waiting for your input — deploy · claude\a" {
 		t.Fatalf("want one OSC 777 sequence, got %q", emitted)
 	}
 	if len(rec.calls()) != 0 {
@@ -173,7 +173,7 @@ func TestNotifyDarwinHelperFailureFallsBackToAppleScript(t *testing.T) {
 		t.Fatalf("want one osascript call, got %v", rec.calls())
 	}
 	call := rec.calls()[0]
-	want := []string{"agent-manager", "deploy · codex", "✕ Errored", "Basso"}
+	want := []string{"agent-fleet", "deploy · codex", "✕ Errored", "Basso"}
 	if len(call) < len(want) || !slices.Equal(call[len(call)-len(want):], want) {
 		t.Fatalf("notification fields should ride argv unquoted, got %v", call)
 	}
@@ -218,9 +218,9 @@ func TestNotifyLinuxUsesPortableStatusHints(t *testing.T) {
 		icon     string
 		category string
 	}{
-		{Waiting, "◆ Waiting for your input", "dialog-question", "normal", "dialog-question", "x-agent-manager.session.waiting"},
-		{Finished, "● Finished", "complete-download", "low", "emblem-default", "x-agent-manager.session.finished"},
-		{Errored, "✕ Errored", "dialog-error", "critical", "dialog-error", "x-agent-manager.session.errored"},
+		{Waiting, "◆ Waiting for your input", "dialog-question", "normal", "dialog-question", "x-agent-fleet.session.waiting"},
+		{Finished, "● Finished", "complete-download", "low", "emblem-default", "x-agent-fleet.session.finished"},
+		{Errored, "✕ Errored", "dialog-error", "critical", "dialog-error", "x-agent-fleet.session.errored"},
 	}
 	for _, test := range tests {
 		t.Run(test.urgency, func(t *testing.T) {
@@ -234,12 +234,12 @@ func TestNotifyLinuxUsesPortableStatusHints(t *testing.T) {
 			}
 			want := []string{
 				"notify-send",
-				"--app-name=agent-manager",
+				"--app-name=agent-fleet",
 				"--urgency=" + test.urgency,
 				"--category=" + test.category,
 				"--icon=" + test.icon,
 				"--hint=string:sound-name:" + test.sound,
-				"--", "agent-manager", test.body + " — --help · claude",
+				"--", "agent-fleet", test.body + " — --help · claude",
 			}
 			if !slices.Equal(rec.calls()[1], want) {
 				t.Fatalf("unexpected notify-send args %v", rec.calls()[1])
@@ -255,7 +255,7 @@ func TestNotifyLinuxClickRaisesTerminalAndSelectsSession(t *testing.T) {
 	rec := linuxDesktop(t)
 	rec.known["xdotool"] = true
 	rec.outputByCommand["notify-send --help"] = "  -A, --action=[NAME=]Text  Specifies the actions to display"
-	rec.outputByCommand["notify-send --app-name=agent-manager"] = "default\n"
+	rec.outputByCommand["notify-send --app-name=agent-fleet"] = "default\n"
 	getenv = func(key string) string {
 		if key == "WINDOWID" {
 			return "4194305"
@@ -314,7 +314,7 @@ func TestNotifyLinuxOverSSHUsesOSC777(t *testing.T) {
 		return nil
 	}
 	Notify(Event{Session: "remote-build", Tool: "codex", Kind: Waiting})
-	if len(emitted) != 1 || emitted[0] != "\x1b]777;notify;agent-manager;◆ Waiting for your input — remote-build · codex\a" {
+	if len(emitted) != 1 || emitted[0] != "\x1b]777;notify;agent-fleet;◆ Waiting for your input — remote-build · codex\a" {
 		t.Fatalf("want one OSC 777 sequence, got %q", emitted)
 	}
 	if len(rec.calls()) != 0 {

@@ -47,7 +47,7 @@ func TestAWaitingRowNeverShowsTheRenameDirective(t *testing.T) {
 	sess := spawnUnnamed(t, m, "rate limit the public search route")
 
 	got := ansi.Strip(m.displayName(sess))
-	for _, leaked := range []string{"Run this exact", "agent-manager rename", "Other agent sessions"} {
+	for _, leaked := range []string{"Run this exact", "agent-fleet rename", "Other agent sessions"} {
 		if strings.Contains(got, leaked) {
 			t.Fatalf("displayName = %q, leaked the launch directive %q", got, leaked)
 		}

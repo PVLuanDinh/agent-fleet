@@ -13,7 +13,7 @@ import (
 	"github.com/YoanWai/agent-manager/internal/store"
 )
 
-// Every launched session runs `agent-manager rename "<name>"` as the first
+// Every launched session runs `agent-fleet rename "<name>"` as the first
 // line of its first prompt, so this exact invocation is what the whole
 // naming mechanism rests on.
 func TestRenameWritesNameFile(t *testing.T) {
@@ -39,7 +39,7 @@ func TestRenameWritesNameFile(t *testing.T) {
 
 func TestRenameValidation(t *testing.T) {
 	dir := t.TempDir()
-	const usage = `usage: agent-manager rename "<name>"`
+	const usage = `usage: agent-fleet rename "<name>"`
 	cases := []struct {
 		label     string
 		args      []string
@@ -126,7 +126,7 @@ func TestReviewRepoRejectsBadInput(t *testing.T) {
 	if err := runReviewRepo(&bytes.Buffer{}, []string{t.TempDir()}, "abc123", configDir); err == nil {
 		t.Error("a path that is not a repo should fail")
 	}
-	const usage = "usage: agent-manager review-repo <path>"
+	const usage = "usage: agent-fleet review-repo <path>"
 	for _, args := range [][]string{nil, {"  "}} {
 		err := runReviewRepo(&bytes.Buffer{}, args, "abc123", configDir)
 		if err == nil || err.Error() != usage {
@@ -192,7 +192,7 @@ func TestReviewCommentRejectsUnknownOrInvalidID(t *testing.T) {
 			t.Fatalf("comment id %q should fail", id)
 		}
 	}
-	if err := runReviewComment(&bytes.Buffer{}, nil, "abc123", configDir); err == nil || err.Error() != "usage: agent-manager "+usageReviewComment {
+	if err := runReviewComment(&bytes.Buffer{}, nil, "abc123", configDir); err == nil || err.Error() != "usage: agent-fleet "+usageReviewComment {
 		t.Fatalf("missing id = %v", err)
 	}
 }
@@ -256,7 +256,7 @@ func TestReviewBaseRejectsBadInput(t *testing.T) {
 	repo := initRepo(t)
 	commitFile(t, repo)
 	configDir := t.TempDir()
-	const usage = "usage: agent-manager review-base <ref>|--clear"
+	const usage = "usage: agent-fleet review-base <ref>|--clear"
 
 	t.Run("missing session id", func(t *testing.T) {
 		t.Chdir(repo)
@@ -325,7 +325,7 @@ func TestReviewCommandsShowUsageOnHelp(t *testing.T) {
 	if err := runRename(out, []string{"-h"}, "abcd1234", t.TempDir()); !errors.Is(err, ErrUsageShown) {
 		t.Fatalf("rename -h = %v, want ErrUsageShown", err)
 	}
-	if !strings.Contains(out.String(), "usage: agent-manager "+usageRename) {
+	if !strings.Contains(out.String(), "usage: agent-fleet "+usageRename) {
 		t.Fatalf("rename -h output = %q", out.String())
 	}
 }

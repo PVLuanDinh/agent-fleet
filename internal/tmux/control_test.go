@@ -646,7 +646,7 @@ func requireHeld(t *testing.T, done <-chan error, failure string) {
 // otherProcessEnv names the action a rerun of this test binary repeats.
 const otherProcessEnv = "AM_TMUX_TEST_OTHER_PROCESS"
 
-// startOtherProcess runs this test binary again as another agent-manager
+// startOtherProcess runs this test binary again as another agent-fleet
 // process that repeats action on the session until the test ends. It returns
 // just before the first one, and the channel reports how that one went.
 func startOtherProcess(t *testing.T, driver *Driver, action, id string) <-chan error {

@@ -39,8 +39,8 @@ func TestUpdateRejectsOperands(t *testing.T) {
 }
 
 func TestUpdateReportsAdviceOnlyManagers(t *testing.T) {
-	swapUpdateSeams(t, "agent-manager",
-		update.Manager{Name: "pacman", Advice: "install an AUR helper first, then: yay -S agent-manager-bin"},
+	swapUpdateSeams(t, "agent-fleet",
+		update.Manager{Name: "pacman", Advice: "install an AUR helper first, then: yay -S agent-fleet-bin"},
 		update.Result{}, nil)
 	err := runUpdate("0.31.0")(&bytes.Buffer{}, nil, t.TempDir())
 	if err == nil || !strings.Contains(err.Error(), "AUR helper") {
@@ -49,7 +49,7 @@ func TestUpdateReportsAdviceOnlyManagers(t *testing.T) {
 }
 
 func TestUpdateDelegatedRunsTheManagerCommand(t *testing.T) {
-	swapUpdateSeams(t, "agent-manager", update.Manager{Name: "true", Command: []string{"true"}}, update.Result{}, nil)
+	swapUpdateSeams(t, "agent-fleet", update.Manager{Name: "true", Command: []string{"true"}}, update.Result{}, nil)
 	var out bytes.Buffer
 	if err := runUpdate("0.31.0")(&out, nil, t.TempDir()); err != nil {
 		t.Fatalf("delegated update: %v", err)
@@ -60,7 +60,7 @@ func TestUpdateDelegatedRunsTheManagerCommand(t *testing.T) {
 }
 
 func TestUpdateDelegatedReportsFailure(t *testing.T) {
-	swapUpdateSeams(t, "agent-manager", update.Manager{Name: "false", Command: []string{"false"}}, update.Result{}, nil)
+	swapUpdateSeams(t, "agent-fleet", update.Manager{Name: "false", Command: []string{"false"}}, update.Result{}, nil)
 	err := runUpdate("0.31.0")(&bytes.Buffer{}, nil, t.TempDir())
 	if err == nil || !strings.Contains(err.Error(), "false:") {
 		t.Fatalf("failed delegated update returned %v", err)
@@ -68,7 +68,7 @@ func TestUpdateDelegatedReportsFailure(t *testing.T) {
 }
 
 func TestUpdateReportsUpToDate(t *testing.T) {
-	swapUpdateSeams(t, "agent-manager", update.Manager{},
+	swapUpdateSeams(t, "agent-fleet", update.Manager{},
 		update.Result{Releases: []update.Release{{Version: "v0.31.0"}}}, nil)
 	var out bytes.Buffer
 	if err := runUpdate("0.31.0")(&out, nil, t.TempDir()); err != nil {
@@ -80,7 +80,7 @@ func TestUpdateReportsUpToDate(t *testing.T) {
 }
 
 func TestUpdateRefusesNonReleaseBuilds(t *testing.T) {
-	swapUpdateSeams(t, "agent-manager", update.Manager{}, update.Result{}, nil)
+	swapUpdateSeams(t, "agent-fleet", update.Manager{}, update.Result{}, nil)
 	refreshed := false
 	oldRefresh := updateRefresh
 	updateRefresh = func(context.Context, string, string) (update.Result, error) {
@@ -98,7 +98,7 @@ func TestUpdateRefusesNonReleaseBuilds(t *testing.T) {
 }
 
 func TestUpdateSwapsTheBinaryForTheLatestRelease(t *testing.T) {
-	swapUpdateSeams(t, "/bin/agent-manager", update.Manager{}, update.Result{Latest: "v0.32.0"}, nil)
+	swapUpdateSeams(t, "/bin/agent-fleet", update.Manager{}, update.Result{Latest: "v0.32.0"}, nil)
 	var appliedTag, appliedPath string
 	oldApply := updateApply
 	updateApply = func(_ context.Context, tag, path string) error {
@@ -110,8 +110,8 @@ func TestUpdateSwapsTheBinaryForTheLatestRelease(t *testing.T) {
 	if err := runUpdate("0.31.0")(&out, nil, t.TempDir()); err != nil {
 		t.Fatalf("update: %v", err)
 	}
-	if appliedTag != "v0.32.0" || appliedPath != "/bin/agent-manager" {
-		t.Fatalf("apply got (%q, %q), want (v0.32.0, /bin/agent-manager)", appliedTag, appliedPath)
+	if appliedTag != "v0.32.0" || appliedPath != "/bin/agent-fleet" {
+		t.Fatalf("apply got (%q, %q), want (v0.32.0, /bin/agent-fleet)", appliedTag, appliedPath)
 	}
 	if !strings.Contains(out.String(), "updating to v0.32.0...") {
 		t.Fatalf("update output = %q", out.String())
@@ -122,7 +122,7 @@ func TestUpdateSwapsTheBinaryForTheLatestRelease(t *testing.T) {
 }
 
 func TestUpdateJSONReportsTheVersion(t *testing.T) {
-	swapUpdateSeams(t, "agent-manager", update.Manager{}, update.Result{Latest: "v0.32.0"}, nil)
+	swapUpdateSeams(t, "agent-fleet", update.Manager{}, update.Result{Latest: "v0.32.0"}, nil)
 	oldApply := updateApply
 	updateApply = func(context.Context, string, string) error { return nil }
 	t.Cleanup(func() { updateApply = oldApply })
@@ -139,7 +139,7 @@ func TestUpdateJSONReportsTheVersion(t *testing.T) {
 }
 
 func TestUpdateReportsRefreshFailures(t *testing.T) {
-	swapUpdateSeams(t, "agent-manager", update.Manager{}, update.Result{}, errors.New("github unreachable"))
+	swapUpdateSeams(t, "agent-fleet", update.Manager{}, update.Result{}, errors.New("github unreachable"))
 	err := runUpdate("0.31.0")(&bytes.Buffer{}, nil, t.TempDir())
 	if err == nil || err.Error() != "update: could not reach GitHub: github unreachable" {
 		t.Fatalf("refresh failure returned %v", err)
@@ -147,7 +147,7 @@ func TestUpdateReportsRefreshFailures(t *testing.T) {
 }
 
 func TestUpdateReportsApplyFailures(t *testing.T) {
-	swapUpdateSeams(t, "agent-manager", update.Manager{}, update.Result{Latest: "v0.32.0"}, nil)
+	swapUpdateSeams(t, "agent-fleet", update.Manager{}, update.Result{Latest: "v0.32.0"}, nil)
 	oldApply := updateApply
 	updateApply = func(context.Context, string, string) error { return errors.New("disk full") }
 	t.Cleanup(func() { updateApply = oldApply })
@@ -168,7 +168,7 @@ func TestUpdateExecutableFailureReachesTheCaller(t *testing.T) {
 }
 
 func TestUpdateUpToDateJSONReportsIt(t *testing.T) {
-	swapUpdateSeams(t, "agent-manager", update.Manager{},
+	swapUpdateSeams(t, "agent-fleet", update.Manager{},
 		update.Result{Releases: []update.Release{{Version: "v0.31.0"}}}, nil)
 	var out bytes.Buffer
 	if err := runUpdate("0.31.0")(&out, []string{"--json"}, t.TempDir()); err != nil {
@@ -180,7 +180,7 @@ func TestUpdateUpToDateJSONReportsIt(t *testing.T) {
 }
 
 func TestUpdateDelegatedJSONKeepsTheRecordClean(t *testing.T) {
-	swapUpdateSeams(t, "agent-manager",
+	swapUpdateSeams(t, "agent-fleet",
 		update.Manager{Name: "echo", Command: []string{"echo", "progress-line"}}, update.Result{}, nil)
 	var out bytes.Buffer
 	if err := runUpdate("0.31.0")(&out, []string{"--json"}, t.TempDir()); err != nil {
@@ -200,7 +200,7 @@ type failingWriter struct{}
 func (failingWriter) Write([]byte) (int, error) { return 0, errors.New("write failed") }
 
 func TestUpdateReportsProgressWriteFailures(t *testing.T) {
-	swapUpdateSeams(t, "agent-manager", update.Manager{}, update.Result{Latest: "v0.32.0"}, nil)
+	swapUpdateSeams(t, "agent-fleet", update.Manager{}, update.Result{Latest: "v0.32.0"}, nil)
 	applied := false
 	oldApply := updateApply
 	updateApply = func(context.Context, string, string) error { applied = true; return nil }

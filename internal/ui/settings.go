@@ -674,7 +674,7 @@ func (m *Model) toggleCLIHidden(name string) {
 // requestCLISupportURL opens a prefilled feature request for another CLI.
 func requestCLISupportURL() string {
 	body := "**What are you trying to do**\n\n" +
-		"I want agent-manager to support another coding CLI.\n\n" +
+		"I want agent-fleet to support another coding CLI.\n\n" +
 		"**What you have in mind**\n\n" +
 		"CLI name:\nHow to launch it:\nResume / session flags (if any):\n\n" +
 		"**Area**\nConfig and tool support\n"

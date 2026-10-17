@@ -51,7 +51,7 @@ func TestFormatSessionResults(t *testing.T) {
 	assertFormatted(t, FormatSendResult(SendResult{MessageID: 7, QueuePosition: 2, ManagerAwake: true}, "def456"),
 		"queued message 7 for session def456 at position 2")
 	assertFormatted(t, FormatSendResult(SendResult{MessageID: 8, QueuePosition: 1}, "def456"),
-		"queued message 8 for session def456 at position 1; Agent Manager is not running, so it waits until the user opens it")
+		"queued message 8 for session def456 at position 1; agent-fleet is not running, so it waits until the user opens it")
 	assertFormatted(t, FormatMessageState(MessageState{MessageID: 7, SessionID: "def456", State: "queued"}),
 		"message 7 to session def456 is queued")
 	assertFormatted(t, FormatMessageState(MessageState{
@@ -74,7 +74,7 @@ func TestFormatSessionResults(t *testing.T) {
 			name:   "died while manager is closed",
 			result: WaitResult{Session: dead, Outcome: WaitDied, Waited: "2s"},
 			want: "the session died before reaching any awaited state: " + FormatSession(dead) + " is dead after 2s" +
-				"; Agent Manager is not running, so this status is the last one it recorded",
+				"; agent-fleet is not running, so this status is the last one it recorded",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

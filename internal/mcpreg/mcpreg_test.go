@@ -60,7 +60,7 @@ func TestDefaultCommandCodeStyleRegisters(t *testing.T) {
 func TestApplyClaudeWritesConfigAndFlag(t *testing.T) {
 	dir := t.TempDir()
 	env := map[string]string{}
-	command, err := Apply("claude", "/opt/bin/agent-manager", dir, "claude", env)
+	command, err := Apply("claude", "/opt/bin/agent-fleet", dir, "claude", env)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,8 +80,8 @@ func TestApplyClaudeWritesConfigAndFlag(t *testing.T) {
 	if err := json.Unmarshal(content, &parsed); err != nil {
 		t.Fatal(err)
 	}
-	server := parsed["mcpServers"]["agent-manager"]
-	if server.Command != "/opt/bin/agent-manager" || len(server.Args) != 1 || server.Args[0] != "mcp" {
+	server := parsed["mcpServers"]["agent-fleet"]
+	if server.Command != "/opt/bin/agent-fleet" || len(server.Args) != 1 || server.Args[0] != "mcp" {
 		t.Fatalf("server = %+v", server)
 	}
 	if server.Env["AGENT_MANAGER_SESSION_ID"] != "${AGENT_MANAGER_SESSION_ID}" {
@@ -94,14 +94,14 @@ func TestApplyClaudeWritesConfigAndFlag(t *testing.T) {
 
 func TestApplyCodexAppendsOverrides(t *testing.T) {
 	env := map[string]string{}
-	command, err := Apply("codex", "/opt/bin/agent-manager", t.TempDir(), "codex", env)
+	command, err := Apply("codex", "/opt/bin/agent-fleet", t.TempDir(), "codex", env)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		`mcp_servers.agent-manager.command="/opt/bin/agent-manager"`,
-		`mcp_servers.agent-manager.args=["mcp"]`,
-		`mcp_servers.agent-manager.env_vars=["AGENT_MANAGER_SESSION_ID"]`,
+		`mcp_servers.agent-fleet.command="/opt/bin/agent-fleet"`,
+		`mcp_servers.agent-fleet.args=["mcp"]`,
+		`mcp_servers.agent-fleet.env_vars=["AGENT_MANAGER_SESSION_ID"]`,
 	} {
 		if !strings.Contains(command, want) {
 			t.Fatalf("command %q missing %q", command, want)
@@ -112,7 +112,7 @@ func TestApplyCodexAppendsOverrides(t *testing.T) {
 func TestApplyOpencodeSetsEnvToConfigFile(t *testing.T) {
 	dir := t.TempDir()
 	env := map[string]string{}
-	command, err := Apply("opencode", "/opt/bin/agent-manager", dir, "opencode", env)
+	command, err := Apply("opencode", "/opt/bin/agent-fleet", dir, "opencode", env)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func TestApplyOpencodeSetsEnvToConfigFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(content)
-	for _, want := range []string{`"/opt/bin/agent-manager"`, `"mcp"`, "{env:AGENT_MANAGER_SESSION_ID}"} {
+	for _, want := range []string{`"/opt/bin/agent-fleet"`, `"mcp"`, "{env:AGENT_MANAGER_SESSION_ID}"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("config %q missing %q", text, want)
 		}
@@ -137,10 +137,10 @@ func TestApplyOpencodeSetsEnvToConfigFile(t *testing.T) {
 
 func TestApplyGrokSkipsWhenMarkerMatches(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "mcp-grok-registered"), []byte("/opt/bin/agent-manager"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "mcp-grok-registered"), []byte("/opt/bin/agent-fleet"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	command, err := Apply("grok", "/opt/bin/agent-manager", dir, "grok", map[string]string{})
+	command, err := Apply("grok", "/opt/bin/agent-fleet", dir, "grok", map[string]string{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,10 +151,10 @@ func TestApplyGrokSkipsWhenMarkerMatches(t *testing.T) {
 
 func TestApplyGeminiSkipsWhenMarkerMatches(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "mcp-gemini-registered"), []byte("/opt/bin/agent-manager"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "mcp-gemini-registered"), []byte("/opt/bin/agent-fleet"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	command, err := Apply("gemini", "/opt/bin/agent-manager", dir, "gemini", map[string]string{})
+	command, err := Apply("gemini", "/opt/bin/agent-fleet", dir, "gemini", map[string]string{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,11 +165,11 @@ func TestApplyGeminiSkipsWhenMarkerMatches(t *testing.T) {
 
 func TestApplyCommandCodeSkipsWhenMarkerMatches(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "mcp-command-code-registered"), []byte("/opt/bin/agent-manager"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "mcp-command-code-registered"), []byte("/opt/bin/agent-fleet"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	env := map[string]string{hooks.EnvSessionID: "sess-abcd"}
-	command, err := Apply("command-code", "/opt/bin/agent-manager", dir, "cmd", env)
+	command, err := Apply("command-code", "/opt/bin/agent-fleet", dir, "cmd", env)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,10 +183,10 @@ func TestApplyCommandCodeSkipsWhenMarkerMatches(t *testing.T) {
 
 func TestApplyHermesSkipsWhenMarkerMatches(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "mcp-hermes-registered"), []byte("/opt/bin/agent-manager"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "mcp-hermes-registered"), []byte("/opt/bin/agent-fleet"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	command, err := Apply("hermes", "/opt/bin/agent-manager", dir, "hermes --cli", map[string]string{})
+	command, err := Apply("hermes", "/opt/bin/agent-fleet", dir, "hermes --cli", map[string]string{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -198,16 +198,16 @@ func TestApplyHermesSkipsWhenMarkerMatches(t *testing.T) {
 func TestValidHermesMCPEntry(t *testing.T) {
 	enabled := true
 	entry := hermesMCPEntry{
-		Command: "/opt/bin/agent-manager",
+		Command: "/opt/bin/agent-fleet",
 		Args:    []string{"mcp"},
 		Env:     map[string]string{"AGENT_MANAGER_SESSION_ID": "${AGENT_MANAGER_SESSION_ID}"},
 		Enabled: &enabled,
 	}
-	if !validHermesMCPEntry(entry, "/opt/bin/agent-manager") {
+	if !validHermesMCPEntry(entry, "/opt/bin/agent-fleet") {
 		t.Fatal("valid Hermes MCP entry was rejected")
 	}
 	entry.Args = []string{"wrong"}
-	if validHermesMCPEntry(entry, "/opt/bin/agent-manager") {
+	if validHermesMCPEntry(entry, "/opt/bin/agent-fleet") {
 		t.Fatal("Hermes MCP entry with wrong args was accepted")
 	}
 }
@@ -247,7 +247,7 @@ exit 1
 	argsPath := filepath.Join(dir, "args")
 	stdinPath := filepath.Join(dir, "stdin")
 	leakPath := filepath.Join(dir, "leaked")
-	exe := "/opt/bin/agent-manager"
+	exe := "/opt/bin/agent-fleet"
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv("FAKE_HERMES_STATE", state)
 	t.Setenv("FAKE_HERMES_ARGS", argsPath)
@@ -267,7 +267,7 @@ exit 1
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantArgs := "mcp\nadd\nagent-manager\n--command\n/opt/bin/agent-manager\n--env\nAGENT_MANAGER_SESSION_ID=${AGENT_MANAGER_SESSION_ID}\n--args\nmcp\n"
+	wantArgs := "mcp\nadd\nagent-fleet\n--command\n/opt/bin/agent-fleet\n--env\nAGENT_MANAGER_SESSION_ID=${AGENT_MANAGER_SESSION_ID}\n--args\nmcp\n"
 	if string(args) != wantArgs {
 		t.Fatalf("hermes args = %q want %q", args, wantArgs)
 	}
@@ -298,7 +298,7 @@ func TestApplyHermesReportsMissingMCPSupport(t *testing.T) {
 if [ "$1" = "config" ]; then
   exit 1
 fi
-printf "Failed to connect: MCP server 'agent-manager' requires the 'mcp' Python SDK, but it is not installed. Run 'hermes setup' to install MCP support, then retry.\n"
+printf "Failed to connect: MCP server 'agent-fleet' requires the 'mcp' Python SDK, but it is not installed. Run 'hermes setup' to install MCP support, then retry.\n"
 exit 0
 `
 	if err := os.WriteFile(filepath.Join(bin, "hermes"), []byte(script), 0o755); err != nil {
@@ -306,7 +306,7 @@ exit 0
 	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 
-	_, err := Apply("hermes", "/opt/bin/agent-manager", t.TempDir(), "hermes --cli", map[string]string{})
+	_, err := Apply("hermes", "/opt/bin/agent-fleet", t.TempDir(), "hermes --cli", map[string]string{})
 	var unavailable HermesMCPUnavailableError
 	if !errors.As(err, &unavailable) {
 		t.Fatalf("err = %v, want HermesMCPUnavailableError", err)
@@ -391,7 +391,7 @@ exit 7
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
-	err := ensureHermesRegistered("/opt/bin/agent-manager", t.TempDir())
+	err := ensureHermesRegistered("/opt/bin/agent-fleet", t.TempDir())
 	var exitErr *exec.ExitError
 	if !errors.As(err, &exitErr) {
 		t.Fatalf("error should wrap exec.ExitError, got %v", err)
@@ -421,7 +421,7 @@ exit 1
 		t.Fatal(err)
 	}
 	argsPath := filepath.Join(dir, "args")
-	exe := "/opt/bin/agent-manager"
+	exe := "/opt/bin/agent-fleet"
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv("FAKE_CMD_ARGS", argsPath)
 	t.Setenv(hooks.EnvSessionID, "parent-session")
@@ -441,7 +441,7 @@ exit 1
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantArgs := "mcp\nadd\n--scope\nuser\nagent-manager\n--\n/opt/bin/agent-manager\nmcp\n"
+	wantArgs := "mcp\nadd\n--scope\nuser\nagent-fleet\n--\n/opt/bin/agent-fleet\nmcp\n"
 	if string(args) != wantArgs {
 		t.Fatalf("cmd args = %q want %q", args, wantArgs)
 	}
@@ -476,7 +476,7 @@ exit 1
 		t.Fatal(err)
 	}
 	argsPath := filepath.Join(dir, "args")
-	exe := "/opt/bin/agent-manager"
+	exe := "/opt/bin/agent-fleet"
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv("FAKE_AGY_ARGS", argsPath)
 
@@ -492,7 +492,7 @@ exit 1
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := "mcp\nadd\nagent-manager\n--\n/opt/bin/agent-manager\nmcp\n"; string(args) != want {
+	if want := "mcp\nadd\nagent-fleet\n--\n/opt/bin/agent-fleet\nmcp\n"; string(args) != want {
 		t.Fatalf("agy args = %q want %q", args, want)
 	}
 	marker, err := os.ReadFile(filepath.Join(dir, "mcp-antigravity-registered"))
@@ -502,8 +502,8 @@ exit 1
 }
 
 func TestEnsureRegisteredOnceNamesFailedCommand(t *testing.T) {
-	err := ensureRegisteredOnce("gemini", "/opt/bin/agent-manager", t.TempDir(),
-		exec.Command("agent-manager-no-such-binary"))
+	err := ensureRegisteredOnce("gemini", "/opt/bin/agent-fleet", t.TempDir(),
+		exec.Command("agent-fleet-no-such-binary"))
 	if err == nil {
 		t.Fatal("expected an error when the add command cannot run")
 	}
@@ -542,14 +542,14 @@ func museSettingsFixture(t *testing.T, content string) string {
 }
 
 var wantMuseEntry = map[string]any{
-	"type": "stdio", "command": "/opt/bin/agent-manager", "args": []any{"mcp"}, "mode": "optional",
+	"type": "stdio", "command": "/opt/bin/agent-fleet", "args": []any{"mcp"}, "mode": "optional",
 }
 
 func TestApplyMuseAddsServerAndKeepsSettings(t *testing.T) {
 	path := museSettingsFixture(t, `{"schema_version": 1, "theme": "dark",
   "mcpServers": {"github": {"type": "stdio", "command": "npx"}}}`)
 	env := map[string]string{}
-	command, err := Apply("muse", "/opt/bin/agent-manager", t.TempDir(), "muse", env)
+	command, err := Apply("muse", "/opt/bin/agent-fleet", t.TempDir(), "muse", env)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -564,8 +564,8 @@ func TestApplyMuseAddsServerAndKeepsSettings(t *testing.T) {
 	if fmt.Sprint(servers["github"]) != fmt.Sprint(map[string]any{"type": "stdio", "command": "npx"}) {
 		t.Fatalf("github server = %v, want it kept", servers["github"])
 	}
-	if fmt.Sprint(servers["agent-manager"]) != fmt.Sprint(wantMuseEntry) {
-		t.Fatalf("agent-manager server = %v, want %v", servers["agent-manager"], wantMuseEntry)
+	if fmt.Sprint(servers["agent-fleet"]) != fmt.Sprint(wantMuseEntry) {
+		t.Fatalf("agent-fleet server = %v, want %v", servers["agent-fleet"], wantMuseEntry)
 	}
 	info, err := os.Stat(path)
 	if err != nil || info.Mode().Perm() != 0o600 {
@@ -575,12 +575,12 @@ func TestApplyMuseAddsServerAndKeepsSettings(t *testing.T) {
 
 func TestApplyMuseCreatesSettings(t *testing.T) {
 	path := museSettingsFixture(t, "")
-	if _, err := Apply("muse", "/opt/bin/agent-manager", t.TempDir(), "muse", map[string]string{}); err != nil {
+	if _, err := Apply("muse", "/opt/bin/agent-fleet", t.TempDir(), "muse", map[string]string{}); err != nil {
 		t.Fatal(err)
 	}
 	settings := readMuseSettings(t, path)
 	servers := settings["mcpServers"].(map[string]any)
-	if settings["schema_version"] != float64(1) || fmt.Sprint(servers["agent-manager"]) != fmt.Sprint(wantMuseEntry) {
+	if settings["schema_version"] != float64(1) || fmt.Sprint(servers["agent-fleet"]) != fmt.Sprint(wantMuseEntry) {
 		t.Fatalf("settings = %v", settings)
 	}
 }
@@ -588,7 +588,7 @@ func TestApplyMuseCreatesSettings(t *testing.T) {
 // Muse drops every server when both spellings are present.
 func TestApplyMuseKeepsTheLegacyServersKey(t *testing.T) {
 	path := museSettingsFixture(t, `{"mcp_servers": {"github": {"command": "npx"}}}`)
-	if _, err := Apply("muse", "/opt/bin/agent-manager", t.TempDir(), "muse", map[string]string{}); err != nil {
+	if _, err := Apply("muse", "/opt/bin/agent-fleet", t.TempDir(), "muse", map[string]string{}); err != nil {
 		t.Fatal(err)
 	}
 	settings := readMuseSettings(t, path)
@@ -596,7 +596,7 @@ func TestApplyMuseKeepsTheLegacyServersKey(t *testing.T) {
 		t.Fatalf("settings = %v, want no mcpServers next to mcp_servers", settings)
 	}
 	servers := settings["mcp_servers"].(map[string]any)
-	if servers["github"] == nil || fmt.Sprint(servers["agent-manager"]) != fmt.Sprint(wantMuseEntry) {
+	if servers["github"] == nil || fmt.Sprint(servers["agent-fleet"]) != fmt.Sprint(wantMuseEntry) {
 		t.Fatalf("mcp_servers = %v", servers)
 	}
 }
@@ -614,7 +614,7 @@ func TestApplyMuseWritesThroughASymlinkedSettingsFile(t *testing.T) {
 	if err := os.Symlink(target, path); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Apply("muse", "/opt/bin/agent-manager", t.TempDir(), "muse", map[string]string{}); err != nil {
+	if _, err := Apply("muse", "/opt/bin/agent-fleet", t.TempDir(), "muse", map[string]string{}); err != nil {
 		t.Fatal(err)
 	}
 	if info, err := os.Lstat(path); err != nil || info.Mode()&os.ModeSymlink == 0 {
@@ -622,7 +622,7 @@ func TestApplyMuseWritesThroughASymlinkedSettingsFile(t *testing.T) {
 	}
 	settings := readMuseSettings(t, target)
 	servers := settings["mcpServers"].(map[string]any)
-	if settings["theme"] != "dark" || fmt.Sprint(servers["agent-manager"]) != fmt.Sprint(wantMuseEntry) {
+	if settings["theme"] != "dark" || fmt.Sprint(servers["agent-fleet"]) != fmt.Sprint(wantMuseEntry) {
 		t.Fatalf("linked settings = %v", settings)
 	}
 }
@@ -630,7 +630,7 @@ func TestApplyMuseWritesThroughASymlinkedSettingsFile(t *testing.T) {
 func TestApplyMuseRefusesUnreadableSettings(t *testing.T) {
 	const content = "{ not json"
 	path := museSettingsFixture(t, content)
-	if _, err := Apply("muse", "/opt/bin/agent-manager", t.TempDir(), "muse", map[string]string{}); err == nil {
+	if _, err := Apply("muse", "/opt/bin/agent-fleet", t.TempDir(), "muse", map[string]string{}); err == nil {
 		t.Fatal("expected an error for settings that do not parse")
 	}
 	data, err := os.ReadFile(path)
@@ -641,7 +641,7 @@ func TestApplyMuseRefusesUnreadableSettings(t *testing.T) {
 
 func TestApplyNoneLeavesEverything(t *testing.T) {
 	env := map[string]string{}
-	command, err := Apply("none", "/opt/bin/agent-manager", t.TempDir(), "aider", env)
+	command, err := Apply("none", "/opt/bin/agent-fleet", t.TempDir(), "aider", env)
 	if err != nil || command != "aider" || len(env) != 0 {
 		t.Fatalf("command = %q, env = %v, err = %v", command, env, err)
 	}

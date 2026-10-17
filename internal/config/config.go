@@ -48,7 +48,7 @@ type Tool struct {
 	// instead of opening the picker.
 	ResumePickerKeys string `toml:"resume_picker_keys"`
 	// ForkCommand creates a new conversation from an existing one. Templates
-	// can use {id}, {session_file}, {new_id}, and {name}; Agent Manager quotes
+	// can use {id}, {session_file}, {new_id}, and {name}; agent-fleet quotes
 	// each value. {session_file} needs SessionStore to keep one ("gemini").
 	ForkCommand string `toml:"fork_command"`
 	// ForkKeys forks from inside the running source, for a tool that can only
@@ -689,7 +689,7 @@ default_status = "finished"
 # draft out.
 input_prefix = "^"
 # Start the activity region at the pane origin. Pane reflow then cannot look
-# like streaming output when Agent Manager attaches or detaches. The rows
+# like streaming output when agent-fleet attaches or detaches. The rows
 # that bound the composer are the plain rule and, since pi 0.85, the top
 # one with the spinner drawn inside it ("── ⠹ Working ───"); the arrow-step
 # head check reads either as the input box's edge rather than a draft.

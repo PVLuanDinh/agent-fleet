@@ -96,7 +96,7 @@ func FormatAfterTurn(result AfterTurn) string {
 		text += "; this replaces the pending " + result.Replaced
 	}
 	if !result.ManagerAwake {
-		text += "; Agent Manager is not running, so it happens once the user opens it"
+		text += "; agent-fleet is not running, so it happens once the user opens it"
 	}
 	return text
 }
@@ -111,7 +111,7 @@ func FormatSessionScreen(screen SessionScreen) string {
 func FormatSendResult(result SendResult, targetID string) string {
 	text := fmt.Sprintf("queued message %d for session %s at position %d", result.MessageID, targetID, result.QueuePosition)
 	if !result.ManagerAwake {
-		text += "; Agent Manager is not running, so it waits until the user opens it"
+		text += "; agent-fleet is not running, so it waits until the user opens it"
 	}
 	return text
 }
@@ -136,7 +136,7 @@ func FormatWaitResult(result WaitResult) string {
 		text = "the session died before reaching any awaited state: " + text
 	}
 	if !result.ManagerAwake {
-		text += "; Agent Manager is not running, so this status is the last one it recorded"
+		text += "; agent-fleet is not running, so this status is the last one it recorded"
 	}
 	return text
 }

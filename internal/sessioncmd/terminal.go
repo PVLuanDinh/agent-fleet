@@ -18,10 +18,10 @@ import (
 
 type Terminal struct {
 	ID         string `json:"id" jsonschema:"managed terminal session id"`
-	Name       string `json:"name" jsonschema:"terminal name shown in Agent Manager"`
+	Name       string `json:"name" jsonschema:"terminal name shown in agent-fleet"`
 	Group      string `json:"group" jsonschema:"group path holding the terminal; empty is the root"`
 	Directory  string `json:"directory" jsonschema:"terminal's current working directory, or its launch directory when stopped"`
-	Status     string `json:"status" jsonschema:"stored Agent Manager status"`
+	Status     string `json:"status" jsonschema:"stored agent-fleet status"`
 	Running    bool   `json:"running" jsonschema:"whether the terminal currently has a live tmux pane"`
 	ParentID   string `json:"parent_id" jsonschema:"id of the parent session when nested; empty when un-nested"`
 	ParentName string `json:"parent_name" jsonschema:"name of the parent session when nested; empty when un-nested"`
@@ -133,7 +133,7 @@ func (r *runtime) caller(sessionID string) (store.Session, error) {
 }
 
 // optionalCaller serves commands that never act on the caller's own row, which
-// a script outside Agent Manager may run with no session at all.
+// a script outside agent-fleet may run with no session at all.
 func (r *runtime) optionalCaller(sessionID string) (store.Session, error) {
 	if sessionID == "" {
 		return store.Session{}, nil
@@ -157,7 +157,7 @@ func (r *runtime) terminal(id string) (store.Session, error) {
 		return store.Session{}, fmt.Errorf("session %s is an agent, not a terminal", id)
 	}
 	if sess.Archived {
-		return store.Session{}, fmt.Errorf("terminal %s is archived; restore it in Agent Manager first", id)
+		return store.Session{}, fmt.Errorf("terminal %s is archived; restore it in agent-fleet first", id)
 	}
 	return sess, nil
 }
@@ -394,7 +394,7 @@ func (r *runtime) createTarget(caller store.Session, requestedGroup *string, dir
 		}
 	}
 	if group != "" && store.EffectivelyArchived(archived, group) {
-		return "", "", fmt.Errorf("group %q is archived; restore it in Agent Manager first", group)
+		return "", "", fmt.Errorf("group %q is archived; restore it in agent-fleet first", group)
 	}
 	if strings.TrimSpace(directory) != "" {
 		dir, err := resolveTerminalDirectory(directory)
@@ -488,7 +488,7 @@ func (t *Terminals) Send(sessionID, terminalID, command string, keys []string) (
 		return TerminalInput{}, err
 	}
 	if !runtime.driver.Exists(terminal.ID) {
-		return TerminalInput{}, fmt.Errorf("terminal %s is not running; revive it in Agent Manager first", terminal.ID)
+		return TerminalInput{}, fmt.Errorf("terminal %s is not running; revive it in agent-fleet first", terminal.ID)
 	}
 	if hasCommand {
 		if err := runtime.driver.SendText(terminal.ID, command); err != nil {
@@ -516,7 +516,7 @@ func (t *Terminals) Read(sessionID, terminalID string) (TerminalScreen, error) {
 		return TerminalScreen{}, err
 	}
 	if !runtime.driver.Exists(terminal.ID) {
-		return TerminalScreen{}, fmt.Errorf("terminal %s is not running; revive it in Agent Manager first", terminal.ID)
+		return TerminalScreen{}, fmt.Errorf("terminal %s is not running; revive it in agent-fleet first", terminal.ID)
 	}
 	output, err := runtime.driver.CapturePane(terminal.ID)
 	if err != nil {

@@ -44,7 +44,7 @@ func TestReserveParsesPathsAndFlags(t *testing.T) {
 		t.Fatal("a mistyped flag should not be leased as a pattern")
 	}
 	if !strings.Contains(mistyped.Error(), `"--mod" starts with a dash`) ||
-		!strings.Contains(mistyped.Error(), "usage: agent-manager reserve") {
+		!strings.Contains(mistyped.Error(), "usage: agent-fleet reserve") {
 		t.Fatalf("the refusal does not name the cause and the usage: %q", mistyped)
 	}
 	if fake.patterns != nil {

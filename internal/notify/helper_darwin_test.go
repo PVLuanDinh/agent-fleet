@@ -23,7 +23,7 @@ func TestInstallHelperSound(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if want := "agent-manager-" + detail.macSound + ".aiff"; name != want {
+			if want := "agent-fleet-" + detail.macSound + ".aiff"; name != want {
 				t.Fatalf("sound name = %q, want %q", name, want)
 			}
 			path := filepath.Join(home, "Library", "Sounds", name)
@@ -89,7 +89,7 @@ func TestHelperPostsLiveBanner(t *testing.T) {
 	}
 	// Notification Center refuses bundles under the temp directory, so the
 	// live bundle sits beside the real one under Application Support.
-	dir := filepath.Join(base, "agent-manager-live-test")
+	dir := filepath.Join(base, "agent-fleet-live-test")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +142,7 @@ func TestUpgradePublishesBesideTheRunningBuild(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dir := filepath.Join(base, "agent-manager-live-test")
+	dir := filepath.Join(base, "agent-fleet-live-test")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -188,7 +188,7 @@ func TestConcurrentMaterializeAgreesOnOneBundle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dir := filepath.Join(base, "agent-manager-live-test")
+	dir := filepath.Join(base, "agent-fleet-live-test")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}

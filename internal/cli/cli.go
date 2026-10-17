@@ -1,4 +1,4 @@
-// Package cli implements agent-manager's subcommands over internal/sessioncmd,
+// Package cli implements agent-fleet's subcommands over internal/sessioncmd,
 // the same layer the MCP server drives. An agent whose CLI carries no MCP
 // client reaches the workspace from its shell instead, and both fronts speak
 // the same words because the sentences come from sessioncmd.
@@ -64,13 +64,13 @@ func Commands(version string) map[string]Command {
 
 func Help(version string, proactive bool) string {
 	var help strings.Builder
-	help.WriteString("Usage: agent-manager [command]\n\n")
+	help.WriteString("Usage: agent-fleet [command]\n\n")
 	help.WriteString("Run the interactive manager when no command is given.\n\n")
-	help.WriteString("agent-manager runs your session beside the user's other agents and terminals.\n")
+	help.WriteString("agent-fleet runs your session beside the user's other agents and terminals.\n")
 	if !proactive {
 		help.WriteString("Work with those other agents only when the user asks: on your own, do not list, message, spawn or wait on them, or create or claim shared tasks.\n")
 	}
-	help.WriteString("update needs no caller, and issue and feature use only the exported session id. Every other command acts as the session or terminal it runs in, resolved from the environment or from the tmux pane, so run them from your own shell. sessions, groups, spawn, read and wait also run from a script outside Agent Manager, where spawn defaults to the CLI picked in settings, the root group and the script's directory.\n")
+	help.WriteString("update needs no caller, and issue and feature use only the exported session id. Every other command acts as the session or terminal it runs in, resolved from the environment or from the tmux pane, so run them from your own shell. sessions, groups, spawn, read and wait also run from a script outside agent-fleet, where spawn defaults to the CLI picked in settings, the root group and the script's directory.\n")
 	for _, section := range sections(version) {
 		help.WriteString("\n" + section.title + "\n")
 		help.WriteString(usageLines(section.commands))
@@ -84,7 +84,7 @@ func Help(version string, proactive bool) string {
 func usageLines(commands []command) string {
 	var lines strings.Builder
 	for _, command := range commands {
-		lines.WriteString("  agent-manager " + command.usage + "\n")
+		lines.WriteString("  agent-fleet " + command.usage + "\n")
 		lines.WriteString("      " + command.about + "\n")
 		lines.WriteString(usageLines(command.verbs))
 	}
@@ -115,7 +115,7 @@ func verbNames(verbs []command) []string {
 func dispatch(out io.Writer, group string, verbs []command, args []string, caller func() string, configDir string) error {
 	names := verbNames(verbs)
 	if len(args) == 0 {
-		return fmt.Errorf("usage: agent-manager %s <%s>", group, strings.Join(names, "|"))
+		return fmt.Errorf("usage: agent-fleet %s <%s>", group, strings.Join(names, "|"))
 	}
 	if args[0] == "-h" || args[0] == "--help" || args[0] == "help" {
 		fmt.Fprint(out, usageLines(verbs))
@@ -156,19 +156,19 @@ func jsonFlag(set *flag.FlagSet) *bool {
 }
 
 func usageError(usage string) error {
-	return fmt.Errorf("usage: agent-manager %s", usage)
+	return fmt.Errorf("usage: agent-fleet %s", usage)
 }
 
 func parseCommand(out io.Writer, set *flag.FlagSet, args []string, min, max int) ([]string, error) {
 	operands, err := parseInterspersed(set, args)
 	if errors.Is(err, flag.ErrHelp) {
-		fmt.Fprintln(out, "usage: agent-manager "+set.Name())
+		fmt.Fprintln(out, "usage: agent-fleet "+set.Name())
 		set.SetOutput(out)
 		set.PrintDefaults()
 		return nil, ErrUsageShown
 	}
 	if err != nil {
-		return nil, fmt.Errorf("%w; usage: agent-manager %s", err, set.Name())
+		return nil, fmt.Errorf("%w; usage: agent-fleet %s", err, set.Name())
 	}
 	if len(operands) < min || (max != anyNumber && len(operands) > max) {
 		return nil, usageError(set.Name())

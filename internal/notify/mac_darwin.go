@@ -31,14 +31,14 @@ import (
 // posts through that copy. Notification Center then shows the manager's
 // name and icon, and a click relaunches the copy, which brings the
 // terminal that started the manager to the front and asks the manager to
-// select the session. The user allows "Agent Manager" once, on the first
+// select the session. The user allows "agent-fleet" once, on the first
 // banner, the way any app asks.
 
 //go:embed agent-manager.icns
 var helperIcon []byte
 
 const (
-	helperBundle     = "Agent Manager.app"
+	helperBundle     = "agent-fleet.app"
 	helperExecutable = "agent-manager"
 	helperBundleID   = "dev.agent-manager.notifier"
 	// helperTimeout leaves room for the first-run permission prompt,
@@ -247,9 +247,9 @@ const helperInfoPlist = `<?xml version="1.0" encoding="UTF-8"?>
 	<key>CFBundleIdentifier</key>
 	<string>` + helperBundleID + `</string>
 	<key>CFBundleName</key>
-	<string>Agent Manager</string>
+	<string>agent-fleet</string>
 	<key>CFBundleDisplayName</key>
-	<string>Agent Manager</string>
+	<string>agent-fleet</string>
 	<key>CFBundleExecutable</key>
 	<string>` + helperExecutable + `</string>
 	<key>CFBundleIconFile</key>
