@@ -35,7 +35,7 @@ const (
 	whatsNewVersionSetting  = "whats_new_version"
 	whatsNewFromSetting     = "whats_new_from_version"
 
-	repoURL = "https://github.com/YoanWai/agent-manager"
+	repoURL = "https://github.com/PVLuanDinh/agent-fleet"
 )
 
 type notice struct {
@@ -521,7 +521,10 @@ func (m *Model) openStartupNotice() {
 	if m.update.version == "dev" {
 		return
 	}
-	if id := m.startupNotice(); id != "" {
+	// startupNotice also records the version this launch greeted, so it runs
+	// either way; the agent-fleet build leaves the panel closed and the
+	// message waits under M instead of covering the fleet at launch.
+	if id := m.startupNotice(); id != "" && !ownBuild {
 		m.openNotices(id)
 	}
 }
@@ -562,7 +565,7 @@ func (m *Model) applyNotices(apply func()) {
 			break
 		}
 	}
-	if added == "" {
+	if added == "" || ownBuild {
 		return
 	}
 	if m.mode == modeNotices {

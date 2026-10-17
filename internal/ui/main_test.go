@@ -25,6 +25,9 @@ func TestMain(m *testing.M) {
 	if notify.LaunchedAsHelper() {
 		os.Exit(notify.HelperMain(os.Args[1:]))
 	}
+	// The suite keeps guarding upstream's feed, update and auto-open flow;
+	// ownbuild_test.go pins the agent-fleet build's own behavior.
+	ownBuild = false
 	// The suite runs as if at the machine it runs on, even when the
 	// developer reached it over SSH.
 	remoteTerminal = localTerminal

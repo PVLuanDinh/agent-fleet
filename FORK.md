@@ -24,6 +24,10 @@ Modified files, all under `internal/ui/`, plus `DESIGN.md` and `.impeccable/desi
   name strings read agent-fleet.
 - Tests in `internal/ui` updated to the new look.
 
+- `ownbuild.go` (new), `model.go`, `notices.go`: this build owns its releases. It never polls upstream's
+  release list or announcement feed, so it never offers to self-update into stock agent-manager, and the
+  messages panel never opens by itself (it opens on the messages key). Upstream's flow stays in the code
+  behind the `ownBuild` flag and its tests run with the flag off.
+
 Build: `go build -ldflags "-X main.version=0.41.0" -o agent-manager .`
-The in-app "update available" notice still points at upstream releases; installing one replaces
-this build with stock agent-manager.
+There is no in-app update: new versions of this build come from this branch.

@@ -1091,6 +1091,11 @@ func (m *Model) refreshUpdates() tea.Msg {
 }
 
 func (m *Model) fetchUpdates(force bool) tea.Msg {
+	if ownBuild {
+		// No release check: upstream's releases are not this build's, and
+		// installing one would replace agent-fleet with stock agent-manager.
+		return updateMsg{manual: force}
+	}
 	dir, err := config.Dir()
 	if err != nil {
 		return updateMsg{failed: true, manual: force, err: err}
@@ -1121,6 +1126,11 @@ func (m *Model) refreshFeed() tea.Msg {
 }
 
 func (m *Model) fetchFeed(force bool) tea.Msg {
+	if ownBuild {
+		// No remote feed: upstream's announcements describe upstream's
+		// releases. Local notices still show in the messages panel (M).
+		return feedMsg{manual: force}
+	}
 	dir, err := config.Dir()
 	if err != nil {
 		return feedMsg{failed: true, manual: force, err: err}
