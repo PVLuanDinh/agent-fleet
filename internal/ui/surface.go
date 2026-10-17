@@ -69,8 +69,8 @@ func (m *Model) railTopRow(paneWidth, width int) string {
 }
 
 // boundedRuleRow closes the body with the same hairline that opened it, so
-// the frame is two quiet lines rather than a drawn box. edge is kept for the
-// callers that once picked a half block per side; the line is the same.
+// the frame is two quiet lines rather than a drawn box. edge is ignored: the
+// opening and closing lines are the same stroke.
 func (m *Model) boundedRuleRow(paneWidth, width int, edge string) string {
 	return m.hairlineRow(paneWidth, width)
 }

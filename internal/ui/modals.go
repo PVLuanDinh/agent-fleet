@@ -234,7 +234,7 @@ func (m *Model) viewForm() string {
 	case m.form.focus == fieldEffort:
 		hint = [][2]string{{"←→", "level"}, {"tab/↑↓", "move"}, {"↵", "create"}, {"esc", "cancel"}}
 	}
-	return m.card("◆ New Session", strings.TrimRight(b.String(), "\n"), hint)
+	return m.card("New Session", strings.TrimRight(b.String(), "\n"), hint)
 }
 
 // groupBaseChoice renders a group's base picker: its own ref, or auto and
@@ -321,7 +321,7 @@ func (m *Model) viewGroupForm() string {
 	if m.groupForm.focus == gfPath && m.pathSugg.active() {
 		hint = pathSuggestHint(m.pathSugg.chosen)
 	}
-	return m.card("✦ New Group", strings.TrimRight(b.String(), "\n"), hint)
+	return m.card("New Group", strings.TrimRight(b.String(), "\n"), hint)
 }
 
 func (m *Model) viewSettings() string {
@@ -487,7 +487,7 @@ func (m *Model) viewSettings() string {
 			hint = [][2]string{{"↑↓", "field"}, {"↵/esc", "save"}}
 		}
 	}
-	return m.cardFlex("⚙ Settings", body, hint)
+	return m.cardFlex("Settings", body, hint)
 }
 
 // settingsVersionRow is the focusable version line: when a newer release is
@@ -546,7 +546,7 @@ func (m *Model) viewCLIPicker() string {
 		hint = [][2]string{{"↑↓", "move"}, {"↵", "open request issue"}, {"esc", "back"}}
 	}
 	// Fixed card width: short checkbox rows must not stretch a wide empty panel.
-	return m.card("⚙ CLIs", strings.TrimRight(b.String(), "\n"), hint)
+	return m.card("CLIs", strings.TrimRight(b.String(), "\n"), hint)
 }
 
 // themeSwatch previews a palette as a run of blocks, so a theme can be
@@ -560,7 +560,7 @@ func themeSwatch(t Theme) string {
 }
 
 func (m *Model) viewMove() string {
-	return m.card("⇄ Move", m.viewGroupPicker(),
+	return m.card("Move", m.viewGroupPicker(),
 		[][2]string{{"↑↓", "pick"}, {"↵", "move"}, {"esc", "cancel"}})
 }
 
@@ -633,7 +633,7 @@ func (m *Model) viewKeyPicker() string {
 	if m.settings.keyCapture {
 		hint = [][2]string{{"any key", "bind it"}, {"esc", "cancel"}}
 	}
-	return m.cardFlex("⚙ Keybindings", strings.TrimRight(b.String(), "\n"), hint)
+	return m.cardFlex("Keybindings", strings.TrimRight(b.String(), "\n"), hint)
 }
 
 func pickerWindow(count, cursor, room int) (first, last int) {

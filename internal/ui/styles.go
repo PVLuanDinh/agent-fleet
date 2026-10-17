@@ -83,7 +83,8 @@ func rebuildStyles() {
 
 	annotationStyle = lipgloss.NewStyle().Foreground(colorAccent).Bold(true)
 	scopeBadgeStyle = lipgloss.NewStyle().Foreground(colorBg).Background(colorAccent2).Bold(true).Padding(0, 1)
-	focusBadgeStyle = lipgloss.NewStyle().Foreground(colorBg).Background(colorAccent).Bold(true)
+	// Foreground only: a fill would punch a chip through the selection band.
+	focusBadgeStyle = lipgloss.NewStyle().Foreground(colorAccent).Bold(true)
 	searchMatchStyle = lipgloss.NewStyle().Foreground(colorBg).Background(colorAccent)
 	// Foreground only: a fill would punch a chip through the band a selected
 	// row paints behind it.

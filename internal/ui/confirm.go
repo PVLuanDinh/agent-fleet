@@ -23,11 +23,11 @@ func (m *Model) confirmTitle() string {
 	case actionArchive:
 		return "◇ Archive " + subject
 	case actionRestore:
-		return "◆ Restore " + subject
+		return "Restore " + subject
 	case actionRestart:
 		return "↻ Restart " + subject
 	case actionRevive:
-		return "◆ Revive " + subject
+		return "Revive " + subject
 	default:
 		return "⚠ Delete " + subject
 	}

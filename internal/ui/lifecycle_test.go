@@ -1421,8 +1421,8 @@ func TestReviveGroupBringsBackEverySessionInside(t *testing.T) {
 	if _, _ = m.reviveSelected(); m.mode != modeConfirmDelete {
 		t.Fatalf("reviving a group of two dead sessions should ask first, mode = %v err = %q", m.mode, m.errBar.text)
 	}
-	if title := m.confirmTitle(); title != "◆ Revive group" {
-		t.Fatalf("title = %q, want ◆ Revive group", title)
+	if title := m.confirmTitle(); title != "Revive group" {
+		t.Fatalf("title = %q, want Revive group", title)
 	}
 	if want := "revive group work (2 dead sessions)? brings them back."; m.confirm.label != want {
 		t.Fatalf("label = %q, want %q", m.confirm.label, want)

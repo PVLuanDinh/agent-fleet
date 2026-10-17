@@ -50,12 +50,11 @@ func (m *Model) viewListFrame() string {
 	for _, line := range m.viewHeaderRows() {
 		frame = append(frame, paint(line, m.width, backdropHex()))
 	}
-	// The rail's fill runs from the edge column through the seam column,
-	// then bleeds half a cell further right, and half a cell above and
-	// below its body rows — soft edges drawn with half blocks, the finest
-	// step a character cell allows. The first column is drawn as foreground
-	// blocks so the window margin beside it keeps the terminal's own
-	// background and the fill's corners land exactly on the cell grid.
+	// The rail's fill runs from the edge column through the seam column and
+	// sits between the two full-width hairlines; one │ hairline past the
+	// seam separates it from the content. The first column is drawn as
+	// foreground blocks so the window margin beside it keeps the terminal's
+	// own background and the fill's edge lands exactly on the cell grid.
 	bleedWidth := contentWidth - 1
 	railWidth := leftWidth - 1
 	m.pane.columnX = leftWidth + 2
