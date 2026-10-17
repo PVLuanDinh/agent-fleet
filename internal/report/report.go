@@ -1,5 +1,5 @@
 // Package report files a bug report or a feature request against the public
-// agent-manager repository from an agent's MCP tool or from a shell. It
+// agent-fleet repository from an agent's MCP tool or from a shell. It
 // composes the issue the way the repository's issue forms lay it out,
 // gathers the context those forms ask for, and posts nothing until the
 // caller confirms a preview.
@@ -25,7 +25,9 @@ import (
 	"github.com/YoanWai/agent-manager/internal/store"
 )
 
-const repo = "YoanWai/agent-manager"
+// The agent-fleet build files against its own repository: a report about this
+// build is not upstream's to triage.
+const repo = "PVLuanDinh/agent-fleet"
 
 const newIssueURL = "https://github.com/" + repo + "/issues/new"
 

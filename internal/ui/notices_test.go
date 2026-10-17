@@ -350,7 +350,7 @@ func TestFeedUsesCanonicalTitleInModal(t *testing.T) {
 
 func TestBugReportURLPrefillsVersion(t *testing.T) {
 	got := bugReportURL("v0.2.0")
-	if !strings.HasPrefix(got, "https://github.com/YoanWai/agent-manager/issues/new") {
+	if !strings.HasPrefix(got, "https://github.com/PVLuanDinh/agent-fleet/issues/new") {
 		t.Fatalf("bug report should open the new-issue page, got %q", got)
 	}
 	if !strings.Contains(got, "template=bug_report.yml") {

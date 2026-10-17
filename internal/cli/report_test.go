@@ -49,7 +49,7 @@ func TestIssuePreviewsUntilConfirmed(t *testing.T) {
 	if err := runIssue(out, fake, []string{"Space lands in the wrong pane", "--body", "steps"}, "cafe0001"); err != nil {
 		t.Fatalf("issue: %v", err)
 	}
-	for _, want := range []string{"bug report for YoanWai/agent-manager, not filed yet", "preview id: 3f2a91c4", "through gh as yoan", "rerun with --confirm 3f2a91c4"} {
+	for _, want := range []string{"bug report for PVLuanDinh/agent-fleet, not filed yet", "preview id: 3f2a91c4", "through gh as yoan", "rerun with --confirm 3f2a91c4"} {
 		if !strings.Contains(out.String(), want) {
 			t.Fatalf("preview lacks %q:\n%s", want, out.String())
 		}
