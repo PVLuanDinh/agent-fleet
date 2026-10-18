@@ -263,7 +263,7 @@ idempotent: many sessions starting together still share one TUI. Measured: a kil
 | see it as text | `fleet.py ui shot [N]` |
 | drive it | `fleet.py ui keys <tmux key>...` (e.g. `j`, `Escape`, `Enter`), prints the screen after |
 | watch it live | `fleet.py ui attach` prints the command; run it in a Desktop Terminal tab or Windows Terminal (detach: `ctrl+b d`, never `q`, which quits it for everyone) |
-| archive every dead row | `fleet.py archive-dead`: confirms a dialog ONLY when it names a dead, unarchived session (never a group, never a live agent) |
+| archive every dead row | `fleet.py archive-dead` (the binary's `agent-fleet archive-dead`: only rows that are dead with no pane left, never a live or finished one). `fleet.py kill` archives what it killed and `fleet.py spawn` clears dead rows first, so the TUI lists what still runs |
 
 Keys sent with `ui keys` land in the same TUI a person may be watching; prefer the fleet.py commands.
 

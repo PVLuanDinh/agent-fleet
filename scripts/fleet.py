@@ -14,7 +14,7 @@ agent-fleet is Linux/macOS only, so on Windows every call goes through `wsl.exe 
   fleet.py kill ID...          stop a session from outside agent-fleet (its own `kill` needs a caller)
   fleet.py ui start|stop|status|shot [N]|keys K...|attach   one hidden agent-fleet TUI (tmux socket fleetui)
                                that keeps session status current; any session can screenshot or drive it
-  fleet.py archive-dead        archive every dead row through that TUI (agent-fleet's `archive` needs a caller)
+  fleet.py archive-dead        archive every dead row (agent-fleet archive-dead; kill and spawn also run it)
   fleet.py preflight [--cwd DIR] [--no-fix]   install + functionally check every skill the project's lanes need
                                (~/.claude/fleet-requirements.json); `spawn` runs it first and refuses on a required failure
 
@@ -150,25 +150,25 @@ def dialog_name(screen: str) -> str:
 
 
 def archive_dead() -> list:
-    rows = sessions()
-    dead = {r["name"] for r in rows if r.get("status") == "dead" and not r.get("archived")}
-    if not dead:
-        return []
-    if ui_start() not in ("running", "started"):
-        raise RuntimeError("fleet: hidden TUI could not start")
-    ui_keys(["Escape", "Escape"] + ["k"] * (len(rows) + 2), pause=0.2)  # close any modal, go to the top
-    done = []
-    for _ in range(3 * (len(rows) + 2)):
-        if set(done) == dead:
-            break
-        ui_keys(["a"], pause=1.0)
-        name = dialog_name(ui_shot())
-        # Confirm ONLY a dialog naming a dead, unarchived session: never a group, never a live agent.
-        if name in dead and name not in done:
-            ui_keys(["y"], pause=1.0); done.append(name)
-        else:
-            ui_keys((["Escape"] if name else []) + ["j"], pause=0.4)
-    return done
+    """Archive every dead row (status dead, pane gone) through the binary's own archive-dead command.
+    No caller and no TUI keystrokes needed; live and finished sessions are never touched."""
+    p = in_wsl(["bash", "-lc", f"exec {AM} archive-dead --json"])
+    if p.returncode != 0:
+        raise RuntimeError(f"fleet: archive-dead failed: {(p.stderr or p.stdout).strip()[:300]}")
+    try:
+        return [r.get("name", r.get("id", "?")) for r in (json.loads(p.stdout or "[]") or [])]
+    except ValueError:
+        raise RuntimeError(f"fleet: archive-dead printed no JSON: {p.stdout.strip()[:300]}")
+
+
+def await_dead(ids: list, timeout: float = 20.0) -> None:
+    """Wait (bounded) until killed sessions read dead; the hidden TUI reconciles status within seconds."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        rows = {r.get("id"): r for r in sessions()}
+        if all(rows.get(i, {}).get("status") == "dead" for i in ids):
+            return
+        time.sleep(1.5)
 
 
 def sessions() -> list:
@@ -402,6 +402,12 @@ def main(argv=None):
             except Exception as e:
                 print(f"fleet: spawn refused, claim guard could not be installed ({e})", file=sys.stderr)
                 return 1
+        try:  # clear finished lanes first, so the TUI lists what is running, not what died earlier
+            cleared = archive_dead()
+            if cleared:
+                print(f"fleet: archived {len(cleared)} dead session(s) before spawning: {', '.join(cleared)}")
+        except RuntimeError as e:
+            print(e, file=sys.stderr)
         return subprocess.call(wsl_prefix() + ["bash", "-lc", f'exec {AM} spawn "$@"', "am"] + rest)
     if rest:
         ap.error(f"unrecognized arguments: {' '.join(rest)}")
@@ -466,9 +472,13 @@ def main(argv=None):
             p = in_wsl(["tmux", "-L", TMUX_SOCKET, "kill-session", "-t", f"am_{sid}"])
             print(f"killed {sid}" if p.returncode == 0 else f"fleet: {sid}: {p.stderr.strip()}")
             rc |= p.returncode != 0
-        if rc == 0:
-            print("rows turn dead within seconds while the hidden TUI runs (fleet.py ui status); "
-                  "then fleet.py archive-dead")
+        killed = [s for s in args.ids if re.fullmatch(r"[0-9a-f]{8}", s)]
+        if rc == 0 and killed:
+            # A killed lane is finished business: file it away so the TUI shows only what still runs.
+            ui_start()
+            await_dead(killed)
+            done = archive_dead()
+            print(f"archived {len(done)}: {', '.join(done) or '-'}")
         return rc
     if args.cmd == "leases":
         ls = leases()
