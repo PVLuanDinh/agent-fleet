@@ -891,6 +891,34 @@ func (s *Sessions) Archive(sessionID, targetID string, archived bool) (Session, 
 	return runtime.sessionInfo(target, running, false), nil
 }
 
+// ArchiveDead files every dead session out of the active list: a row whose
+// status is dead and whose pane no longer exists. It needs no caller, since
+// it acts only on sessions nothing is running in, which is what the archive
+// key does to a dead row; a live or merely finished session is never touched.
+func (s *Sessions) ArchiveDead() ([]Session, error) {
+	runtime, err := s.open()
+	if err != nil {
+		return nil, err
+	}
+	defer runtime.store.Close()
+	rows, err := runtime.store.ListSessions(false)
+	if err != nil {
+		return nil, err
+	}
+	var archived []Session
+	for _, row := range rows {
+		if row.Archived || row.Status != status.Dead || runtime.driver.Exists(row.ID) {
+			continue
+		}
+		if err := runtime.store.SetArchived(row.ID, true); err != nil {
+			return archived, err
+		}
+		row.Archived = true
+		archived = append(archived, runtime.sessionInfo(row, false, false))
+	}
+	return archived, nil
+}
+
 // AfterTurn is what the calling session left for the manager to do to it
 // once its turn ends.
 type AfterTurn struct {

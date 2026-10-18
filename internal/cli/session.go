@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/PVLuanDinh/agent-fleet/internal/sessioncmd"
@@ -23,6 +24,7 @@ const (
 	usageKill          = "kill <session-id> [--json]"
 	usageRevive        = "revive <session-id> [--json]"
 	usageArchive       = "archive <session-id> [--restore] [--json]"
+	usageArchiveDead   = "archive-dead [--json]"
 	usageArchiveSelf   = "archive-self [--cancel] [--json]"
 	usageKillSelf      = "kill-self [--cancel] [--json]"
 	usageGroups        = "groups [--json]"
@@ -64,6 +66,7 @@ func sessionSection() section {
 			{name: "kill", usage: usageKill, about: "stop another agent's process, ending whatever it is doing; its row keeps the last screen", run: bind(newSessions, runKill)},
 			{name: "revive", usage: usageRevive, about: "bring a dead session back on its old row, resuming the conversation it held; an agent that quit inside a live pane comes back there", run: bind(newSessions, runRevive)},
 			{name: "archive", usage: usageArchive, about: "file a finished session out of the active list, or restore it with --restore", run: bind(newSessions, runArchive)},
+			{name: "archive-dead", usage: usageArchiveDead, about: "file every dead session (status dead, no pane left) out of the active list; needs no caller and never touches a live or finished session", run: bind(newDeadArchiver, runArchiveDead)},
 			{name: "archive-self", usage: usageArchiveSelf, about: "archive this session once the current turn ends, the way the archive key does; --cancel withdraws a pending archive or kill", run: bind(newSessions, runArchiveSelf)},
 			{name: "kill-self", usage: usageKillSelf, about: "stop this session's agent once the current turn ends, keeping its row for revive; --cancel withdraws a pending archive or kill", run: bind(newSessions, runKillSelf)},
 			{name: "groups", usage: usageGroups, about: "list the groups sessions and terminals are filed under", run: bind(newSessions, runGroups)},
@@ -243,6 +246,37 @@ func runArchive(out io.Writer, sessions sessionCommands, args []string, sessionI
 		return err
 	}
 	return emit(out, *asJSON, updated, sessioncmd.FormatArchiveState(updated))
+}
+
+// deadArchiver is the one operation archive-dead needs; it stays off
+// sessionCommands so the many fakes of that interface need not grow.
+type deadArchiver interface {
+	ArchiveDead() ([]sessioncmd.Session, error)
+}
+
+func newDeadArchiver(configDir string) deadArchiver {
+	return sessioncmd.NewSessions(configDir, sessioncmd.CLIVocabulary())
+}
+
+func runArchiveDead(out io.Writer, archiver deadArchiver, args []string, _ string) error {
+	set := newFlagSet(usageArchiveDead)
+	asJSON := jsonFlag(set)
+	if _, err := parseCommand(out, set, args, 0, 0); err != nil {
+		return err
+	}
+	archived, err := archiver.ArchiveDead()
+	if err != nil {
+		return err
+	}
+	names := make([]string, 0, len(archived))
+	for _, s := range archived {
+		names = append(names, s.Name)
+	}
+	text := fmt.Sprintf("archived %d dead session(s)", len(archived))
+	if len(names) > 0 {
+		text += ": " + strings.Join(names, ", ")
+	}
+	return emit(out, *asJSON, archived, text)
 }
 
 func runArchiveSelf(out io.Writer, sessions sessionCommands, args []string, sessionID string) error {

@@ -499,7 +499,7 @@ func TestCommandsThatActAsNoSessionNeverResolveACaller(t *testing.T) {
 func TestCommandsAndHelpCoverEverySection(t *testing.T) {
 	table := Commands("dev")
 	registered := []string{
-		"sessions", "spawn", "send", "read", "wait", "message-status", "kill", "revive", "archive", "archive-self", "kill-self",
+		"sessions", "spawn", "send", "read", "wait", "message-status", "kill", "revive", "archive", "archive-dead", "archive-self", "kill-self",
 		"groups", "create-group", "delete-group", "task", "reserve", "release-files", "reservations", "terminal",
 		"rename", "review-repo", "review-base", "review-mode", "review-comment", "issue", "feature", "update",
 	}
