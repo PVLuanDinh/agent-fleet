@@ -93,7 +93,9 @@ def main() -> int:
     try:
         if not active():
             return 0
-        raw = sys.stdin.read().lstrip("﻿")   # Windows PowerShell 5.1 pipes add a BOM
+        # bytes, not text: Windows decodes piped stdin as cp1252, which turns PowerShell 5.1's UTF-8 BOM into
+        # "ï»¿" (never stripped, so json.loads failed and the hook failed open); hook input is UTF-8 by contract
+        raw = sys.stdin.buffer.read().decode("utf-8-sig", errors="replace")
         if not raw.strip():
             return 0
         out = decide(json.loads(raw), Path(tempfile.gettempdir()))

@@ -463,11 +463,16 @@ def keepalive_mechanics():
         res.append(("mid-message status line does not excuse a stall", run(stall) is not None))
         blocks = sum(run("Done. Next step queued.", "cap") is not None for _ in range(K.MAX_BLOCKS + 1))
         res.append((f"cap: {K.MAX_BLOCKS} blocks then 1 allow", blocks == K.MAX_BLOCKS))
-        env = {**__import__("os").environ, "AGENT_NAME": "lead"}
-        p = subprocess.run([sys.executable, str(HERE / "keepalive.py")], env=env, capture_output=True,
-                           input=("﻿" + json.dumps({"session_id": "bom", "last_assistant_message": "Starting now."})).encode())
-        Path(tempfile.gettempdir(), "agent-keepalive-bom.count").unlink(missing_ok=True)
-        res.append(("hook process blocks on BOM-prefixed stdin", b'"block"' in p.stdout))
+        # stdin pinned to cp1252 (Windows' piped-stdin locale) so these stay red-capable on Linux/WSL, whose stdin is UTF-8
+        env = {**__import__("os").environ, "AGENT_NAME": "lead", "PYTHONIOENCODING": "cp1252"}
+        for sid, prefix, msg, name in [("bom", "﻿", "Starting now.", "hook process blocks on BOM-prefixed stdin"),
+                                       ("nonascii", "", "Starting now. А",
+                                        "hook process blocks on a non-cp1252 message")]:
+            p = subprocess.run([sys.executable, str(HERE / "keepalive.py")], env=env, capture_output=True,
+                               input=(prefix + json.dumps({"session_id": sid, "last_assistant_message": msg},
+                                                          ensure_ascii=False)).encode("utf-8"))
+            Path(tempfile.gettempdir(), f"agent-keepalive-{sid}.count").unlink(missing_ok=True)
+            res.append((name, b'"block"' in p.stdout))
         tr = tmp / "t.jsonl"
         tr.write_text("\n".join(json.dumps(x) for x in [
             {"type": "user", "message": {"content": "go"}},
