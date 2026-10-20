@@ -26,6 +26,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import board as B  # noqa: E402
+import fastboard  # noqa: E402
+
+fastboard.install()  # cached board reads; board.py itself stays byte-identical
 
 REVIEWABLE = ("result", "plan")
 VERDICTS = ("agree", "challenge", "answer", "resolve")

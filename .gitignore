@@ -7,3 +7,6 @@ __pycache__/
 /tasks/
 /reviewing/
 /cursors/
+scripts/bin/
+rust/**/target/
+cache/

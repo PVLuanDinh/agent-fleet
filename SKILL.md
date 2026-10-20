@@ -389,3 +389,25 @@ held by agents silent for days.
   `janitor.py authorize --owner-auth N` in `<board>/janitor.json`; without it clean refuses (`--dry-run` always works).
 - The monitor: list it as a non-required preflight entry (check = `janitor.py check`, install = `janitor.py clean`),
   so every lane spawn runs it and cleans when the limit is hit.
+
+## 12. Speed: cached board reads + a Rust reader
+
+Every board read used to open every message file (thousands of them). `scripts/fastboard.py` caches
+the parsed messages and re-reads only new or changed files; a cold load reads them in parallel
+through the Rust helper `bin/fleetcore` (source `rust/fleetcore`, rayon). Measured on a 4,315-message
+board (2026-10-19):
+
+| Path | before | after |
+|---|---|---|
+| WSL lane, one `post`/`claim` (reads the whole board) | 13.7 s | 0.29 s (`fboard.py`) |
+| WSL lane, load the board | 12.0 s | 52 ms warm, 1.6 s cold |
+| Windows, `view.py brief` / `digest` | 634 / 409 ms | 211 / 203 ms |
+
+- Lanes call `fboard.py`: the same commands as `board.py`, run through the cache. `board.py` stays
+  byte-identical because `score.py` pins its hash, and scoring keeps the uncached loader.
+- `view.py`, `review.py` and `janitor.py` use the cache automatically.
+- Build the helper with `python fleet.py build-core` (needs cargo; on Windows it also builds the WSL
+  copy). Without it everything still works, only cold loads are slower.
+- The cache is JSON in `<board>/cache/`, or `~/.cache/agent-fleet/boards/` when the board sits on a
+  Windows drive seen from WSL; there files are matched by name, since message files are written once.
+  `FLEET_NOCACHE=1` re-reads everything.

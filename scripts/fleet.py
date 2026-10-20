@@ -149,6 +149,36 @@ def dialog_name(screen: str) -> str:
     return m.group(1) if m else ""
 
 
+def build_core() -> int:
+    """Build the Rust board reader (rust/fleetcore) for Windows and, when cargo exists there, for WSL.
+    fastboard.py uses bin/fleetcore(.exe) for cold loads and falls back to Python without it."""
+    skill = Path(__file__).resolve().parent.parent
+    src, out = skill / "rust" / "fleetcore", Path(__file__).resolve().parent / "bin"
+    out.mkdir(exist_ok=True)
+    target = Path(os.environ.get("CARGO_TARGET_DIR") or Path.home() / ".cache" / "agent-fleet-cargo")
+    rc = 0
+    if shutil.which("cargo"):
+        env = dict(os.environ, CARGO_TARGET_DIR=str(target))
+        p = subprocess.run(["cargo", "build", "--release", "-q", "--manifest-path", str(src / "Cargo.toml")], env=env)
+        exe = target / "release" / ("fleetcore.exe" if os.name == "nt" else "fleetcore")
+        if p.returncode == 0 and exe.exists():
+            shutil.copyfile(exe, out / exe.name)
+            if os.name != "nt":
+                os.chmod(out / exe.name, 0o755)
+            print(f"built {out / exe.name}")
+        else:
+            print("fleet: cargo build failed", file=sys.stderr); rc = 1
+    else:
+        print("fleet: cargo not found on this side (install rustup); fastboard falls back to Python", file=sys.stderr)
+    if os.name == "nt":
+        script = ("set -e; command -v cargo >/dev/null || { echo 'no cargo in WSL: the Linux helper is skipped'; exit 0; }; "
+                  f"CARGO_TARGET_DIR=$HOME/.cache/agent-fleet-cargo cargo build --release -q --manifest-path '{to_wsl_path(str(src / 'Cargo.toml'))}' && "
+                  f"install -m 0755 $HOME/.cache/agent-fleet-cargo/release/fleetcore '{to_wsl_path(str(out / 'fleetcore'))}' && echo built Linux helper")
+        p = in_wsl(["bash", "-lc", script])
+        print((p.stdout or p.stderr).strip())
+    return rc
+
+
 def archive_dead() -> list:
     """Archive every dead row (status dead, pane gone) through the binary's own archive-dead command.
     No caller and no TUI keystrokes needed; live and finished sessions are never touched."""
@@ -359,6 +389,7 @@ def main(argv=None):
     u = sub.add_parser("ui"); u.add_argument("action", choices=["start", "stop", "status", "shot", "keys", "attach"])
     u.add_argument("more", nargs="*")
     sub.add_parser("archive-dead")
+    sub.add_parser("build-core")
     pf = sub.add_parser("preflight", help="install and verify every skill the project's lanes need")
     pf.add_argument("--cwd", default=os.getcwd()); pf.add_argument("--no-fix", action="store_true")
     args, rest = ap.parse_known_args(argv)
@@ -459,6 +490,8 @@ def main(argv=None):
         lines = ui_shot().splitlines()
         n = int(args.more[0]) if args.action == "shot" and args.more else len(lines)
         print("\n".join(lines[:n])); return 0
+    if args.cmd == "build-core":
+        return build_core()
     if args.cmd == "archive-dead":
         done = archive_dead()
         left = [r["name"] for r in sessions() if r.get("status") == "dead" and not r.get("archived")]

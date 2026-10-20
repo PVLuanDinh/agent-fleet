@@ -141,6 +141,12 @@ check per skill, install-then-recheck, refuse on a required failure), and can pr
 index) under a byte budget by MOVING text into a DETAIL file, never deleting it, and `verify` proves
 every line survived. Config and hook: [SKILL.md](SKILL.md) section 8, [hooks/README.md](hooks/README.md).
 
+## Speed
+
+Board reads are cached (`scripts/fastboard.py`; lanes call `scripts/fboard.py`, the same commands as
+`board.py`), and cold loads use a parallel Rust reader (`rust/fleetcore`, build with `python scripts/fleet.py build-core`).
+On a 4,315-message board a lane's post went from 13.7 s to 0.29 s. Details: SKILL.md section 12.
+
 ## Self-check
 
 ```bash

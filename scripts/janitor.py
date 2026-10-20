@@ -20,6 +20,9 @@ from urllib.parse import unquote
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import board as B  # noqa: E402
+import fastboard  # noqa: E402
+
+fastboard.install()  # cached board reads; board.py itself stays byte-identical
 
 NAME = "janitor"
 
@@ -88,9 +91,13 @@ def stale_claims(root: Path, idle_h: float, now=None) -> list:
 
 
 def digest_tokens(root: Path) -> int:
-    p = subprocess.run([sys.executable, str(HERE / "view.py"), "--board", str(root), "digest"],
-                       capture_output=True, text=True, encoding="utf-8", errors="replace")
-    return len(p.stdout) // 4
+    """What a lane pays to read the digest (chars / 4), measured in-process on the shared cache."""
+    import contextlib, io
+    import view as V
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        V.main(["--board", str(root), "digest"])
+    return len(buf.getvalue()) // 4
 
 
 def main(argv=None):

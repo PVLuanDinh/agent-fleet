@@ -689,6 +689,45 @@ def lease_mechanics():
     return res
 
 
+def fastboard_mechanics():
+    # The cached loader must return exactly what board.load_msgs returns, in every board state.
+    import os, time as _t
+    import fastboard as FB
+    orig = FB.B.__dict__.get("_orig_load_msgs", B.load_msgs)
+    tmp = Path(tempfile.mkdtemp(prefix="fastboard-")); root = tmp / "b"; res = []
+    try:
+        for i in range(5):
+            B.post(root, f"a{i}", "note", f"message {i}")
+        res.append(("cold_equals_board", FB.load_msgs(root) == orig(root)))
+        res.append(("warm_equals_board", FB.load_msgs(root) == orig(root)))
+        res.append(("cache_written", (root / "cache" / "msgs-index.json").exists()))
+        B.post(root, "a9", "note", "a new message after the cache")
+        res.append(("new_message_seen", FB.load_msgs(root) == orig(root) and len(orig(root)) == 6))
+        (root / "msgs" / "99999999.json").write_text("{not json", encoding="utf-8")
+        res.append(("corrupt_file_matches", FB.load_msgs(root) == orig(root)))
+        first = sorted((root / "msgs").glob("0*.json"))[0]
+        txt = first.read_text(encoding="utf-8")
+        first.write_text(txt.replace("message 0", "MESSAGE 0 edited"), encoding="utf-8")
+        st = first.stat(); os.utime(first, ns=(st.st_atime_ns, st.st_mtime_ns + 10_000_000))
+        res.append(("edited_file_reread", FB.load_msgs(root) == orig(root)))
+        res.append(("strict_equals_board", FB.load_msgs(root, strict=True) == orig(root)))
+        (root / "cache" / "msgs-index.json").write_text("garbage", encoding="utf-8")
+        res.append(("broken_cache_ignored", FB.load_msgs(root) == orig(root)))
+        res.append(("returns_fresh_dicts", FB.load_msgs(root)[0] is not FB.load_msgs(root)[0]))
+        # bridged-filesystem mode: names only, cache off the board, new messages still seen
+        os.environ["FLEET_SLOWFS"] = "1"
+        try:
+            FB.load_msgs(root, strict=True)
+            B.post(root, "a10", "note", "seen in slow mode")
+            res.append(("slowfs_new_message_seen", FB.load_msgs(root) == orig(root)))
+            res.append(("slowfs_cache_off_board", FB._cache_path(root).parent.name == "boards"))
+        finally:
+            os.environ.pop("FLEET_SLOWFS", None)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return res
+
+
 def janitor_mechanics():
     # Board readability: a stale claim (holder idle, legacy/expired) is released on the record with one owner auth.
     import os, time as _t
@@ -802,6 +841,8 @@ if __name__ == "__main__":
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  lease: {name}")
     for name, ok in claim_guard_mechanics():
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  claim-guard: {name}")
+    for name, ok in fastboard_mechanics():
+        bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  fastboard: {name}")
     for name, ok in janitor_mechanics():
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  janitor: {name}")
     for name, ok in review_mechanics():
