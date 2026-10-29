@@ -925,6 +925,13 @@ def claim_guard_mechanics():
         CG.install(str(repo), str(board), "b")
         res.append(("guard_ignores_expired_claim", commit("old.py", "b after a's lease expired").returncode == 0))
         res.append(("guard_ignores_shared_claim", commit("rev.py", "b edits a shared-claimed file").returncode == 0))
+        run(B.main, ["--board", str(board), "claim", "src/fen.py", "--as", "b", "--ttl", "1s"])
+        _t.sleep(2.2)
+        r = commit("fen.py", "b after its own lease lapsed")
+        res.append(("guard_refuses_own_expired_claim", r.returncode != 0 and "expired" in r.stderr))
+        g("reset", "-q")
+        run(B.main, ["--board", str(board), "claim", "src/fen.py", "--as", "b"])
+        res.append(("guard_allows_after_reclaim", commit("fen.py", "b after claiming again").returncode == 0))
         body = (hooks / "pre-commit").read_text(encoding="utf-8")
         res.append(("guard_hook_skips_when_script_missing", "|| exit 0" in body.split("PY=")[0]))
     finally:
@@ -1069,6 +1076,12 @@ def lanehook_mechanics():
                  f"lanehook.run({{'hook_event_name': 'PostToolUse', 'cwd': {str(lane)!r}}}); print(board.load_msgs.__module__)")
         p = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, env=env, timeout=60)
         res.append(("board_reads_go_through_fastboard_cache", p.stdout.strip().endswith("fastboard")))
+        (root / "takes").mkdir(exist_ok=True)
+        aged = _t.strftime("%Y-%m-%dT%H:%M:%S%z", _t.localtime(_t.time() - 500))   # a 10m take with ~100 s left
+        (root / "takes" / "77").write_text(f"L1 {aged} ttl=600 mode=take\n", encoding="utf-8")
+        hook()
+        tk = B.read_lease(root / "takes" / "77")
+        res.append(("own_take_renewed", tk["ttl"] == 1800 and tk["ts"] > _t.time() - 60))
         res.append(("tool_call_heartbeat_is_tool", last_event("L1") == "tool"))
         B.post(root, "lead", "request", "please rebase onto 1234", to="L1")
         B.post(root, "lead", "note", "for someone else", to="L9")
@@ -1227,6 +1240,48 @@ def resurrect_mechanics():
     return res
 
 
+def renew_live_mechanics():
+    # Round-2 fix 1: leases renewed from OUTSIDE the lane while its agent-fleet session is alive, so one long tool
+    # call (no hook fires) cannot lapse them; a lane with no live session stops renewing. Fix 4: context limit.
+    import os, time as _t
+    import fleet as F
+    tmp = Path(tempfile.mkdtemp(prefix="renewlive-")); root = tmp / "b"; rdir = tmp / "roster"; rdir.mkdir(); res = []
+    for name, sid in (("L1", "aaaa1111"), ("L2", "bbbb2222")):
+        (rdir / f"{name}.json").write_text(json.dumps({"dir": str(tmp), "board": str(root), "id": sid}), encoding="utf-8")
+    saved = os.environ.get("FLEET_ROSTER"); os.environ["FLEET_ROSTER"] = str(rdir)
+    real = (F.sessions, F.in_wsl, F.ui_running, F.ui_board, F.ui_tmux, F.time.sleep)
+    try:
+        a = ["--board", str(root)]
+        run(B.main, a + ["claim", "src/l1.py", "--as", "L1", "--ttl", "10m"])
+        run(B.main, a + ["claim", "src/l2.py", "--as", "L2", "--ttl", "10m"])
+        (root / "takes").mkdir(exist_ok=True)
+        aged = _t.strftime("%Y-%m-%dT%H:%M:%S%z", _t.localtime(_t.time() - 500))
+        (root / "takes" / "9").write_text(f"L1 {aged} ttl=600 mode=take\n", encoding="utf-8")
+        F.sessions = lambda: [{"id": "aaaa1111", "name": "L1", "status": "working"},
+                              {"id": "bbbb2222", "name": "L2", "status": "dead"}]
+        _t.sleep(1.1)
+        rc = run(F.main, ["renew-live"])[0]
+        lease = lambda p: B.read_lease(B.claim_file(root, p))
+        res.append(("live_lane_claims_renewed", rc == 0 and lease("src/l1.py")["ttl"] == 1800))
+        res.append(("dead_lane_claims_left_to_lapse", lease("src/l2.py")["ttl"] == 600))
+        res.append(("live_lane_takes_renewed", B.read_lease(root / "takes" / "9")["ttl"] == 1800))
+        res.append(("verify_intact_after_renew_live", B.verify(root) == []))
+        calls, up = [], iter([False, True, True])
+        F.ui_running = lambda: next(up)
+        F.in_wsl = lambda *x, **k: subprocess.CompletedProcess(x, 0, "", "")
+        F.ui_board = lambda: ""
+        F.ui_tmux = lambda *x: calls.append(x) or subprocess.CompletedProcess(x, 0, "", "")
+        F.time.sleep = lambda s: None
+        F.ui_start()
+        res.append(("hidden_tui_runs_renew_live", any("renew-live" in " ".join(map(str, c)) for c in calls)))
+        res.append(("context_limit_is_a_blocker", F.blocked_reason("API Error: Prompt is too long") == "context limit"))
+    finally:
+        F.sessions, F.in_wsl, F.ui_running, F.ui_board, F.ui_tmux, F.time.sleep = real
+        os.environ.pop("FLEET_ROSTER", None) if saved is None else os.environ.__setitem__("FLEET_ROSTER", saved)
+        shutil.rmtree(tmp, ignore_errors=True)
+    return res
+
+
 def take_mechanics():
     # Atomic request take (robustness fix 10): exactly one agent takes a request, on the record; addressed requests
     # only by their addressee; racing takers never both win.
@@ -1247,6 +1302,14 @@ def take_mechanics():
         took = [m for m in B.good(B.load_msgs(root)) if m.get("kind") == "status" and m.get("reply_to") == open_req]
         res.append(("take_on_record_in_thread", len(took) == 1 and took[0]["from"] == "A" and took[0].get("thread") == "T"))
         res.append(("taken_request_leaves_list", f"#{open_req}" not in run(R.main, a + ["requests"])[1]))
+        exp = B.post(root, "lead", "request", "short take")["seq"]
+        run(R.main, a + ["take", str(exp), "--as", "A", "--ttl", "1s"])
+        import time as _t; _t.sleep(2.2)
+        res.append(("expired_take_reopens", f"#{exp}" in run(R.main, a + ["requests"])[1]))
+        res.append(("expired_take_taken_over_on_record", run(R.main, a + ["take", str(exp), "--as", "B"])[0] == 0
+                    and any(m.get("kind") == "status" and m.get("reply_to") == exp and "expired" in m.get("body", "")
+                            for m in B.good(B.load_msgs(root)))))
+        res.append(("live_take_still_refused", run(R.main, a + ["take", str(exp), "--as", "C"])[0] == 1))
         race = B.post(root, "lead", "request", "race for it")["seq"]
         ps = [subprocess.Popen([sys.executable, str(HERE / "review.py"), *a, "take", str(race), "--as", f"r{i}"],
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for i in range(4)]
@@ -1354,7 +1417,8 @@ if __name__ == "__main__":
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  stdio: {name}")
     for label, fn in (("admission", admission_mechanics), ("lanehook", lanehook_mechanics),
                       ("doctor", doctor_mechanics), ("seen", seen_mechanics), ("resurrect", resurrect_mechanics),
-                      ("take", take_mechanics), ("durability", durability_mechanics)):
+                      ("take", take_mechanics), ("durability", durability_mechanics),
+                      ("renew-live", renew_live_mechanics)):
         try:
             rows = fn()
         except Exception as e:   # a missing module or function is this fix's RED, not a selfcheck crash

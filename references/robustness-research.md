@@ -85,10 +85,43 @@ the heartbeat, 8-9). selfcheck: ALL GREEN on Windows and WSL, durability cases i
 
 ## Independent review (2026-10-29), folded
 
-An Opus reviewer read the whole change: 2 BLOCK, 5 MAJOR, 6 MINOR, and 4 tests that could not fail. Folded the same day:
+An independent reviewer read the whole change: 2 BLOCK, 5 MAJOR, 6 MINOR, and 4 tests that could not fail. Folded the same day:
 lanehook through fastboard's cache with the throttle saved first (an uncached renew took 53 s, past the 20 s hook
 timeout); lane identity by agent-fleet session id, silent when ambiguous; leases never shortened; Stop recorded so a
 finished lane is not resurrected; the roster as one file per lane (no lost update), recorded only after a successful
 spawn; kill forgets each lane it actually killed; an admission lock from check to spawn; unknown statuses count as
 active; the resume note never stacks; doctor matches boards by samefile; brief's cursor from its first read; broadcast
 receipts list agents only; every file LF. Each fix has a case that a mutation of it turns red.
+
+## Round 2: the limits that remain (webgrab research, 2026-10-29)
+
+Sources: Claude Code's sandboxing docs (code.claude.com/docs/en/sandboxing); a 2026 write-up of four Claude Code
+sandbox and worktree escape fixes (versions 2.1.216-2.1.219); webcoyote/awesome-AI-sandbox; Kleppmann, "How to do
+distributed locking" (fencing tokens); the Batty tmux agent supervisor (dev.to); a reverse-engineering of Claude Code
+Agent Teams' task claims (claim expiry). Paraphrased, not quoted.
+
+| Remaining limit | What the field does | Fit here |
+|---|---|---|
+| Agents can edit the board, the scorer, any file (same OS user) | Claude Code's own sandbox (bubblewrap on Linux/WSL2): `sandbox.filesystem.denyWrite`, permission `deny` rules for Edit/Write, `allowUnsandboxedCommands: false`. Others: a separate OS user per agent, Landlock, containers | PARTIAL. WSL lanes can be sandboxed, but a Windows binary launched from WSL (anything under /mnt/c, e.g. a Windows venv python.exe) runs on the Windows host, outside the sandbox. Blocking that socket breaks lanes that test with Windows Python; allowing it leaves a write path. Real prevention for such a fleet is still a scorer run as another Windows user or in CI. Checked: WSL Claude Code 2.1.312 and Windows 2.1.295, both past the escape fixes; bwrap present in WSL, socat (needed for the network proxy) not installed; Ubuntu 26.04 needs the AppArmor user-namespace allowance |
+| A lease lapses during one long tool call | Liveness from the process, not from activity: a supervisor renews while the holder is alive (Batty polls panes; distributed leases renew on heartbeat) | GOOD. Renew each roster lane's claims from outside while its agent-fleet session is alive: a small loop in the hidden TUI session (`fleet.py renew-live`, every 5 minutes) |
+| A lane writes after its lease lapsed | Fencing tokens: the resource rejects a writer whose token is older than the current one | GOOD, simplified: `claim_guard` refuses a lane's commit of a file whose claim BY THAT LANE has expired (today it only refuses files someone else holds) |
+| A `take` never expires | Claim expiry: a task held N minutes without a heartbeat returns to ready (Agent Teams pattern) | GOOD. Give takes a lease; lanehook renews the lane's own takes; an expired take reopens on the record |
+| A lane that hits its context limit sits unresponsive | Batty detects the context-exhaustion message and flags the agent for restart | GOOD, tiny: add the pattern to `fleet.py` BLOCKERS so `sessions` and `doctor` report it |
+| Names are self-declared | Ed25519 key per agent, signed messages (alien-id/agent-id, A2A discussions) | NOT YET: with one OS user every agent can read every key, so signatures prove nothing. Revisit only with per-lane OS isolation |
+| Restart after a crash is manual (`resurrect`) | Supervisors restart dead members automatically, with backoff | KEEP MANUAL: auto-restart can loop on a lane that crashes on start. At most, list cut-off lanes at session start |
+
+Ranked by value per cost: renew-live (1), stale-writer fencing in claim_guard (2), take leases (3), the context
+pattern (4), the sandbox for WSL lanes without Windows-binary access (5, partial).
+
+### Round 2 built (2026-10-29)
+
+| # | Fix | State |
+|---|---|---|
+| 1 | `fleet.py renew-live` from session liveness, run by the hidden TUI every 300 s | LIVE (window `renew`; first pass 04:21 renewed 0: the one roster lane held no claims) |
+| 2 | claim guard refuses a lane's commit of a file whose own claim lapsed | LIVE |
+| 3 | takes are leases (renewed, expire, reopen, takeover on the record) | LIVE |
+| 4 | context-limit blocker in `fleet.py sessions` / `doctor` | LIVE |
+
+Built in a separate copy while lanes were spawning, then swapped in file by file; selfcheck ALL GREEN on Windows
+(306, 1 SKIP) and WSL (306); every new case was shown to fail with its fix mutated. First live proof of the lane hook:
+a reviewer lane spawned after the change wrote heartbeat `tool`, found by its agent-fleet session id.

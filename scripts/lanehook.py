@@ -7,7 +7,8 @@ Which lane: $AGENT_NAME + $AGENT_BOARD; else, inside an agent-fleet session, onl
 $AGENT_FLEET_SESSION_ID (agent-fleet exports it into each session); else (no session id) the one roster entry whose
 folder holds the cwd. Two entries for one folder (panel lenses share one) is ambiguous: silence, never another lane's
 name.
-1. Leases: each of the lane's claims whose lease ends within half of LANEHOOK_TTL (default 30m) is renewed through
+1. Leases: each of the lane's claims (and request takes) whose lease ends within half of LANEHOOK_TTL (default 30m)
+   is renewed through
    board.py's own `renew` (on the record) to max(its own ttl, LANEHOOK_TTL): a lease is never shortened. A lane that
    stops calling tools stops renewing, and its claims lapse to the next claimer with no owner answer. ttl 0 and
    pre-lease claims are left alone: whoever set them chose no expiry.
@@ -70,6 +71,27 @@ def due_renewals(B, root: Path, name: str, ttl: int, now: float) -> list:
     return out
 
 
+def due_takes(B, root: Path, name: str, ttl: int, now: float) -> list:
+    """The lane's own request takes (review.py take) that end within half of ttl: (file, renewed ttl)."""
+    tdir, out = root / "takes", []
+    for f in (sorted(tdir.iterdir()) if tdir.is_dir() else []):
+        lease = B.read_lease(f) if f.is_file() else None
+        if lease and lease["who"] == name and lease["ttl"] and lease["ts"] is not None \
+                and lease["ts"] + lease["ttl"] - now <= ttl / 2:
+            out.append((f, max(lease["ttl"], ttl)))
+    return out
+
+
+def keep_alive(B, root: Path, name: str, ttl: int, now: float) -> tuple:
+    """Renew the lane's due claims (on the record, through board.py renew) and its due takes. (renewed, failures)."""
+    claims = due_renewals(B, root, name, ttl, now)
+    failed = renew(B, root, name, claims)
+    takes = due_takes(B, root, name, ttl, now)
+    for f, t in takes:
+        B.write_atomic(f, B.lease_text(name, t, "take"))
+    return len(claims) - len(failed) + len(takes), failed
+
+
 def renew(B, root: Path, name: str, due: list) -> list:
     import contextlib, io
     failed = []
@@ -120,7 +142,7 @@ def run(payload: dict) -> str:
     import fastboard
     fastboard.install()
     ttl = int(os.environ.get("LANEHOOK_TTL", "1800"))
-    notes = [f"lanehook: could not renew {f}" for f in renew(B, root, name, due_renewals(B, root, name, ttl, now))]
+    notes = [f"lanehook: could not renew {f}" for f in keep_alive(B, root, name, ttl, now)[1]]
     cur, mine = unread_mail(B, root, name)
     if mine and mine[-1]["seq"] > state.get("alerted", 0):
         notes.append(f"board: {len(mine)} new message(s) addressed to you ({name}) past your brief cursor #{cur}:")

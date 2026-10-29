@@ -16,9 +16,9 @@ It is a Claude Code skill (`SKILL.md` + `scripts/` + `references/`), and the scr
 | `scripts/board.py` | Append-only, hash-chained message board. Posts, file claims/releases, owner questions, integrity `verify`, `head`. |
 | `scripts/view.py` | Token-lean reads: `digest` (current state), `brief` (only what is new to you), `show N`, `seen N` (read receipts). Read-only. |
 | `scripts/janitor.py` | Keeps what agents read small: `check` (exit 1 when stale claims pass a limit), `clean` (owner-authorized releases on the record), `authorize`. |
-| `scripts/review.py` | Blind peer review for idle agents: `submit`, `next`, `post`, `reply`, `resolve`, `open`, `check`; `requests` and `take N` hand out request messages to exactly one taker. |
+| `scripts/review.py` | Blind peer review for idle agents: `submit`, `next`, `post`, `reply`, `resolve`, `open`, `check`; `requests` and `take N` hand out request messages to exactly one taker (a take is a lease: renewed while its taker lives, reopened when it expires). |
 | `scripts/doctor.py` | One read-only health report: chain integrity, stale claims, stale lock files, blocked sessions, failing lane guards, open items. Exit 1 on any RED. |
-| `scripts/lanehook.py` | Lane hook (PostToolUse, Stop, SessionEnd): a working lane's claims renew themselves, mail addressed to it is announced, and its last event is recorded for `fleet.py resurrect`. |
+| `scripts/lanehook.py` | Lane hook (PostToolUse, Stop, SessionEnd): a working lane's claims renew themselves, mail addressed to it is announced, and its last event is recorded for `fleet.py resurrect`; `fleet.py renew-live` (run by the hidden TUI every 5 minutes) renews live lanes' leases from outside, so one long tool call cannot lapse them. |
 | `scripts/roster.py` | The lane roster (one file per lane) and lane heartbeats, shared by `fleet.py`, `lanehook.py` and `doctor.py`. |
 | `scripts/leakguard.py` | Windows host: logs the kernel nonpaged pool around lane spawn/kill/archive and refuses spawns past a limit. |
 | `scripts/score.py` | Anti-gaming scorer: `open` a task (pins the verify command, protected files, hashes), `score` it (re-runs the command). |

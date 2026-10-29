@@ -468,6 +468,13 @@ Board reads go through fastboard's cache (an uncached read of a 6,000-message bo
 throttle is saved before any work. Knobs: `LANEHOOK_TTL` (1800), `LANEHOOK_EVERY` (60), `FLEET_ROSTER` (a directory).
 Lanes spawned before 2026-10-29 are not in the roster, so the hook stays silent for them until they are respawned.
 
+**Round 2 (2026-10-29):** `fleet.py renew-live` renews the claims and takes of every roster lane whose agent-fleet
+session is alive, so one long tool call (no hook fires) cannot lapse a lease; the hidden TUI runs it every 5 minutes
+in a second tmux window (`renew`). `review.py take N --ttl 4h` is a lease too: renewed for a live taker, and an expired
+take reopens the request (the next taker's takeover is posted on the record). The pre-commit claim guard also refuses
+a lane's commit of a file whose claim BY THAT LANE has lapsed: someone else may have taken it meanwhile. `fleet.py
+sessions` and `doctor` flag a lane stuck at its context limit.
+
 ## 15. Changing the pinned files (board.py, score.py)
 
 `board.py` and `score.py` are hash-pinned by every open scored task (`tasks/<T>.json` "self"). A change to them is

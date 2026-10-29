@@ -13,8 +13,9 @@ results, from their own context, and argue it out on the board until each challe
                                                              others and no open challenge; exit 0/1
   review.py requests [--as R1]                               open `request` messages nobody has taken
                                                              (with --as: only those R1 may take)
-  review.py take N --as R1                                   take request N: exactly one taker wins
-                                                             (O_EXCL, like claims); posted on the record
+  review.py take N --as R1 [--ttl 4h]                        take request N: exactly one taker wins
+                                                             (O_EXCL, like claims); posted on the record; a
+                                                             lease: an expired take reopens the request
 
 Reviewable items: kind `result` (board.py post --kind result) and kind `plan` (submit above).
 Reviews post under thread "review" with reply_to = the item, so review text never counts toward a
@@ -261,11 +262,10 @@ def _take_dir(root):
 
 
 def _taker(root, seq):
+    """Who holds a LIVE take on request seq (None: untaken, or the take's lease expired and it is open again)."""
     f = root / "takes" / str(seq)
-    try:
-        return f.read_text(encoding="utf-8").split()[0] if f.exists() else None
-    except (OSError, IndexError):
-        return "?"
+    lease = B.read_lease(f) if f.exists() else None
+    return lease["who"] if lease and not B.expired(lease) else None
 
 
 def _may_take(m, who):
@@ -288,7 +288,8 @@ def cmd_requests(a, root):
 
 
 def cmd_take(a, root):
-    # ponytail: a take never expires; a taker that dies leaves the request taken. Upgrade path: a lease like claims.
+    # A take is a lease (default 4h, like claims): the lane hook and `fleet.py renew-live` renew a live taker's take;
+    # a dead taker's take expires, the request reopens, and the next taker's takeover is posted on the record.
     who = B.author_of(a)
     m = {m["seq"]: m for m in _msgs(root)}.get(a.n)
     if not m or m.get("kind") != "request":
@@ -297,13 +298,27 @@ def cmd_take(a, root):
         sys.exit(f"review: #{a.n} is your own request")
     if not _may_take(m, who):
         sys.exit(f"review: #{a.n} is addressed to {m.get('to')}")
-    try:
-        fd = os.open(_take_dir(root) / str(a.n), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
-    except FileExistsError:
-        print(f"review: #{a.n} already taken by {_taker(root, a.n)}", file=sys.stderr)
-        return 1
+    ttl = B.parse_ttl(a.ttl) if a.ttl is not None else B.DEFAULT_TTL
+    f = _take_dir(root) / str(a.n)
+    for attempt in (1, 2):
+        try:
+            fd = os.open(f, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+            break
+        except FileExistsError:
+            old = B.read_lease(f)
+            if attempt == 2 or not (old and B.expired(old)):
+                print(f"review: #{a.n} already taken by {old['who'] if old else '?'}", file=sys.stderr)
+                return 1
+            grave = f.with_name(f"{f.name}.expired-{os.getpid()}-{time.time_ns()}")
+            try:
+                os.replace(f, grave)   # one re-taker wins the move; the loser sees the fresh take on attempt 2
+            except FileNotFoundError:
+                continue
+            B.post(root, who, "status", f"re-taking #{a.n}: the take of {old['who']} expired", thread=m.get("thread"),
+                   reply_to=a.n)
+            grave.unlink(missing_ok=True)
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
-        fh.write(f"{who} {time.strftime('%Y-%m-%dT%H:%M:%S%z')}\n")
+        fh.write(B.lease_text(who, ttl, "take"))
     d = B.post(root, who, "status", f"taking #{a.n}: {' '.join(str(m.get('body', '')).split())[:100]}",
                thread=m.get("thread"), reply_to=a.n)
     print(f"took #{a.n} (#{d['seq']})")
@@ -328,6 +343,7 @@ def main(argv=None):
     c.add_argument("--accept-overrule", type=int, nargs="*", help="lead overrules the lead has read and accepts")
     sub.add_parser("requests").add_argument("--as", dest="as_")
     t = sub.add_parser("take"); t.add_argument("n", type=int); t.add_argument("--as", dest="as_")
+    t.add_argument("--ttl", help="lease length: 30m, 4h, 2d (default 4h); a live taker's lane renews it")
     a = ap.parse_args(argv)
     root = B.board_root(a)
     return {"submit": cmd_submit, "next": cmd_next, "post": cmd_post, "reply": cmd_reply, "resolve": cmd_resolve,

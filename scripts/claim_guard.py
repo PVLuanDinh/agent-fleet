@@ -60,6 +60,9 @@ def check(repo, board, who) -> list:
             # only a LIVE EXCLUSIVE claim by someone else blocks; shared means others may edit, expired means free
             if lease and lease["who"] != who and lease["mode"] != "shared" and not board_mod.expired(lease):
                 held.append(f"{rel}: claimed by {lease['who']} ({board_mod.until(lease)})")
+            elif lease and lease["who"] == who and board_mod.expired(lease):
+                # Fencing, simplified: a lapsed lease means someone else may have taken the file meanwhile.
+                held.append(f"{rel}: your own claim expired ({board_mod.until(lease)}); claim it again before committing")
         if (Path(native(board)) / "fleet.on").exists():
             sys.path.insert(0, str(HERE))
             import fleet

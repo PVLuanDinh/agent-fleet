@@ -13,6 +13,8 @@ agent-fleet is Linux/macOS only, so on Windows every call goes through `wsl.exe 
                                Admission (the project's max_active_lanes and min_available_mb in
                                fleet-requirements.json): over either, exit 3 and nothing spawns;
                                --wait-admission SECONDS queues it, --no-admission overrides
+  fleet.py renew-live [--every N]   renew the leases (claims, takes) of roster lanes whose session is alive; the hidden
+                               TUI runs it every 300 s, so a long tool call inside a lane cannot lapse its leases
   fleet.py resurrect [NAME... | --all]   list roster lanes with no live session (a crash or reboot cut off the
                                ones with no clean end); respawn named ones, or --all cut-off ones
   fleet.py sessions [--json]   agent-fleet sessions, each checked for a blocking prompt or a vanished pane
@@ -73,6 +75,7 @@ WSL_TRUST = (
 BLOCKERS = [("trust prompt", r"trust (the files in )?this folder"), ("login", r"select login method|please run /login"),
             ("theme picker", r"choose the text style"), ("external imports prompt", r"allow external imports"),
             ("read-outside prompt", r"allow this read outside"),
+            ("context limit", r"prompt is too long|context limit reached|conversation is too long"),
 ("permission prompt", r"do you want to (proceed|allow)")]
 
 
@@ -139,7 +142,12 @@ def ui_start() -> str:
     env = ["-e", f"AGENT_FLEET_BOARD={board}"] if board else []
     ui_tmux("new-session", "-d", "-s", UI_SESSION, "-x", "200", "-y", "50", *env, f"bash -lc 'exec {AM}'")
     time.sleep(3)
-    return "started" if ui_running() else "failed to start"
+    if not ui_running():
+        return "failed to start"
+    # A second window renews live lanes' leases every 5 minutes, from outside the lanes (fleet.py renew-live).
+    me = to_wsl_path(str(HERE / "fleet.py")) if os.name == "nt" else str(HERE / "fleet.py")
+    ui_tmux("new-window", "-d", "-t", UI_SESSION, "-n", "renew", f"bash -lc 'exec python3 {me} renew-live --every 300'")
+    return "started"
 
 
 def ui_shot() -> str:
@@ -468,6 +476,34 @@ def lane_id(name: str) -> str:
         return ""
 
 
+def renew_live(every: int = 0) -> int:
+    """Renew the claims and takes of every roster lane whose agent-fleet session is alive. Liveness comes from the
+    session, not from tool calls, so a lane inside one long tool call (no hook fires) keeps its leases; a lane with no
+    live session stops renewing and its leases lapse to the next claimer. --every N repeats forever (the hidden TUI)."""
+    import lanehook
+    import board as B
+    import fastboard
+    fastboard.install()
+    ttl = int(os.environ.get("LANEHOOK_TTL", "1800"))
+    while True:
+        try:
+            rows = [r for r in sessions() if r.get("status") != "dead" and not r.get("archived")]
+        except (RuntimeError, ValueError, OSError, subprocess.SubprocessError) as e:
+            print(f"fleet: renew-live cannot read the fleet ({e}); nothing renewed", file=sys.stderr)
+            rows = None
+        if rows is not None:
+            ids, names, n, failed = {r.get("id") for r in rows}, {r.get("name") for r in rows}, 0, []
+            for name, e in roster.load().items():
+                if e.get("board") and (e["id"] in ids if e.get("id") else name in names):
+                    k, f = lanehook.keep_alive(B, Path(roster.native(e["board"])), name, ttl, time.time())
+                    n += k; failed += f
+            print(f"fleet: renew-live {time.strftime('%H:%M:%S')}: renewed {n} lease(s)"
+                  + (f"; could not renew {', '.join(failed)}" if failed else ""), flush=True)
+        if not every:
+            return 0
+        time.sleep(every)
+
+
 RESUME_NOTE = ("RESUMED by fleet.py resurrect: this lane's earlier session ended (a crash or a reboot). Before acting, "
                "read your brief and the report files in this folder, and your board mail (view.py brief --as <you>); "
                "finish only what is not already done.")
@@ -536,6 +572,8 @@ def main(argv=None):
     sub.add_parser("build-core")
     pf = sub.add_parser("preflight", help="install and verify every skill the project's lanes need")
     pf.add_argument("--cwd", default=os.getcwd()); pf.add_argument("--no-fix", action="store_true")
+    rl = sub.add_parser("renew-live", help="renew the leases of roster lanes whose session is alive")
+    rl.add_argument("--every", type=int, default=0, help="repeat every N seconds (the hidden TUI runs 300)")
     rs = sub.add_parser("resurrect", help="list, or respawn, roster lanes that have no live session")
     rs.add_argument("names", nargs="*"); rs.add_argument("--all", action="store_true")
     args, rest = ap.parse_known_args(argv)
@@ -703,6 +741,8 @@ def main(argv=None):
         return build_core()
     if args.cmd == "resurrect":
         return resurrect(args.names, args.all)
+    if args.cmd == "renew-live":
+        return renew_live(args.every)
     if args.cmd == "archive-dead":
         import leakguard
         lg_before = leakguard.sample()
