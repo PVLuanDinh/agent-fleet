@@ -36,9 +36,19 @@
           "required": false,
           "check": "command -v rea >/dev/null",
           "install": "npm install -g --prefix ~/.local rea-agents@6.3.0"
+        },
+        {
+          "skill": "lanehook",
+          "required": true,
+          "check": "python3 -c \"import json,os,sys;h=json.load(open(os.path.expanduser('~/.claude/settings.json'))).get('hooks',{});w=lambda e:'lanehook.py' in json.dumps(h.get(e,[]));sys.exit(0 if w('PostToolUse') and w('Stop') and w('SessionEnd') else 1)\""
         }
       ],
-      "board": "C:\\Users\\<you>\\.claude\\agent-board\\myproject"
+      "board": "C:\\Users\\<you>\\.claude\\agent-board\\myproject",
+      "max_active_lanes": 7,
+      "min_available_mb": 6144,
+      "locks": [
+        "D:\\work\\myproject\\HEAVY-RUN.lock"
+      ]
     }
   ]
 }

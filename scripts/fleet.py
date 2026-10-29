@@ -10,6 +10,11 @@ agent-fleet is Linux/macOS only, so on Windows every call goes through `wsl.exe 
                                refuses a path an agent-fleet session holds an exclusive lease on
   fleet.py trust DIR...        pre-accept Claude Code's "trust this folder" prompt for DIR inside WSL
   fleet.py spawn --directory DIR [agent-fleet spawn args]   trust DIR, then spawn (Windows paths ok)
+                               Admission (the project's max_active_lanes and min_available_mb in
+                               fleet-requirements.json): over either, exit 3 and nothing spawns;
+                               --wait-admission SECONDS queues it, --no-admission overrides
+  fleet.py resurrect [NAME... | --all]   list roster lanes with no live session (a crash or reboot cut off the
+                               ones with no clean end); respawn named ones, or --all cut-off ones
   fleet.py sessions [--json]   agent-fleet sessions, each checked for a blocking prompt or a vanished pane
   fleet.py kill ID...          stop a session from outside agent-fleet (its own `kill` needs a caller)
   fleet.py ui start|stop|status|shot [N]|keys K...|attach   one hidden agent-fleet TUI (tmux socket fleetui)
@@ -18,6 +23,10 @@ agent-fleet is Linux/macOS only, so on Windows every call goes through `wsl.exe 
   fleet.py preflight [--cwd DIR] [--no-fix]   install + functionally check every skill the project's lanes need
                                (~/.claude/fleet-requirements.json); `spawn` runs it first and refuses on a required failure
 
+Leak guard (leakguard.py, Windows host): spawn, kill and archive-dead log the kernel nonpaged pool and pool tag NtFC
+(the ntfs.sys leak) before and after, plus a follow-up ~45 s later, to ~/.claude/agent-fleet-leak.log; spawn is
+refused while the nonpaged pool is >= FLEET_NONPAGED_MAX_MB (8192). FLEET_LEAKGUARD_OFF=1 overrides the refusal.
+
 Env: AGENT_FLEET_WSL_DISTRO (default Ubuntu); AGENT_FLEET_AM_DB reads that state.db file
 directly (tests, or a non-default agent-fleet config dir).
 
@@ -25,9 +34,12 @@ ponytail: leases are matched on the path text only, not on which checkout the ag
 session runs in, so two repos with the same relative path collide. A false refusal, never a
 missed one. Upgrade path: compare against the session's repo column in state.db.
 """
-import argparse, fnmatch, json, os, re, shutil, sqlite3, subprocess, sys, time
+import argparse, fnmatch, hashlib, json, os, re, shutil, sqlite3, subprocess, sys, time
 from pathlib import Path
 
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+import roster  # noqa: E402
 DISTRO = os.environ.get("AGENT_FLEET_WSL_DISTRO", "Ubuntu")
 MARKER = "fleet.on"
 LEASE_SQL = ("SELECT pattern, mode, session_id, note, expires_at FROM file_reservations "
@@ -335,22 +347,61 @@ def preflight(proj: dict, fix: bool = True, run=lane_run) -> list:
     return rows
 
 
-def preflight_cached(proj: dict, fresh: bool = False) -> list:
-    cache = Path.home() / ".claude" / "fleet-preflight-cache.json"
+def preflight_cached(proj: dict, fresh: bool = False, run=lane_run, cache=None, now=None) -> list:
+    """Re-run only the checks whose own reuse window ran out: a skill's `ttl_s` (default PREFLIGHT_TTL).
+    A check that costs the host something per run gets a long ttl_s; e.g. a webgrab check that launches uv's
+    CPython 3.11, and every launch of that build leaks ntfs.sys NtFC pool records (measured 2026-10-28)."""
+    cache = Path(cache) if cache else Path.home() / ".claude" / "fleet-preflight-cache.json"
+    now = time.time() if now is None else now
     try:
         c = json.loads(cache.read_text(encoding="utf-8")) if cache.exists() else {}
     except ValueError:
         c = {}
-    hit = c.get(proj.get("name", "?"))
-    if not fresh and hit and time.time() - hit["ts"] < PREFLIGHT_TTL and all(r["ok"] or not r["required"] for r in hit["rows"]):
-        return hit["rows"]
-    rows = preflight(proj)
-    c[proj.get("name", "?")] = {"ts": time.time(), "rows": rows}
+    hit = c.get(proj.get("name", "?")) or {}
+    old = {r["skill"]: r for r in hit.get("rows", [])}
+    stale = []
+    for s in proj.get("skills", []):
+        r = old.get(s["skill"])
+        ts = r.get("ts", hit.get("ts", 0)) if r else 0
+        if fresh or not r or now - ts >= s.get("ttl_s", PREFLIGHT_TTL) or not (r["ok"] or not r["required"]):
+            stale.append(s)
+    if not stale:
+        return [old[s["skill"]] for s in proj.get("skills", [])]
+    new = {r["skill"]: dict(r, ts=now) for r in preflight(dict(proj, skills=stale), run=run)}
+    rows = [new.get(s["skill"]) or old[s["skill"]] for s in proj.get("skills", [])]
+    c[proj.get("name", "?")] = {"ts": now, "rows": rows}
     try:
         cache.write_text(json.dumps(c, indent=1), encoding="utf-8")
     except OSError:
         pass
     return rows
+
+
+def copy_lane_assets(proj: dict, lane_dir: str) -> list:
+    """Copy the project's `lane_assets` -- gitignored files a lane worktree needs but git does not carry
+    (e.g. model files; without them a lane silently measures a different system) --
+    into a lane worktree ROOT (a dir holding .git) where missing. A source whose sha256 does not start with
+    its pin is refused, never copied. Returns report lines; any line not starting "copied" is a refusal."""
+    root = Path(to_win_path(lane_dir) if os.name == "nt" else lane_dir)
+    if not proj.get("lane_assets") or not (root / ".git").exists():
+        return []
+    out = []
+    for a in proj["lane_assets"]:
+        dst = root / a["path"]
+        if dst.exists():
+            continue
+        src = Path(a["from"] if os.name == "nt" else to_wsl_path(a["from"]))
+        if not src.is_file():
+            out.append(f"MISSING source for {a['path']}: {src}")
+            continue
+        pin = a.get("sha256", "")
+        if pin and not hashlib.sha256(src.read_bytes()).hexdigest().startswith(pin):
+            out.append(f"REFUSED {a['path']}: source sha256 does not start with the pin {pin}")
+            continue
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+        out.append(f"copied {a['path']}")
+    return out
 
 
 def with_preamble(rest: list, proj: dict) -> list:
@@ -365,6 +416,95 @@ def with_preamble(rest: list, proj: dict) -> list:
     return out
 
 
+# A finished or idle lane holds memory but no work slot. Every OTHER status counts as active, including ones this
+# list has never seen (the binary also reports e.g. running/blocked): an unknown status errs toward holding a spawn.
+IDLE = ("finished", "idle", "dead", "errored")
+ADMIT_POLL = 30          # seconds between admission re-checks under --wait-admission
+ADMIT_LOCK_STALE = 300   # an admission lock older than this was left by a crashed spawn
+
+
+def admission(proj: dict, s, rows: list) -> str:
+    """Why a spawn must wait now ('' = admitted): the project's RAM floor and active-lane cap.
+    No leak-guard sample (not Windows) skips the floor, like the leak guard itself."""
+    floor = proj.get("min_available_mb")
+    if floor and s and s["available_mb"] < floor:
+        return f"{s['available_mb']:.0f} MB available, below the project's {floor} MB floor"
+    cap = proj.get("max_active_lanes")
+    if cap:
+        mine = [r["name"] for r in rows if r.get("status") not in IDLE and not r.get("archived")
+                and project_for(r.get("directory", "")).get("name") == proj.get("name")]
+        if len(mine) >= cap:
+            return f"{len(mine)} active lane(s) ({', '.join(mine)}), at the project's cap of {cap}"
+    return ""
+
+
+def admit_lock() -> Path:
+    return roster.root() / "admission.lock"
+
+
+def take_admit_lock() -> bool:
+    """One spawn at a time between the admission check and the spawn itself, so N queued spawns cannot all see the
+    same freed slot. A lock older than ADMIT_LOCK_STALE was left by a crashed spawn and is cleared."""
+    f = admit_lock()
+    f.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        if time.time() - f.stat().st_mtime > ADMIT_LOCK_STALE:
+            f.unlink(missing_ok=True)
+    except OSError:
+        pass
+    try:
+        os.close(os.open(f, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644))
+        return True
+    except FileExistsError:
+        return False
+
+
+def lane_id(name: str) -> str:
+    """The live agent-fleet session id of a just-spawned lane ('' when it cannot be read)."""
+    try:
+        return next((r["id"] for r in sessions() if r.get("name") == name and r.get("status") != "dead"
+                     and not r.get("archived")), "")
+    except (RuntimeError, ValueError, OSError, subprocess.SubprocessError):
+        return ""
+
+
+RESUME_NOTE = ("RESUMED by fleet.py resurrect: this lane's earlier session ended (a crash or a reboot). Before acting, "
+               "read your brief and the report files in this folder, and your board mail (view.py brief --as <you>); "
+               "finish only what is not already done.")
+
+
+def resurrect(names: list, every: bool) -> int:
+    """Roster lanes with no live session: listed by default; respawned (their own spawn args, a resume note first)
+    when named, or with --all every one that was cut off (its last event a tool call: a crash or a reboot hit it
+    mid-work), so a lane that finished its turn or ended is never restarted by accident."""
+    live = {r["name"] for r in sessions() if r.get("status") != "dead" and not r.get("archived")}
+    lanes = roster.load()
+    gone = [n for n in lanes if n not in live and lanes[n].get("argv")]
+    cut = [n for n in gone if roster.heartbeat(n).get("last") == "tool"]
+    if not names and not every:
+        for n in gone:
+            last = roster.heartbeat(n).get("last")
+            state = {"tool": "CUT OFF (last event a tool call)", "stop": "finished its turn", "end": "ended cleanly"}
+            print(f"  {n}: {state.get(last, 'never ran a tool')}; {lanes[n]['dir']} (spawned {lanes[n].get('spawned', '?')})")
+        print(f"{len(gone)} lane(s) with no live session, {len(cut)} cut off; respawn with "
+              f"`fleet.py resurrect NAME...`, or --all for the cut-off ones")
+        return 0
+    rc = 0
+    for n in (cut if every else names):
+        if n not in gone:
+            print(f"fleet: {n} is {'live' if n in live else 'not in the roster'}; not respawned", file=sys.stderr)
+            rc = max(rc, 1)
+            continue
+        argv = list(lanes[n]["argv"])
+        if "--prompt" in argv and argv.index("--prompt") + 1 < len(argv):
+            j = argv.index("--prompt") + 1
+            argv[j] = f"{RESUME_NOTE}\n\n{argv[j].removeprefix(RESUME_NOTE).lstrip()}"
+        r = main(["spawn", *argv])
+        print(f"fleet: resurrect {n}: {'spawned' if r == 0 else f'rc {r}'}")
+        rc = max(rc, r)
+    return rc
+
+
 def preflight_report(rows: list) -> tuple:
     bad = [r["skill"] for r in rows if r["required"] and not r["ok"]]
     lines = [f"  {'OK  ' if r['ok'] else ('FAIL' if r['required'] else 'warn')} {r['skill']}"
@@ -373,6 +513,10 @@ def preflight_report(rows: list) -> tuple:
 
 
 def main(argv=None):
+    # the TUI's status glyphs (e.g. U+25CF) crashed print() on a cp1252 console (`ui shot`, 2026-10-22)
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     ap = argparse.ArgumentParser(prog="fleet", description=__doc__.splitlines()[0])
     ap.add_argument("--board"); ap.add_argument("--project")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -392,6 +536,8 @@ def main(argv=None):
     sub.add_parser("build-core")
     pf = sub.add_parser("preflight", help="install and verify every skill the project's lanes need")
     pf.add_argument("--cwd", default=os.getcwd()); pf.add_argument("--no-fix", action="store_true")
+    rs = sub.add_parser("resurrect", help="list, or respawn, roster lanes that have no live session")
+    rs.add_argument("names", nargs="*"); rs.add_argument("--all", action="store_true")
     args, rest = ap.parse_known_args(argv)
 
     if args.cmd == "am":
@@ -401,12 +547,33 @@ def main(argv=None):
         # A folder WSL claude has never opened parks the new session on the trust prompt, unseen.
         if "--directory" not in rest or rest.index("--directory") + 1 >= len(rest):
             ap.error("spawn needs --directory DIR, so the folder can be trusted first")
+        import leakguard
+        lg_before = leakguard.sample()
+        why = leakguard.refusal(lg_before)
+        if why:
+            # The ntfs.sys pool leak grows in bursts at lane spawn/archive (2026-10-28); past the limit, reboot first.
+            print(f"fleet: spawn refused by the leak guard: {why}", file=sys.stderr)
+            leakguard.record("spawn-refused", "", lg_before, None, follow=False)
+            return 1
+        if leakguard.warning(lg_before):
+            print(leakguard.warning(lg_before), file=sys.stderr)
         skip = "--no-preflight" in rest
-        rest = [a for a in rest if a != "--no-preflight"]
+        admit = "--no-admission" not in rest
+        wait_s = 0
+        if "--wait-admission" in rest:
+            j = rest.index("--wait-admission")
+            try:
+                wait_s = int(rest[j + 1])
+            except (IndexError, ValueError):
+                ap.error("--wait-admission needs SECONDS")
+            del rest[j:j + 2]
+        rest = [a for a in rest if a not in ("--no-preflight", "--no-admission")]
         i = rest.index("--directory") + 1
         rest[i] = to_wsl_path(rest[i])
+        given = list(rest)
         try:
-            proj = {} if skip else project_for(rest[i])
+            home = project_for(rest[i])
+            proj, gate = ({} if skip else home), (home if admit else {})
         except RequirementsError as e:
             print(f"fleet: spawn refused, lane requirements unreadable: {e}", file=sys.stderr)
             return 1
@@ -418,28 +585,70 @@ def main(argv=None):
                 print(f"fleet: spawn refused, {proj.get('name')} lanes cannot use: {', '.join(bad)}\n{report}\n"
                       f"fix and rerun, or `fleet.py preflight --cwd <dir>` for detail (--no-preflight overrides)", file=sys.stderr)
                 return 1
-        if trust([rest[i]]) != 0:
-            return 1
-        rest = with_preamble(rest, proj)
-        if proj.get("board") and "--name" in rest:
-            # Enforce board claims at commit time in the lane's worktree, under the lane's name.
-            lane_dir = to_win_path(rest[i]) if os.name == "nt" else rest[i]
-            name = rest[rest.index("--name") + 1]
-            try:
-                import claim_guard
-                if subprocess.run(["git", "-C", lane_dir, "rev-parse", "--is-inside-work-tree"],
-                                  capture_output=True, text=True).stdout.strip() == "true":
-                    print(f"claim guard: {claim_guard.install(lane_dir, proj['board'], name)} (lane {name})")
-            except Exception as e:
-                print(f"fleet: spawn refused, claim guard could not be installed ({e})", file=sys.stderr)
+            # Fail closed: a lane missing its gitignored assets would silently run a different system.
+            assets = copy_lane_assets(proj, rest[i])
+            for line in assets:
+                print(f"lane asset: {line}")
+            if any(not line.startswith("copied") for line in assets):
+                print("fleet: spawn refused, lane assets could not be supplied (--no-preflight overrides)", file=sys.stderr)
                 return 1
-        try:  # clear finished lanes first, so the TUI lists what is running, not what died earlier
-            cleared = archive_dead()
-            if cleared:
-                print(f"fleet: archived {len(cleared)} dead session(s) before spawning: {', '.join(cleared)}")
-        except RuntimeError as e:
-            print(e, file=sys.stderr)
-        return subprocess.call(wsl_prefix() + ["bash", "-lc", f'exec {AM} spawn "$@"', "am"] + rest)
+        # Admission last, just before the spawn, under one lock: the window from check to spawn is seconds, not the
+        # minutes a preflight install can take, and N queued spawns cannot all take the same freed slot.
+        waited, s, locked = 0, lg_before, False
+        while gate:
+            locked = take_admit_lock()
+            why = "" if locked else "another spawn is being admitted"
+            if locked:
+                try:
+                    rows = sessions()
+                except (RuntimeError, ValueError, OSError, subprocess.SubprocessError) as e:
+                    print(f"fleet: admission cannot read the fleet ({e}); cap not checked", file=sys.stderr)
+                    rows = []
+                why = admission(gate, s, rows)
+                if why:
+                    admit_lock().unlink(missing_ok=True); locked = False
+            if not why:
+                break
+            if waited >= wait_s:
+                # Held, not refused: rerun when a lane finishes, or queue with --wait-admission (lane cap + RAM floor).
+                print(f"fleet: spawn not admitted: {why}. Rerun later, queue it with --wait-admission SECONDS, "
+                      f"or override with --no-admission", file=sys.stderr)
+                return 3
+            print(f"fleet: spawn queued: {why}; rechecking in {ADMIT_POLL}s ({waited}/{wait_s}s waited)", file=sys.stderr)
+            time.sleep(ADMIT_POLL)
+            waited += ADMIT_POLL
+            s = leakguard.sample()
+        try:
+            if trust([rest[i]]) != 0:
+                return 1
+            rest = with_preamble(rest, proj)
+            name = rest[rest.index("--name") + 1] if "--name" in rest else ""
+            if proj.get("board") and name:
+                # Enforce board claims at commit time in the lane's worktree, under the lane's name.
+                lane_dir = to_win_path(rest[i]) if os.name == "nt" else rest[i]
+                try:
+                    import claim_guard
+                    if subprocess.run(["git", "-C", lane_dir, "rev-parse", "--is-inside-work-tree"],
+                                      capture_output=True, text=True).stdout.strip() == "true":
+                        print(f"claim guard: {claim_guard.install(lane_dir, proj['board'], name)} (lane {name})")
+                except Exception as e:
+                    print(f"fleet: spawn refused, claim guard could not be installed ({e})", file=sys.stderr)
+                    return 1
+            try:  # clear finished lanes first, so the TUI lists what is running, not what died earlier
+                cleared = archive_dead()
+                if cleared:
+                    print(f"fleet: archived {len(cleared)} dead session(s) before spawning: {', '.join(cleared)}")
+            except RuntimeError as e:
+                print(e, file=sys.stderr)
+            rc = subprocess.call(wsl_prefix() + ["bash", "-lc", f'exec {AM} spawn "$@"', "am"] + rest)
+            if rc == 0 and home.get("board") and name:
+                # Recorded only once the lane exists, with its session id: lanehook.py tells lanes sharing a folder apart.
+                roster.record(name, dir=rest[i], board=home["board"], argv=given, id=lane_id(name))
+            leakguard.record("spawn", name, lg_before, leakguard.sample())
+            return rc
+        finally:
+            if locked:
+                admit_lock().unlink(missing_ok=True)
     if rest:
         ap.error(f"unrecognized arguments: {' '.join(rest)}")
     if args.cmd == "trust":
@@ -492,19 +701,32 @@ def main(argv=None):
         print("\n".join(lines[:n])); return 0
     if args.cmd == "build-core":
         return build_core()
+    if args.cmd == "resurrect":
+        return resurrect(args.names, args.all)
     if args.cmd == "archive-dead":
+        import leakguard
+        lg_before = leakguard.sample()
         done = archive_dead()
+        leakguard.record("archive-dead", ",".join(done), lg_before, leakguard.sample())
         left = [r["name"] for r in sessions() if r.get("status") == "dead" and not r.get("archived")]
         print(f"archived {len(done)}: {', '.join(done) or '-'}" + (f"; still dead, not archived: {', '.join(left)}" if left else ""))
         return 1 if left else 0
     if args.cmd == "kill":
+        import leakguard
+        lg_before = leakguard.sample()
         rc = 0
+        try:
+            id_name = {r["id"]: r["name"] for r in sessions()}
+        except (RuntimeError, ValueError, OSError, subprocess.SubprocessError):
+            id_name = {}
         for sid in args.ids:
             if not re.fullmatch(r"[0-9a-f]{8}", sid):
                 print(f"fleet: {sid!r} is not an agent-fleet session id", file=sys.stderr); rc = 1; continue
             p = in_wsl(["tmux", "-L", TMUX_SOCKET, "kill-session", "-t", f"am_{sid}"])
             print(f"killed {sid}" if p.returncode == 0 else f"fleet: {sid}: {p.stderr.strip()}")
             rc |= p.returncode != 0
+            if p.returncode == 0:   # stopped on purpose: never resurrected (archiving alone does not forget a lane)
+                roster.forget([id_name[sid]] if sid in id_name else [])
         killed = [s for s in args.ids if re.fullmatch(r"[0-9a-f]{8}", s)]
         if rc == 0 and killed:
             # A killed lane is finished business: file it away so the TUI shows only what still runs.
@@ -512,6 +734,8 @@ def main(argv=None):
             await_dead(killed)
             done = archive_dead()
             print(f"archived {len(done)}: {', '.join(done) or '-'}")
+        if killed:  # an invalid id runs nothing, so it is no lifecycle step to log
+            leakguard.record("kill", ",".join(killed), lg_before, leakguard.sample())
         return rc
     if args.cmd == "leases":
         ls = leases()

@@ -604,11 +604,64 @@ def fleet_bridge_mechanics():
     state["tool"] = False
     rows_nofix = {r["skill"]: r for r in F.preflight(proj, fix=False, run=fake)}
     res.append(("preflight_no_fix_does_not_install", not rows_nofix["b"]["ok"] and not state["tool"]))
+    # Per-skill reuse window: a costly check (ttl_s) is not re-run on every spawn; the others keep the default.
+    calls = []
+    def counting(cmd):
+        calls.append(cmd); return 0
+    ttl_proj = {"name": "ttl", "skills": [{"skill": "cheap", "check": "c1"},
+                                          {"skill": "costly", "check": "c2", "ttl_s": 86400}]}
+    with tempfile.TemporaryDirectory() as td:
+        cf = Path(td) / "cache.json"
+        F.preflight_cached(ttl_proj, run=counting, cache=cf, now=1000.0)
+        first = list(calls); calls.clear()
+        F.preflight_cached(ttl_proj, run=counting, cache=cf, now=1000.0 + 3600)
+        hour = list(calls); calls.clear()
+        F.preflight_cached(ttl_proj, run=counting, cache=cf, now=1000.0 + 90000)
+        day = list(calls); calls.clear()
+        F.preflight_cached(ttl_proj, run=counting, cache=cf, now=1000.0 + 90010, fresh=True)
+        forced = list(calls)
+    res += [("preflight_ttl_first_runs_all", first == ["c1", "c2"]),
+            ("preflight_ttl_costly_skipped_within_window", hour == ["c1"]),
+            ("preflight_ttl_costly_rerun_after_window", day == ["c1", "c2"]),
+            ("preflight_ttl_fresh_runs_all", forced == ["c1", "c2"])]
     pre_proj = {"lane_preamble": "FIRST: invoke the hub skill."}
     pr = F.with_preamble(["--name", "n", "--prompt", "do the task"], pre_proj)
     res += [("preamble_prefixes_prompt", pr[3].startswith("FIRST: invoke the hub skill.") and pr[3].endswith("do the task")),
             ("preamble_not_doubled", F.with_preamble(pr, pre_proj) == pr),
             ("preamble_absent_leaves_prompt", F.with_preamble(["--prompt", "x"], {}) == ["--prompt", "x"])]
+    # lane assets: gitignored files a lane worktree needs, copied at spawn, hash-pinned, fail-closed
+    at = Path(tempfile.mkdtemp(prefix="fleetassets-"))
+    try:
+        srcf = at / "src.bin"; srcf.write_bytes(b"encoder-bytes")
+        pin = hashlib.sha256(b"encoder-bytes").hexdigest()[:16]
+        good = {"lane_assets": [{"path": "models/enc.pt", "from": str(srcf), "sha256": pin}]}
+        bad_pin = {"lane_assets": [{"path": "models/enc.pt", "from": str(srcf), "sha256": "0" * 16}]}
+        wt, wt2, wt3, plain = at / "wt", at / "wt2", at / "wt3", at / "plain"
+        for d in (wt, wt2, wt3):
+            (d / ".git").mkdir(parents=True)
+        plain.mkdir()
+        (wt2 / "models").mkdir(); (wt2 / "models" / "enc.pt").write_bytes(b"lane-own-copy")
+        r_good = F.copy_lane_assets(good, str(wt))
+        res += [("assets_copied_into_worktree_root",
+                 r_good == ["copied models/enc.pt"] and (wt / "models" / "enc.pt").read_bytes() == b"encoder-bytes"),
+                ("assets_existing_left_untouched",
+                 F.copy_lane_assets(good, str(wt2)) == [] and (wt2 / "models" / "enc.pt").read_bytes() == b"lane-own-copy"),
+                ("assets_hash_mismatch_refused_not_copied",
+                 F.copy_lane_assets(bad_pin, str(wt3))[0].startswith("REFUSED") and not (wt3 / "models" / "enc.pt").exists()),
+                ("assets_non_worktree_dir_skipped",
+                 F.copy_lane_assets(good, str(plain)) == [] and not (plain / "models").exists())]
+        areq = at / "req.json"
+        areq.write_text(json.dumps({"projects": [{"name": "selfcheck-assets", "cwd_prefix": str(at), **bad_pin}]}))
+        old_areq = os.environ.get("FLEET_REQUIREMENTS"); os.environ["FLEET_REQUIREMENTS"] = str(areq)
+        try:
+            rc_bad = run(F.main, ["spawn", "--directory", str(wt3), "--prompt", "x"])[0]
+        finally:
+            if old_areq is None: os.environ.pop("FLEET_REQUIREMENTS", None)
+            else: os.environ["FLEET_REQUIREMENTS"] = old_areq
+        res.append(("spawn_refused_when_an_asset_cannot_be_supplied",
+                    rc_bad == 1 and not (wt3 / "models" / "enc.pt").exists()))
+    finally:
+        shutil.rmtree(at, ignore_errors=True)
     reqf = Path(tempfile.mkdtemp(prefix="fleetreq-")) / "req.json"
     reqf.write_text(json.dumps({"projects": [{"name": "outer", "cwd_prefix": "D:\\work"},
                                              {"name": "inner", "cwd_prefix": ["D:\\work\\app", "C:\\wt\\app-"]}]}))
@@ -728,6 +781,61 @@ def fastboard_mechanics():
     return res
 
 
+def leakguard_mechanics():
+    # The ntfs.sys NtFC pool leak (2026-10-28): measure around lane lifecycle steps, refuse spawns past the limit.
+    import os, struct
+    import leakguard as L
+    import fleet as F
+    tmp = Path(tempfile.mkdtemp(prefix="leakguard-"))
+    saved = {k: os.environ.get(k) for k in ("FLEET_LEAK_LOG", "FLEET_NONPAGED_MAX_MB", "FLEET_LEAKGUARD_OFF")}
+    os.environ["FLEET_LEAK_LOG"] = str(tmp / "leak.log")
+    for k in ("FLEET_NONPAGED_MAX_MB", "FLEET_LEAKGUARD_OFF"):
+        os.environ.pop(k, None)
+    try:
+        def entry(tag, np_allocs, np_frees, np_used):
+            return tag.encode() + struct.pack("<IIIQIIQ", 0, 0, 0, 0, np_allocs, np_frees, np_used)
+        buf = struct.pack("<II", 2, 0) + entry("NtFC", 10, 3, 4096) + entry("Abcd", 5, 5, 0)
+        parsed = L.parse_pool_tags(buf)
+        hi = {"nonpaged_mb": 9000.0, "tag": "NtFC", "tag_mb": 7000.0, "tag_allocs": 1}
+        lo = dict(hi, nonpaged_mb=1000.0)
+        res = [("parse_x64_layout", parsed == {"NtFC": (4096, 7), "Abcd": (0, 0)}),
+               ("refuses_at_or_over_limit", L.refusal(hi) != "" and L.refusal(dict(hi, nonpaged_mb=8192.0)) != ""),
+               ("allows_under_limit", L.refusal(lo) == ""),
+               ("no_sample_never_refuses", L.refusal(None) == "")]
+        os.environ["FLEET_LEAKGUARD_OFF"] = "1"
+        res.append(("off_switch_allows", L.refusal(hi) == ""))
+        os.environ.pop("FLEET_LEAKGUARD_OFF")
+        L.record("t", "x", dict(lo, tag_allocs=5), dict(lo, tag_allocs=12, nonpaged_mb=1001.5), follow=False)
+        row = json.loads((tmp / "leak.log").read_text(encoding="utf-8").splitlines()[-1])
+        res.append(("record_logs_delta", row["delta_tag_allocs"] == 7 and row["delta_nonpaged_mb"] == 1.5))
+        live = L.sample()
+        if os.name == "nt":
+            # Positive control: every NTFS system volume keeps NtFC records, so a zero means the reader is broken.
+            res.append(("live_sample_reads_ntfc", bool(live) and live["tag_allocs"] > 0 and live["nonpaged_mb"] > 0))
+            os.environ["FLEET_NONPAGED_MAX_MB"] = "1"
+            called = []
+            real_call, real_wsl = F.subprocess.call, F.in_wsl
+            F.subprocess.call = lambda *a, **k: called.append(a) or 0
+            F.in_wsl = lambda *a, **k: called.append(a) or subprocess.CompletedProcess(a, 0, "", "")
+            try:
+                rc, _ = run(F.main, ["spawn", "--directory", str(tmp), "--name", "x"])
+            finally:
+                F.subprocess.call, F.in_wsl = real_call, real_wsl
+                os.environ.pop("FLEET_NONPAGED_MAX_MB")
+            last = json.loads((tmp / "leak.log").read_text(encoding="utf-8").splitlines()[-1])
+            res.append(("spawn_refused_before_any_wsl_call", rc == 1 and not called and last["op"] == "spawn-refused"))
+        else:
+            res.append(("non_windows_sample_is_none", live is None))
+        return res
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def janitor_mechanics():
     # Board readability: a stale claim (holder idle, legacy/expired) is released on the record with one owner auth.
     import os, time as _t
@@ -824,7 +932,398 @@ def claim_guard_mechanics():
     return res
 
 
+def stdio_mechanics():
+    # Crash guard: a board message holding chars
+    # the console encoding cannot show (a BOM, the stop sign) must never crash a script that prints board text.
+    # Measured live: view.py digest died with UnicodeEncodeError on '﻿' under a cp1252 pipe.
+    # PYTHONIOENCODING forces a strict cp1252 stdout on every OS, so this red also fires on WSL.
+    import os
+    tmp = Path(tempfile.mkdtemp(prefix="stdio-")); root = tmp / "b"; a = ["--board", str(root)]; res = []
+    env = {**os.environ, "PYTHONIOENCODING": "cp1252:strict", "JANITOR_NO_FLEET": "1"}
+    env.pop("PYTHONUTF8", None)
+    try:
+        B.post(root, "t", "note", "﻿stop ⛔ done ✓ 日本", thread="T1")
+        B.post(root, "t", "status", "⛔ status text", thread="T1")
+        import review as R, time as _t
+        plan = run(R.main, a + ["submit", "--as", "t", "--thread", "T1", "⛔ plan 日本"])[1]
+        on = plan.split("#")[1].split()[0] if "#" in plan else "3"
+        run(R.main, a + ["post", "--as", "r", "--on", on, "--verdict", "challenge", "--cite", "f.py:1",
+                         "﻿⛔ finding 日本"])                 # review.py open prints this challenge
+        run(B.main, a + ["claim", "src/日.py", "--as", "t"] + (["--ttl", "1s"] if hasattr(B, "read_lease") else []))
+        _t.sleep(1.6)                                                           # janitor check lists it as stale
+        cmds = {"view_digest": ["view.py", *a, "digest"], "view_show": ["view.py", *a, "show", "1"],
+                "view_brief": ["view.py", *a, "brief", "--as", "r", "--all"], "review_open": ["review.py", *a, "open"],
+                "janitor_dry_run": ["janitor.py", *a, "clean", "--idle", "0.0003h", "--dry-run"]}  # prints claim paths
+        for name, argv in cmds.items():
+            p = subprocess.run([sys.executable, str(HERE / argv[0]), *argv[1:]], capture_output=True, env=env, timeout=60)
+            res.append((f"{name}_survives_unencodable_text", b"UnicodeEncodeError" not in p.stderr and p.returncode in (0, 1)))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return res
+
+
+def admission_mechanics():
+    # Admission control (robustness fix 1): a spawn past the project's active-lane cap or under its RAM floor
+    # is held (exit 3, nothing spawned), never silently started; --wait-admission queues it until a slot frees.
+    import os
+    import fleet as F
+    import leakguard as L
+    tmp = Path(tempfile.mkdtemp(prefix="admission-")); lane = tmp / "lane"; lane.mkdir(); res = []
+    req = tmp / "req.json"
+    req.write_text(json.dumps({"projects": [{"name": "p", "cwd_prefix": str(tmp), "skills": [],
+                                             "max_active_lanes": 2, "min_available_mb": 6144}]}), encoding="utf-8")
+    saved = {k: os.environ.get(k) for k in ("FLEET_REQUIREMENTS", "FLEET_ROSTER")}
+    os.environ["FLEET_REQUIREMENTS"] = str(req); os.environ["FLEET_ROSTER"] = str(tmp / "roster")
+    proj = F.project_for(str(lane))
+    row = lambda name, status, d=str(lane): {"id": "0" * 8, "name": name, "status": status, "directory": d}
+    ram = lambda mb: {"available_mb": mb, "nonpaged_mb": 100.0, "tag": "NtFC", "tag_mb": 1.0, "tag_allocs": 1}
+    res.append(("under_cap_and_floor_admitted", F.admission(proj, ram(9000), [row("a", "working")]) == ""))
+    res.append(("cap_counts_active_lanes", "cap" in F.admission(proj, ram(9000), [row("a", "working"), row("b", "waiting")])))
+    res.append(("finished_lanes_do_not_count", F.admission(proj, ram(9000), [row("a", "finished"), row("b", "idle"),
+                                                                             row("c", "working")]) == ""))
+    res.append(("other_projects_do_not_count", F.admission(proj, ram(9000), [row("a", "working", "/elsewhere"),
+                                                                              row("b", "working", "/elsewhere")]) == ""))
+    res.append(("unknown_statuses_count_as_active", "cap" in F.admission(proj, ram(9000), [row("a", "running"),
+                                                                                          row("b", "blocked")])))
+    res.append(("ram_floor_holds", "floor" in F.admission(proj, ram(5000), [])))
+    res.append(("no_sample_skips_floor", F.admission(proj, None, []) == ""))
+    states = {"rows": [row("a", "working"), row("b", "working")]}
+    spawned, slept = [], []
+    real = (F.subprocess.call, F.in_wsl, F.sessions, L.sample, F.time.sleep)
+    F.subprocess.call = lambda *a, **k: spawned.append(a) or 0
+    F.in_wsl = lambda *a, **k: subprocess.CompletedProcess(a, 0, "[]", "")
+    F.sessions = lambda: states["rows"]
+    L.sample = lambda: ram(9000)
+    F.time.sleep = lambda s: slept.append(s) or states.update(rows=[row("a", "working")])
+    spawn = lambda *x: run(F.main, ["spawn", "--directory", str(lane), "--name", "n1", *x])[0]
+    try:
+        res.append(("over_cap_spawn_held_exit3", spawn() == 3 and not spawned))
+        res.append(("no_admission_overrides", spawn("--no-admission") == 0 and len(spawned) == 1
+                    and "--no-admission" not in spawned[-1][0]))
+        res.append(("wait_admission_queues_then_spawns", spawn("--wait-admission", "60") == 0 and len(spawned) == 2
+                    and slept and "--wait-admission" not in spawned[-1][0]))
+        states["rows"] = [row("a", "working"), row("b", "working")]
+        F.time.sleep = lambda s: slept.append(s)
+        res.append(("wait_admission_times_out_exit3", spawn("--wait-admission", "1") == 3 and len(spawned) == 2))
+        states["rows"] = [row("a", "working")]
+        res.append(("admission_lock_released_after_spawn", spawn() == 0 and not F.admit_lock().exists()))
+        F.admit_lock().parent.mkdir(parents=True, exist_ok=True)
+        F.admit_lock().write_text("held", encoding="utf-8")       # another spawn is between check and spawn
+        res.append(("held_admission_lock_holds_spawn", spawn() == 3 and len(spawned) == 3))
+        old = __import__("time").time() - F.ADMIT_LOCK_STALE - 60
+        os.utime(F.admit_lock(), (old, old))                      # left behind by a crashed spawn
+        res.append(("stale_admission_lock_cleared", spawn() == 0 and len(spawned) == 4))
+    finally:
+        F.subprocess.call, F.in_wsl, F.sessions, L.sample, F.time.sleep = real
+        for k, v in saved.items():
+            os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
+        shutil.rmtree(tmp, ignore_errors=True)
+    return res
+
+
+def lanehook_mechanics():
+    # Lane PostToolUse hook (robustness fixes 2 + 3): a working lane's own short leases renew themselves, so a dead
+    # lane's claims lapse without an owner answer; mail addressed to the lane is announced, and the cursor is untouched.
+    import os, time as _t
+    tmp = Path(tempfile.mkdtemp(prefix="lanehook-")); root = tmp / "b"; lane = tmp / "lane"; lane.mkdir(); res = []
+    a = ["--board", str(root)]
+    rdir = tmp / "roster"; rdir.mkdir()
+    entry = lambda name, **kw: (rdir / f"{name}.json").write_text(json.dumps({"dir": str(lane), "board": str(root), **kw}),
+                                                                  encoding="utf-8")   # a dir= in kw overrides lane
+    entry("L1")
+    env = {**os.environ, "FLEET_ROSTER": str(rdir), "LANEHOOK_EVERY": "0", "LANEHOOK_TTL": "1800",
+           "LANEHOOK_STATE": str(tmp / "state")}
+    for k in ("AGENT_NAME", "AGENT_BOARD", "AGENT_FLEET_SESSION_ID"):
+        env.pop(k, None)
+    last_event = lambda n: json.loads((rdir / "heartbeat" / f"{n}.json").read_text(encoding="utf-8")).get("last")
+    def hook(cwd=lane, payload=None, e=env):
+        p = subprocess.run([sys.executable, str(HERE / "lanehook.py")], input=payload if payload is not None else
+                           json.dumps({"hook_event_name": "PostToolUse", "cwd": str(cwd), "tool_name": "Bash"}),
+                           capture_output=True, text=True, env=e, timeout=60)
+        ctx = json.loads(p.stdout)["hookSpecificOutput"]["additionalContext"] if p.stdout.strip() else ""
+        return p.returncode, ctx
+    ttl = lambda path: B.read_lease(B.claim_file(root, path))["ttl"]
+    try:
+        run(B.main, a + ["claim", "src/near.py", "--as", "L1", "--ttl", "10m"])      # 10m left: inside the renew window
+        run(B.main, a + ["claim", "src/far.py", "--as", "L1", "--ttl", "4h"])        # far from expiry: left alone
+        run(B.main, a + ["claim", "src/other.py", "--as", "L2", "--ttl", "10m"])     # someone else's
+        run(B.main, a + ["claim", "src/never.py", "--as", "L1", "--ttl", "0"])       # an explicit no-expiry claim
+        before = B.read_lease(B.claim_file(root, "src/near.py"))["ts"]; _t.sleep(1.1)
+        rc, ctx = hook()
+        res.append(("hook_exits_0", rc == 0))
+        res.append(("own_expiring_lease_renewed_short", ttl("src/near.py") == 1800
+                    and B.read_lease(B.claim_file(root, "src/near.py"))["ts"] > before))
+        res.append(("far_lease_left_alone", ttl("src/far.py") == 14400))
+        res.append(("other_holders_lease_untouched", ttl("src/other.py") == 600))
+        res.append(("ttl0_claim_untouched", ttl("src/never.py") == 0))
+        res.append(("renew_on_record", any(m.get("kind") == "renew" and m.get("path") == "src/near.py"
+                                           for m in B.good(B.load_msgs(root)))))
+        res.append(("no_mail_no_alert", ctx == ""))
+        run(B.main, a + ["claim", "src/long.py", "--as", "L1", "--ttl", "4h"])
+        aged = _t.strftime("%Y-%m-%dT%H:%M:%S%z", _t.localtime(_t.time() - 14100))   # a 4h lease with 5 minutes left
+        B.claim_file(root, "src/long.py").write_text(f"L1 {aged} ttl=14400 mode=exclusive\n", encoding="utf-8")
+        hook()
+        res.append(("long_lease_renewed_never_shortened", ttl("src/long.py") == 14400
+                    and B.read_lease(B.claim_file(root, "src/long.py"))["ts"] > _t.time() - 60))
+        probe = (f"import sys; sys.path.insert(0, {str(HERE)!r}); import lanehook, board; "
+                 f"lanehook.run({{'hook_event_name': 'PostToolUse', 'cwd': {str(lane)!r}}}); print(board.load_msgs.__module__)")
+        p = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, env=env, timeout=60)
+        res.append(("board_reads_go_through_fastboard_cache", p.stdout.strip().endswith("fastboard")))
+        res.append(("tool_call_heartbeat_is_tool", last_event("L1") == "tool"))
+        B.post(root, "lead", "request", "please rebase onto 1234", to="L1")
+        B.post(root, "lead", "note", "for someone else", to="L9")
+        rc, ctx = hook()
+        res.append(("mail_to_lane_announced", "1 new" in ctx and "please rebase" in ctx and "someone else" not in ctx))
+        res.append(("cursor_not_advanced", not (root / "cursors" / "L1").exists()))
+        res.append(("same_mail_not_repeated", hook()[1] == ""))
+        B.post(root, "lead", "request", "second request", to="L1")
+        res.append(("new_mail_announced_again", "second request" in hook()[1]))
+        run(__import__("view").main, a + ["brief", "--as", "L1"])
+        B.post(root, "lead", "request", "third", to="L1")
+        res.append(("only_mail_past_cursor_counted", "1 new" in hook()[1]))
+        res.append(("non_lane_cwd_silent", hook(cwd=tmp / "elsewhere") == (0, "")))
+        res.append(("garbage_stdin_fails_open", hook(payload="not json") == (0, "")))
+        e2 = {**env, "LANEHOOK_EVERY": "3600"}
+        hook(e=e2); B.post(root, "lead", "request", "throttled", to="L1")
+        res.append(("throttle_skips_within_window", hook(e=e2)[1] == ""))
+        hook(payload=json.dumps({"hook_event_name": "Stop", "cwd": str(lane)}), e=e2)
+        res.append(("stop_marks_turn_finished_even_throttled", last_event("L1") == "stop"))
+        hook(payload=json.dumps({"hook_event_name": "SessionEnd", "cwd": str(lane)}), e=e2)
+        res.append(("session_end_marks_clean_end", last_event("L1") == "end"))
+        entry("L2")                                                  # a second lane recorded for the SAME folder
+        B.post(root, "lead", "request", "for L1 after the tie", to="L1")
+        res.append(("two_lanes_one_folder_is_silent", hook() == (0, "")))
+        entry("L1", id="aaaa1111"); entry("L2", id="bbbb2222")
+        B.post(root, "lead", "request", "for L2 by id", to="L2")
+        rc, ctx = hook(e={**env, "AGENT_FLEET_SESSION_ID": "bbbb2222"})
+        res.append(("session_id_picks_the_right_lane", "for L2 by id" in ctx and "for L1 after the tie" not in ctx))
+        entry("P", dir=str(tmp), id="pppp0000")                    # a lane recorded for the PARENT folder
+        B.post(root, "lead", "request", "for P only", to="P")
+        sub = tmp / "sub"; sub.mkdir()
+        res.append(("folder_alone_still_finds_its_lane", "for P only" in hook(cwd=sub)[1]))
+        res.append(("unrecorded_session_never_borrows_a_folder",
+                    hook(cwd=sub, e={**env, "AGENT_FLEET_SESSION_ID": "zzzz9999", "LANEHOOK_STATE": str(tmp / "state2")})
+                    == (0, "")))
+        res.append(("verify_intact_after_hook", B.verify(root) == []))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return res
+
+
+def doctor_mechanics():
+    # doctor (robustness fix 4): one report over board integrity, stale claims, stale lock files and lane health;
+    # every RED must be reachable, and an intact board with a live lock must read OK.
+    import os
+    import doctor as D
+    tmp = Path(tempfile.mkdtemp(prefix="doctor-")); root = tmp / "b"; a = ["--board", str(root)]; res = []
+    os.environ["DOCTOR_NO_FLEET"] = "1"; os.environ["JANITOR_NO_FLEET"] = "1"
+    lock = tmp / "HEAVY.lock"; lock.mkdir()
+    owner = lambda pid: (lock / "owner.txt").write_text(f"name t\npid {pid}\nstart 2026-10-29T00:00:00\n", encoding="utf-8")
+    dr = lambda *x: run(D.main, a + ["--lock", str(lock), *x])
+    try:
+        B.post(root, "t", "note", "hello")
+        owner(os.getpid())
+        rc, out = dr()
+        res.append(("healthy_board_live_lock_ok", rc == 0 and "RED" not in out and "held by t" in out))
+        owner(4194303)
+        rc, out = dr()
+        res.append(("dead_owner_lock_red", rc == 1 and "stale lock" in out))
+        (lock / "owner.txt").unlink()
+        res.append(("ownerless_old_lock_red", dr("--lock-grace", "0")[0] == 1))
+        lock.rmdir()
+        res.append(("absent_lock_ok", dr()[0] == 0))
+        run(B.main, a + ["claim", "src/s.py", "--as", "gone", "--ttl", "1s"])
+        import time as _t; _t.sleep(1.6)
+        rc, out = dr("--idle", "0.0003h", "--stale-limit", "0")
+        res.append(("stale_claims_over_limit_red", rc == 1 and "src/s.py" in out))
+        # WSL over NTFS (/mnt/c): paths are case-sensitive STRINGS on a case-insensitive disk, so a differently-cased
+        # board path must still find its project. On Windows the path resolves to its real case first: nothing to test.
+        if os.name != "nt" and str(HERE).startswith("/mnt/"):
+            ci = Path(tempfile.mkdtemp(prefix="doctor-ci-", dir=str(HERE.parent)))
+            try:
+                cb = ci / "board"; B.post(cb, "t", "note", "hi")
+                cl = ci / "lock"; cl.mkdir(); (cl / "owner.txt").write_text(f"name t\npid {os.getpid()}\nstart x\n", encoding="utf-8")
+                req = ci / "req.json"
+                req.write_text(json.dumps({"projects": [{"name": "p", "board": str(cb), "locks": [str(cl)]}]}), encoding="utf-8")
+                os.environ["FLEET_REQUIREMENTS"] = str(req)
+                out = run(D.main, ["--board", str(cb).replace("/board", "/BOARD")])[1]
+                res.append(("board_path_case_still_finds_project_locks", "held by t" in out))
+            finally:
+                os.environ.pop("FLEET_REQUIREMENTS", None)
+                shutil.rmtree(ci, ignore_errors=True)
+        else:
+            res.append(("board_path_case_still_finds_project_locks: WSL over /mnt only", None))
+        (root / "msgs" / f"{3:08d}.json").write_text("{broken", encoding="utf-8")
+        rc, out = dr()
+        res.append(("broken_board_red", rc == 1 and "verify" in out))
+    finally:
+        os.environ.pop("DOCTOR_NO_FLEET", None); os.environ.pop("JANITOR_NO_FLEET", None)
+        os.environ.pop("FLEET_REQUIREMENTS", None)
+        shutil.rmtree(tmp, ignore_errors=True)
+    return res
+
+
+def resurrect_mechanics():
+    # Reboot recovery (robustness fix 6): a lane cut off without a clean session end is respawned from the roster
+    # with its own spawn args and a resume note; a lane that ended cleanly, or was killed on purpose, stays down.
+    import os
+    import fleet as F
+    import leakguard as L
+    tmp = Path(tempfile.mkdtemp(prefix="resurrect-")); lane = tmp / "lane"; lane.mkdir(); res = []
+    req = tmp / "req.json"
+    req.write_text(json.dumps({"projects": [{"name": "p", "cwd_prefix": str(tmp), "skills": [], "board": str(tmp / "b")}]}),
+                   encoding="utf-8")
+    import roster as RO
+    saved = {k: os.environ.get(k) for k in ("FLEET_REQUIREMENTS", "FLEET_ROSTER")}
+    os.environ["FLEET_REQUIREMENTS"] = str(req); os.environ["FLEET_ROSTER"] = str(tmp / "roster")
+    ids = {"cut": "aaaa1111", "done": "bbbb2222", "busy": "cccc3333", "fin": "dddd4444"}
+    spawned, live, rcs = [], {"rows": []}, {"bad": 1}
+    real = (F.subprocess.call, F.in_wsl, F.sessions, L.sample, F.await_dead, F.ui_start)
+    def call(argv, *a, **k):
+        name = argv[argv.index("--name") + 1] if "--name" in argv else ""
+        spawned.append(argv)
+        live["rows"] = live["rows"] + [{"id": ids.get(name, "eeee5555"), "name": name, "status": "working",
+                                        "directory": str(lane)}]
+        return rcs.get(name, 0)
+    F.subprocess.call = call
+    F.in_wsl = lambda argv, **k: subprocess.CompletedProcess(argv, 1 if "am_bbbb2222" in argv else 0, "[]", "")
+    F.sessions = lambda: live["rows"]
+    L.sample = lambda: None
+    F.await_dead = lambda ids_, timeout=0: None
+    F.ui_start = lambda: "running"
+    prompt = lambda n: next(x for x in spawned[::-1] if f"brief of {n}" in " ".join(x))
+    try:
+        for n in ("cut", "done", "busy", "fin", "bad"):
+            run(F.main, ["spawn", "--directory", str(lane), "--name", n, "--tool", "claude", "--prompt", f"brief of {n}"])
+        r = RO.load()
+        res.append(("spawn_records_roster_with_args_and_id", set(r) == {"cut", "done", "busy", "fin"}
+                    and "brief of cut" in r["cut"]["argv"] and r["cut"]["board"] == str(tmp / "b")
+                    and r["cut"]["id"] == "aaaa1111"))
+        res.append(("failed_spawn_records_nothing", "bad" not in r))
+        RO.beat("cut", "tool"); RO.beat("done", "end"); RO.beat("busy", "tool"); RO.beat("fin", "stop")
+        live["rows"] = [{"id": "cccc3333", "name": "busy", "status": "working", "directory": str(lane)}]
+        n0 = len(spawned)
+        rc, out = run(F.main, ["resurrect"])
+        res.append(("list_is_a_dry_run", rc == 0 and len(spawned) == n0 and "cut: CUT OFF" in out
+                    and "done: ended cleanly" in out and "fin: finished its turn" in out and "busy" not in out))
+        rc, out = run(F.main, ["resurrect", "--all"])
+        res.append(("all_respawns_only_cut_off", rc == 0 and len(spawned) == n0 + 1
+                    and "RESUMED by fleet.py resurrect" in " ".join(prompt("cut"))))
+        res.append(("finished_turn_lane_not_resurrected", not any("brief of fin" in " ".join(x) for x in spawned[n0:])))
+        live["rows"] = [r for r in live["rows"] if r["name"] != "cut"]
+        run(F.main, ["resurrect", "cut"])
+        res.append(("resume_note_never_stacks", " ".join(prompt("cut")).count("RESUMED by fleet.py resurrect") == 1))
+        res.append(("named_live_lane_refused", run(F.main, ["resurrect", "busy"])[0] == 1))
+        live["rows"] = [{"id": "aaaa1111", "name": "cut", "status": "working", "directory": str(lane)},
+                        {"id": "bbbb2222", "name": "done", "status": "working", "directory": str(lane)}]
+        rc = run(F.main, ["kill", "bbbb2222", "aaaa1111"])[0]                 # the FIRST kill fails
+        res.append(("kill_forgets_each_killed_lane_even_if_another_fails", rc == 1 and "cut" not in RO.load()
+                    and "done" in RO.load()))
+    finally:
+        F.subprocess.call, F.in_wsl, F.sessions, L.sample, F.await_dead, F.ui_start = real
+        for k, v in saved.items():
+            os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
+        shutil.rmtree(tmp, ignore_errors=True)
+    return res
+
+
+def take_mechanics():
+    # Atomic request take (robustness fix 10): exactly one agent takes a request, on the record; addressed requests
+    # only by their addressee; racing takers never both win.
+    import review as R
+    tmp = Path(tempfile.mkdtemp(prefix="take-")); root = tmp / "b"; a = ["--board", str(root)]; res = []
+    try:
+        open_req = B.post(root, "lead", "request", "anyone: port the parser", thread="T")["seq"]
+        to_c = B.post(root, "lead", "request", "C only: review #1", to="C")["seq"]
+        note = B.post(root, "lead", "note", "not a request")["seq"]
+        rc, out = run(R.main, a + ["requests", "--as", "A"])
+        res.append(("requests_lists_takeable_only", rc == 0 and f"#{open_req}" in out and f"#{to_c}" not in out))
+        res.append(("first_taker_wins", run(R.main, a + ["take", str(open_req), "--as", "A"])[0] == 0))
+        res.append(("second_taker_refused", run(R.main, a + ["take", str(open_req), "--as", "B"])[0] == 1))
+        res.append(("addressed_request_refuses_others", run(R.main, a + ["take", str(to_c), "--as", "A"])[0] != 0))
+        res.append(("addressee_takes_it", run(R.main, a + ["take", str(to_c), "--as", "C"])[0] == 0))
+        res.append(("note_is_not_takeable", run(R.main, a + ["take", str(note), "--as", "A"])[0] != 0))
+        res.append(("own_request_not_takeable", run(R.main, a + ["take", str(open_req), "--as", "lead"])[0] != 0))
+        took = [m for m in B.good(B.load_msgs(root)) if m.get("kind") == "status" and m.get("reply_to") == open_req]
+        res.append(("take_on_record_in_thread", len(took) == 1 and took[0]["from"] == "A" and took[0].get("thread") == "T"))
+        res.append(("taken_request_leaves_list", f"#{open_req}" not in run(R.main, a + ["requests"])[1]))
+        race = B.post(root, "lead", "request", "race for it")["seq"]
+        ps = [subprocess.Popen([sys.executable, str(HERE / "review.py"), *a, "take", str(race), "--as", f"r{i}"],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for i in range(4)]
+        res.append(("racing_takers_one_wins", sorted(p.wait(timeout=60) for p in ps) == [0, 1, 1, 1]))
+        res.append(("verify_intact_after_takes", B.verify(root) == []))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return res
+
+
+def durability_mechanics():
+    # Fixes 8 + 9 (staged in ../staged until no scored task pins board.py/score.py): every message, claim and lease
+    # write is fsynced before it is linked/renamed into place, and board.py/score.py print text cp1252 cannot encode.
+    if not hasattr(B, "write_durable"):
+        return [("SKIP until staged/board.py + staged/score.py land", None)]
+    import os
+    tmp = Path(tempfile.mkdtemp(prefix="durable-")); root = tmp / "b"; a = ["--board", str(root)]; res = []
+    calls, real = [], B.os.fsync
+    B.os.fsync = lambda fd: calls.append(fd) or real(fd)
+    try:
+        B.post(root, "t", "note", "x"); n = len(calls)
+        res.append(("post_fsyncs", n >= 1))
+        run(B.main, a + ["claim", "src/d.py", "--as", "t"]); m = len(calls)
+        res.append(("claim_fsyncs_lease_and_message", m - n >= 2))
+        run(B.main, a + ["renew", "src/d.py", "--as", "t"])
+        res.append(("renew_fsyncs_lease_and_message", len(calls) - m >= 2))
+    finally:
+        B.os.fsync = real
+    env = {**os.environ, "PYTHONIOENCODING": "cp1252:strict"}
+    env.pop("PYTHONUTF8", None)
+    try:
+        B.post(root, "t", "note", "﻿stop ⛔ 日本", thread="T1")
+        p = subprocess.run([sys.executable, str(HERE / "board.py"), *a, "read"], capture_output=True, env=env, timeout=60)
+        res.append(("board_read_survives_unencodable_text", b"UnicodeEncodeError" not in p.stderr and p.returncode == 0))
+        work = tmp / "w"; work.mkdir()
+        # raw utf-8 bytes: a print() here would itself die under cp1252 and leave only an ASCII traceback in the tail
+        (work / "check.py").write_text("import sys; sys.stdout.buffer.write('⛔ 日本 failed\\n'.encode()); raise SystemExit(1)\n",
+                                       encoding="utf-8")
+        _, out = run(S.main, a + ["open", "U1", "--verify", f"{PY} check.py", "--protect", "check.py", "--cwd", str(work)])
+        anchor = next(l.split()[1] for l in out.splitlines() if l.startswith("ANCHOR"))
+        p = subprocess.run([sys.executable, str(HERE / "score.py"), *a, "score", "U1", "--anchor", anchor],
+                           capture_output=True, env={**env, "PYTHONUTF8": "0"}, timeout=120)
+        res.append(("score_survives_unencodable_verify_output", b"UnicodeEncodeError" not in p.stderr and p.returncode == 1
+                    and b"RED correct" in p.stdout))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return res
+
+
+def seen_mechanics():
+    # Read receipts (robustness fix 5): which addressees have read message N, from the per-agent brief cursors.
+    import view as V
+    tmp = Path(tempfile.mkdtemp(prefix="seen-")); root = tmp / "b"; a = ["--board", str(root)]; res = []
+    try:
+        one = B.post(root, "lead", "request", "first", to="R")["seq"]
+        run(V.main, a + ["brief", "--as", "R"]); run(V.main, a + ["brief", "--as", "S"])
+        two = B.post(root, "lead", "request", "second", to="R")["seq"]
+        rc, out = run(V.main, a + ["seen", str(one)])
+        res.append(("read_message_seen", rc == 0 and "seen   R" in out))
+        rc, out = run(V.main, a + ["seen", str(two)])
+        res.append(("unread_message_unseen_exit1", rc == 1 and "UNSEEN R" in out))
+        B.post(root, "R", "note", "R posts"); B.post(root, "S", "note", "S posts")   # agents post; tools never do
+        three = B.post(root, "lead", "note", "to everyone")["seq"]
+        run(V.main, a + ["brief", "--as", "S"]); run(V.main, a + ["brief", "--as", "battery-cache"])
+        rc, out = run(V.main, a + ["seen", str(three)])
+        res.append(("broadcast_lists_every_reader", rc == 1 and "seen   S" in out and "UNSEEN R" in out))
+        res.append(("broadcast_ignores_tool_cursors", "battery-cache" not in out))
+        res.append(("unknown_message_exit2", run(V.main, a + ["seen", "999"])[0] == 2))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return res
+
+
 if __name__ == "__main__":
+    import os
+    # fleet.main() now logs lifecycle steps (leakguard): keep every case's lines out of the real leak log.
+    os.environ["FLEET_LEAK_LOG"] = str(Path(tempfile.mkdtemp(prefix="selfcheck-leaklog-")) / "leak.log")
     bad = 0
     for name, ok in keepalive_mechanics():
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  keepalive: {name}")
@@ -845,10 +1344,25 @@ if __name__ == "__main__":
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  fastboard: {name}")
     for name, ok in janitor_mechanics():
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  janitor: {name}")
+    for name, ok in leakguard_mechanics():
+        bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  leakguard: {name}")
     for name, ok in review_mechanics():
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  review: {name}")
     for name, ok in review_regressions():
         bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  review-red: {name}")
+    for name, ok in stdio_mechanics():
+        bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  stdio: {name}")
+    for label, fn in (("admission", admission_mechanics), ("lanehook", lanehook_mechanics),
+                      ("doctor", doctor_mechanics), ("seen", seen_mechanics), ("resurrect", resurrect_mechanics),
+                      ("take", take_mechanics), ("durability", durability_mechanics)):
+        try:
+            rows = fn()
+        except Exception as e:   # a missing module or function is this fix's RED, not a selfcheck crash
+            rows = [(f"not built: {type(e).__name__}: {e}", False)]
+        for name, ok in rows:
+            if ok is None:   # a case for code that is staged, not landed: shown, never counted as a pass
+                print(f"SKIP  {label}: {name}"); continue
+            bad += not ok; print(f"{'PASS' if ok else 'FAIL'}  {label}: {name}")
     mt = subprocess.run([sys.executable, str(HERE / "memtrim.py"), "selftest"], capture_output=True, text=True, timeout=120)
     for line in mt.stdout.splitlines():
         if line.startswith(("PASS", "FAIL")):

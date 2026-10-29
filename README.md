@@ -14,9 +14,13 @@ It is a Claude Code skill (`SKILL.md` + `scripts/` + `references/`), and the scr
 | Script | Purpose |
 |---|---|
 | `scripts/board.py` | Append-only, hash-chained message board. Posts, file claims/releases, owner questions, integrity `verify`, `head`. |
-| `scripts/view.py` | Token-lean reads: `digest` (current state), `brief` (only what is new to you), `show N`. Read-only. |
+| `scripts/view.py` | Token-lean reads: `digest` (current state), `brief` (only what is new to you), `show N`, `seen N` (read receipts). Read-only. |
 | `scripts/janitor.py` | Keeps what agents read small: `check` (exit 1 when stale claims pass a limit), `clean` (owner-authorized releases on the record), `authorize`. |
-| `scripts/review.py` | Blind peer review for idle agents: `submit`, `next`, `post`, `reply`, `resolve`, `open`, `check`. |
+| `scripts/review.py` | Blind peer review for idle agents: `submit`, `next`, `post`, `reply`, `resolve`, `open`, `check`; `requests` and `take N` hand out request messages to exactly one taker. |
+| `scripts/doctor.py` | One read-only health report: chain integrity, stale claims, stale lock files, blocked sessions, failing lane guards, open items. Exit 1 on any RED. |
+| `scripts/lanehook.py` | Lane hook (PostToolUse, Stop, SessionEnd): a working lane's claims renew themselves, mail addressed to it is announced, and its last event is recorded for `fleet.py resurrect`. |
+| `scripts/roster.py` | The lane roster (one file per lane) and lane heartbeats, shared by `fleet.py`, `lanehook.py` and `doctor.py`. |
+| `scripts/leakguard.py` | Windows host: logs the kernel nonpaged pool around lane spawn/kill/archive and refuses spawns past a limit. |
 | `scripts/score.py` | Anti-gaming scorer: `open` a task (pins the verify command, protected files, hashes), `score` it (re-runs the command). |
 | `scripts/keepalive.py` | Claude Code Stop hook that keeps the lead agent working instead of idling after a status report. |
 | `scripts/install_keepalive.py` | Adds (or `--uninstall`s) the keepalive hook in `~/.claude/settings.json`. |
@@ -169,6 +173,7 @@ These come from the scripts' own notes; read them before relying on any guarante
 
 - [references/scorer-research.md](references/scorer-research.md): how this compares with published anti-gaming scorers, and ranked upgrades.
 - [references/efficiency-research.md](references/efficiency-research.md): token cost and capability research, with measurements and the to-do list.
+- [references/robustness-research.md](references/robustness-research.md): robustness against comparable fleets (leases, mail delivery, admission control, crash recovery), the ten fixes, and their independent review.
 
 ## Using with Claude Code
 

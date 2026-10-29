@@ -11,6 +11,10 @@ results, from their own context, and argue it out on the board until each challe
   review.py check TASK [--min N]                             reviewed=1 only if every plan/result in the
                                                              task's thread has >= N agree reviews by
                                                              others and no open challenge; exit 0/1
+  review.py requests [--as R1]                               open `request` messages nobody has taken
+                                                             (with --as: only those R1 may take)
+  review.py take N --as R1                                   take request N: exactly one taker wins
+                                                             (O_EXCL, like claims); posted on the record
 
 Reviewable items: kind `result` (board.py post --kind result) and kind `plan` (submit above).
 Reviews post under thread "review" with reply_to = the item, so review text never counts toward a
@@ -250,7 +254,66 @@ def cmd_check(a, root):
     return 1 if reds else 0
 
 
+def _take_dir(root):
+    d = root / "takes"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _taker(root, seq):
+    f = root / "takes" / str(seq)
+    try:
+        return f.read_text(encoding="utf-8").split()[0] if f.exists() else None
+    except (OSError, IndexError):
+        return "?"
+
+
+def _may_take(m, who):
+    return m.get("from") != who and m.get("to") in (None, "all", who)
+
+
+def cmd_requests(a, root):
+    who = getattr(a, "as_", None)
+    msgs = _msgs(root)
+    by = {m["seq"]: m for m in msgs}
+    retracted = {m.get("reply_to") for m in msgs if m.get("kind") == "retract"
+                 and by.get(m.get("reply_to"), {}).get("from") == m.get("from")}
+    open_ = [m for m in msgs if m.get("kind") == "request" and m["seq"] not in retracted
+             and _taker(root, m["seq"]) is None and (not who or _may_take(m, who))]
+    for m in open_:
+        to = f">{m['to']}" if m.get("to") else ""
+        print(f"#{m['seq']} {m.get('from')}{to} [{m.get('thread') or '-'}]: {' '.join(str(m.get('body', '')).split())[:140]}")
+    print(f"{len(open_)} open request(s)" + (f" {who} may take" if who else ""))
+    return 0
+
+
+def cmd_take(a, root):
+    # ponytail: a take never expires; a taker that dies leaves the request taken. Upgrade path: a lease like claims.
+    who = B.author_of(a)
+    m = {m["seq"]: m for m in _msgs(root)}.get(a.n)
+    if not m or m.get("kind") != "request":
+        sys.exit(f"review: #{a.n} is not a request")
+    if m.get("from") == who:
+        sys.exit(f"review: #{a.n} is your own request")
+    if not _may_take(m, who):
+        sys.exit(f"review: #{a.n} is addressed to {m.get('to')}")
+    try:
+        fd = os.open(_take_dir(root) / str(a.n), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    except FileExistsError:
+        print(f"review: #{a.n} already taken by {_taker(root, a.n)}", file=sys.stderr)
+        return 1
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write(f"{who} {time.strftime('%Y-%m-%dT%H:%M:%S%z')}\n")
+    d = B.post(root, who, "status", f"taking #{a.n}: {' '.join(str(m.get('body', '')).split())[:100]}",
+               thread=m.get("thread"), reply_to=a.n)
+    print(f"took #{a.n} (#{d['seq']})")
+    return 0
+
+
 def main(argv=None):
+    for stream in (sys.stdout, sys.stderr):  # board text holds chars a cp1252 pipe cannot encode (a BOM, the stop sign)
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     ap = argparse.ArgumentParser(prog="review", description=__doc__.splitlines()[0])
     ap.add_argument("--board"); ap.add_argument("--project")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -263,10 +326,12 @@ def main(argv=None):
     sub.add_parser("open")
     c = sub.add_parser("check"); c.add_argument("task"); c.add_argument("--min", type=int, default=2)
     c.add_argument("--accept-overrule", type=int, nargs="*", help="lead overrules the lead has read and accepts")
+    sub.add_parser("requests").add_argument("--as", dest="as_")
+    t = sub.add_parser("take"); t.add_argument("n", type=int); t.add_argument("--as", dest="as_")
     a = ap.parse_args(argv)
     root = B.board_root(a)
-    return {"submit": cmd_submit, "next": cmd_next, "post": cmd_post, "reply": cmd_reply,
-            "resolve": cmd_resolve, "open": cmd_open, "check": cmd_check}[a.cmd](a, root)
+    return {"submit": cmd_submit, "next": cmd_next, "post": cmd_post, "reply": cmd_reply, "resolve": cmd_resolve,
+            "open": cmd_open, "check": cmd_check, "requests": cmd_requests, "take": cmd_take}[a.cmd](a, root)
 
 
 if __name__ == "__main__":

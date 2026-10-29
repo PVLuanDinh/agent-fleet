@@ -101,6 +101,9 @@ def digest_tokens(root: Path) -> int:
 
 
 def main(argv=None):
+    for stream in (sys.stdout, sys.stderr):  # claim paths can hold chars a cp1252 pipe cannot encode
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     ap = argparse.ArgumentParser(prog="janitor", description=__doc__.splitlines()[0])
     ap.add_argument("--board"); ap.add_argument("--project")
     sub = ap.add_subparsers(dest="cmd", required=True)

@@ -109,7 +109,7 @@ def cmd_open(a, root: Path) -> int:
             "self": {str(p): sha(p) for p in SELF_FILES},
             "head_seq": msgs[-1]["seq"] if msgs else 0, "head_hash": msgs[-1]["hash"] if msgs else "0" * 64}
     sp.parent.mkdir(parents=True, exist_ok=True)
-    sp.write_text(json.dumps(spec, indent=1), encoding="utf-8")
+    B.write_durable(sp, json.dumps(spec, indent=1))
     d = B.post(root, B.OWNER, "task-open", f"task {a.task} opened", thread=a.task, spec_sha=sha(sp),
                verify=a.verify, cwd=str(base))
     print(f"opened {a.task}: {len(spec['hashes'])} protected entries, record #{d['seq']}")
@@ -196,6 +196,9 @@ def cmd_score(a, root: Path) -> int:
 
 
 def main(argv=None):
+    for stream in (sys.stdout, sys.stderr):  # a re-run's output tail and board text can hold chars cp1252 cannot encode
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     ap = argparse.ArgumentParser(prog="score", description=__doc__.splitlines()[0])
     ap.add_argument("--board"); ap.add_argument("--project")
     sub = ap.add_subparsers(dest="cmd", required=True)

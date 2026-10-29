@@ -12,7 +12,7 @@ No identity = a human or the integrator committing: allowed with a note. Claimed
 board.py claims do. With the fleet layer on (fleet.on), an exclusive agent-fleet lease counts as a claim too.
 Bypass is git's own `--no-verify` (only on the owner's word).
 """
-import argparse, os, re, stat, subprocess, sys
+import argparse, os, stat, subprocess, sys
 from pathlib import Path
 from urllib.parse import quote
 
@@ -20,12 +20,8 @@ HERE = Path(__file__).resolve().parent
 HOOK_MARK = "# agent-fleet claim guard"
 
 
-def native(p: str) -> str:
-    """A board path given in Windows form still works from WSL/Linux, and vice versa for /mnt paths on Windows."""
-    if os.name != "nt":
-        return re.sub(r"^([A-Za-z]):[\\/]", lambda m: f"/mnt/{m.group(1).lower()}/", p).replace("\\", "/")
-    m = re.match(r"^/mnt/([a-z])/(.*)$", p)
-    return f"{m.group(1).upper()}:\\" + m.group(2).replace("/", "\\") if m else p
+sys.path.insert(0, str(HERE))
+from roster import native  # noqa: E402  (a board path given in Windows form still works from WSL, and vice versa)
 
 
 def git(repo, *a) -> str:
@@ -98,6 +94,9 @@ PY="{Path(sys.executable).as_posix()}"   # the interpreter that installed the gu
 
 
 def main(argv=None):
+    for stream in (sys.stdout, sys.stderr):  # claim paths can hold chars a cp1252 pipe cannot encode
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     ap = argparse.ArgumentParser(prog="claim_guard", description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     for name in ("install", "check"):

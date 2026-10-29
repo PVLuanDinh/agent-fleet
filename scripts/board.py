@@ -135,7 +135,7 @@ def post(root: Path, author: str, kind: str, body: str, **extra) -> dict:
              "client": client(), "pid": os.getpid(), "body": body, **fields}
         d["hash"] = msg_hash(d)
         tmp = mdir / f".tmp-{uuid.uuid4().hex}"
-        tmp.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
+        write_durable(tmp, json.dumps(d, ensure_ascii=False, indent=1))
         try:
             os.link(tmp, mdir / f"{seq:08d}.json")  # atomic, fails if another writer took this seq
             return d
@@ -261,9 +261,18 @@ def live_shared(root: Path, path: str, now=None) -> list:
     return [l for l in leases if l and not expired(l, now)]
 
 
+def write_durable(f: Path, text: str) -> None:
+    """Write and fsync before the caller links/renames it into place: a power loss or a BSOD then leaves the old state
+    or the new one, never a truncated message. ponytail: the directory entry is not fsynced (NTFS journals it)."""
+    with open(f, "w", encoding="utf-8") as fh:
+        fh.write(text)
+        fh.flush()
+        os.fsync(fh.fileno())
+
+
 def write_atomic(f: Path, text: str) -> None:
     tmp = f.with_name(f".{f.name}.{uuid.uuid4().hex}.tmp")
-    tmp.write_text(text, encoding="utf-8")
+    write_durable(tmp, text)
     os.replace(tmp, f)
 
 
@@ -282,6 +291,9 @@ def show(m: dict) -> str:
 
 
 def main(argv=None):
+    for stream in (sys.stdout, sys.stderr):  # board text holds chars a cp1252 pipe cannot encode (a BOM, the stop sign)
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     ap = argparse.ArgumentParser(prog="board", description=__doc__.splitlines()[0])
     ap.add_argument("--board"); ap.add_argument("--project")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -386,6 +398,8 @@ def main(argv=None):
                 grave.unlink(missing_ok=True)
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(lease_text(who, ttl, "exclusive"))
+            fh.flush()
+            os.fsync(fh.fileno())
         d = post(root, who, "claim", f"claim {path}", path=path, thread=args.thread, mode="exclusive", ttl=ttl)
         print(f"claimed {path} (#{d['seq']}, {until(read_lease(f))})"); return 0
     if args.cmd == "renew":

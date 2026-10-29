@@ -63,6 +63,8 @@ Every participant names itself: `--as G3` or `$AGENT_NAME` (`owner` is reserved)
 | park a question for the owner | `board.py ask-owner --as G3 --thread G3 "..."` |
 | open owner questions | `board.py owner`. Send them to the owner in ONE batch when nothing else can proceed |
 | owner's reply | `board.py answer N "<owner's verbatim words>"`. Run only by the owner or the lead relaying them |
+| did they read it? | `view.py seen N`: which addressees' brief cursors have passed message N (exit 1 while any has not) |
+| hand out work without a central assigner | post `--kind request`; any eligible agent runs `review.py requests --as R1`, then `review.py take N --as R1` (exactly one taker wins, on the record; a request `--to X` only X may take) |
 | integrity | `board.py verify` while no agent is mid-claim; exit 1 names each edited/deleted/reordered message |
 | pin what you saw | `board.py head` prints `N:HASH`; the lead records it off-board each time it reads the board |
 
@@ -229,6 +231,9 @@ Three traps found live (2026-10-14: two reviewers sat 14 minutes on a prompt nob
 |---|---|---|
 | spawn an agent | `python $B/fleet.py spawn --directory <dir> --name <n> --tool claude --prompt "..."` (Windows paths are translated) | Claude Code stops at **"Do you trust this folder?"** in any folder WSL claude has never opened, and the default choice is "No, exit". `fleet.py spawn` marks the folder trusted in WSL's `~/.claude.json` first. `fleet.py trust <dir>...` does only that step |
 | see who is stuck | `python $B/fleet.py sessions` | agent-fleet can keep showing a parked session as `starting` for its whole life. This reads each live pane and flags `BLOCKED: trust prompt / login / permission prompt / pane gone` |
+| a spawn that waits instead of overloading the host | `spawn` checks the project's `max_active_lanes` (working/waiting/starting lanes only) and `min_available_mb` from fleet-requirements.json; over either it exits **3** and spawns nothing. `--wait-admission SECONDS` queues it (rechecks every 30 s), `--no-admission` overrides | a lane cap and RAM floor kept only as prose rules; a lane spawned past it competed with a battery for memory |
+| bring lanes back after a crash or reboot | `python $B/fleet.py resurrect` lists roster lanes with no live session and marks the CUT OFF ones (a heartbeat, no clean session end); `resurrect NAME...` or `--all` (cut-off ones only) respawns each with its own spawn args and a resume note | a reboot needed a hand-written savepoint index |
+| one health read | `python $B/doctor.py --board <root>`: verify, stale claims, stale lock files (`--lock DIR`, plus the project's `locks`), BLOCKED sessions, failing lane-guard rows, digest size, open items; exit 1 on any RED; repairs nothing | a stale lock and 78 open challenges were found by hand |
 | stop a session | `python $B/fleet.py kill <id>...` | agent-fleet's `kill` and `archive` need a caller session ("not inside an agent-fleet session"). This kills the tmux session `am_<id>` on its `agentfleet` socket; the row turns dead when the TUI next runs, and archiving happens there |
 
 Never probe with `fleet.py am <cmd> --help`: an unknown flag opens the TUI and hangs the caller.
@@ -411,3 +416,62 @@ board (2026-10-19):
 - The cache is JSON in `<board>/cache/`, or `~/.cache/agent-fleet/boards/` when the board sits on a
   Windows drive seen from WSL; there files are matched by name, since message files are written once.
   `FLEET_NOCACHE=1` re-reads everything.
+
+## 13. Leak guard: measure the kernel leak at every lane step, refuse spawns past a limit
+
+On a real host (2026-10-28) the kernel nonpaged pool reached 16 GB of 31.8 GB after 4.8 days. 13.1 GB of it sat
+under pool tag `NtFC` in `ntfs.sys`, and it grew in bursts of about 4,400 records when a lane was spawned or archived.
+Only a reboot frees it. `scripts/leakguard.py` (Windows host, stdlib ctypes, no admin) adds two things:
+
+- **Measure.** `fleet.py spawn`, `kill` and `archive-dead` log the nonpaged pool and the tag before and after the
+  step, plus one detached follow-up sample about 45 s later, as JSON lines in `~/.claude/agent-fleet-leak.log`
+  (`op`, `id`, `delta_tag_allocs`, `delta_nonpaged_mb`). That log is what attributes the bursts to a lifecycle step.
+- **Refuse.** `spawn` is refused while the nonpaged pool is at or above `FLEET_NONPAGED_MAX_MB` (default 8192), with
+  a warning from `FLEET_NONPAGED_WARN_MB` (4096). Past that, the fix is a reboot, not another lane.
+
+| Need | Command |
+|---|---|
+| one reading | `python $B/leakguard.py sample` |
+| would a spawn be refused now? | `python $B/leakguard.py check` (exit 1 = refused) |
+| override for one spawn | `FLEET_LEAKGUARD_OFF=1` (readings are still logged) |
+
+**Cause found (2026-10-28):** the per-spawn burst is the preflight's `webgrab` check,
+and under it, every LAUNCH of uv's python-build-standalone CPython 3.11.15 (the base of `.venv-scrapling` and of the PATH
+`python`) leaks about 120-230 NtFC records, more with imports (a webgrab get is about 3,700). python.org 3.13 leaks 0 per
+launch. So a preflight entry may carry **`ttl_s`**, its own reuse window (default 1,800 s), and a webgrab check
+can carry `ttl_s: 86400`: it still proves use, but at most daily. `preflight_cached` re-runs only the checks whose window
+ran out.
+
+ponytail: Windows only. From WSL, or any non-Windows host, the sample is None and the guard never refuses, so a
+`fleet.py` run inside WSL is unguarded. Upgrade path: sample through powershell.exe from WSL. The guard limits the
+damage; it does not fix the driver.
+
+## 14. Lane hook: leases that renew themselves, mail that announces itself, a last-event heartbeat
+
+`scripts/lanehook.py` is wired in WSL `~/.claude/settings.json` on PostToolUse, Stop and SessionEnd (preflight row
+`lanehook` refuses a spawn while it is not). It acts only inside a lane: `$AGENT_NAME` + `$AGENT_BOARD`, or the roster
+entry whose id is the session's `$AGENT_FLEET_SESSION_ID` (agent-fleet exports it), or, outside agent-fleet, the ONE
+roster entry whose folder holds the cwd. Lanes sharing a folder are told apart by id; an ambiguous match stays silent
+rather than use another lane's name. The roster is one file per lane in `agent-fleet-lanes/` beside the Windows
+`~/.claude`, written by `fleet.py spawn` only after the spawn succeeds. At most once a minute per lane:
+
+- **Leases.** Each of the lane's claims whose lease ends within 15 minutes is renewed through `board.py renew` (on
+  the record) to max(its own ttl, 30m): a lease is never shortened. A lane that stops working stops renewing, and its
+  claims lapse to the next claimer with no owner answer. Claim with a ttl longer than your longest single tool call
+  (a subagent dispatch can run for a long time with no hook firing). `--ttl 0` and pre-lease claims are never touched.
+- **Mail.** Messages addressed to the lane past its brief cursor are announced once, with a `view.py brief --to-me`
+  line. The cursor is never advanced: reading is still the lane's own `brief`.
+- **Heartbeat.** `agent-fleet-lanes/heartbeat/<lane>.json` records the LAST event: `tool`, `stop` (turn finished) or
+  `end`. `fleet.py resurrect --all` respawns only lanes whose last event was `tool` (cut off mid-work).
+
+Board reads go through fastboard's cache (an uncached read of a 6,000-message board over /mnt/c took 53 s), and the
+throttle is saved before any work. Knobs: `LANEHOOK_TTL` (1800), `LANEHOOK_EVERY` (60), `FLEET_ROSTER` (a directory).
+Lanes spawned before 2026-10-29 are not in the roster, so the hook stays silent for them until they are respawned.
+
+## 15. Changing the pinned files (board.py, score.py)
+
+`board.py` and `score.py` are hash-pinned by every open scored task (`tasks/<T>.json` "self"). A change to them is
+built in a `staged/` copy and tested there, then landed in a window: the lead scores every open task first and opens
+none until the copy lands; tasks opened before that are re-opened. Done that way 2026-10-29 for fsync before every
+message, claim and lease write (fix 8) and the cp1252 crash guard in both files (fix 9); board.py re-landed with LF line endings the same day. The skill folder is a local git repo with `* -text`: a CRLF rewrite on checkout
+would change those hashes and zero every open task.

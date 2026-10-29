@@ -8,6 +8,9 @@ only what is new to you, full text only on demand. Read-only; never posts.
   view.py brief --as R1 [--to-me]      one line per message you have not seen yet (a per-agent cursor
                                        under <board>/cursors/); --all ignores the cursor
   view.py show N [N ...]               full text of chosen messages
+  view.py seen N                       read receipt: which addressees' brief cursors have passed message N
+                                       (to one agent: that agent; untagged/all: every cursor holder); exit 1
+                                       while any has not, 2 for no such message
 
 Why: a full `board.py read` re-sends every message ever posted (measured on a production board,
 2026-10-08: ~6.9k tokens for 130 messages, and growing). Shared state beats a shared log
@@ -51,7 +54,7 @@ def _epoch(ts):
 
 
 def cmd_digest(a, root):
-    # Bounded: the full state grew to ~19k tokens on a 2,950-message board and every lane read it.
+    # Bounded: the full state grew to ~19k tokens on a 2,950-message board (2026-10-16) and every lane read it.
     import time
     from collections import Counter
     now = time.time()
@@ -112,7 +115,8 @@ def cmd_brief(a, root):
             since = int(cur.read_text(encoding="utf-8").strip() or 0)
         except ValueError:
             since = 0
-    msgs = [m for m in B.good(B.load_msgs(root)) if m["seq"] > since]
+    every = B.good(B.load_msgs(root))
+    msgs = [m for m in every if m["seq"] > since]
     if a.to_me:
         msgs = [m for m in msgs if m.get("to") in (who, "all", None) or m.get("from") == who]
     i = 0
@@ -129,7 +133,8 @@ def cmd_brief(a, root):
             for m in msgs[i:j + 1]:
                 print(_line(m))
         i = j + 1
-    new_head = max((m["seq"] for m in B.good(B.load_msgs(root))), default=since)
+    # The cursor moves to what THIS read saw: a message posted meanwhile stays unread, never silently skipped.
+    new_head = max((m["seq"] for m in every), default=since)
     cur.parent.mkdir(parents=True, exist_ok=True)
     cur.write_text(str(new_head), encoding="utf-8")
     print(f"({len(msgs)} new since #{since}; cursor now #{new_head}; `view.py show N` for full text)")
@@ -143,7 +148,36 @@ def cmd_show(a, root):
     return 0
 
 
+def cmd_seen(a, root):
+    msgs = B.good(B.load_msgs(root))
+    m = {m["seq"]: m for m in msgs}.get(a.n)
+    if not m:
+        print(f"#{a.n}: no such message"); return 2
+    posters = {x.get("from") for x in msgs}
+    cursors = {}
+    cdir = root / "cursors"
+    for f in (sorted(cdir.iterdir()) if cdir.is_dir() else []):
+        try:
+            cursors[f.name] = int(f.read_text(encoding="utf-8").strip() or 0)
+        except (OSError, ValueError):
+            cursors[f.name] = 0
+    to = m.get("to")
+    # A broadcast's readers are the agents: cursor holders that have posted (tools also keep cursors, never read mail).
+    readers = [to] if to and to != "all" else [n for n in cursors if n != m.get("from") and n in posters]
+    print(_line(m))
+    unseen = 0
+    for r in readers:
+        c = cursors.get(r)
+        ok = c is not None and c >= m["seq"]
+        unseen += not ok
+        print(f"  {'seen  ' if ok else 'UNSEEN'} {r} ({'no cursor yet' if c is None else f'cursor #{c}'})")
+    return 1 if unseen else 0
+
+
 def main(argv=None):
+    for stream in (sys.stdout, sys.stderr):  # board text holds chars a cp1252 pipe cannot encode (a BOM, the stop sign)
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     ap = argparse.ArgumentParser(prog="view", description=__doc__.splitlines()[0])
     ap.add_argument("--board"); ap.add_argument("--project")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -151,9 +185,10 @@ def main(argv=None):
     b = sub.add_parser("brief"); b.add_argument("--as", dest="as_"); b.add_argument("--to-me", action="store_true")
     b.add_argument("--all", action="store_true")
     s = sub.add_parser("show"); s.add_argument("n", type=int, nargs="+")
+    sub.add_parser("seen").add_argument("n", type=int)
     a = ap.parse_args(argv)
     root = B.board_root(a)
-    return {"digest": cmd_digest, "brief": cmd_brief, "show": cmd_show}[a.cmd](a, root)
+    return {"digest": cmd_digest, "brief": cmd_brief, "show": cmd_show, "seen": cmd_seen}[a.cmd](a, root)
 
 
 if __name__ == "__main__":
