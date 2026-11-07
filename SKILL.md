@@ -278,6 +278,9 @@ Keys sent with `ui keys` land in the same TUI a person may be watching; prefer t
 hook on the Skill tool (`hooks/agent-fleet-tui-tab.ps1`, optional, Desktop only, once per session,
 off with `AGENT_FLEET_TAB_OFF=1`) injects this reminder, because a hook cannot open a tab itself.
 Closing the tab only detaches; the shared TUI keeps running.
+With an agent office web UI installed, set `AGENT_OFFICE_ENSURE` (a WSL command that starts it only when it
+is down): the keeper hook then keeps it up and this reminder opens the office (`AGENT_OFFICE_URL`, default
+`http://localhost:4610/`) in the browser pane instead of the TUI tab. Unset, nothing changes.
 
 ### One claim domain
 
