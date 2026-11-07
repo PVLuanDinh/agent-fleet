@@ -47,10 +47,13 @@ def load_config() -> dict:
 
 
 def project_for(cwd: str) -> dict:
-    """The config entry whose cwd_prefix contains cwd (longest wins), or a MEMORY.md-only default."""
-    norm = os.path.normcase(os.path.abspath(cwd))
+    """The config entry whose cwd_prefix contains cwd (longest wins), or a MEMORY.md-only default.
+    Contains = the folder itself or below it; a sibling sharing the name (app vs app-lane1) is not inside."""
+    def norm(p: str) -> str:
+        return os.path.normcase(os.path.abspath(p)).rstrip("\\/")
+    c = norm(cwd)
     hits = [p for p in load_config().get("projects", [])
-            if norm.startswith(os.path.normcase(os.path.abspath(p["cwd_prefix"])))]
+            if c == norm(p["cwd_prefix"]) or c.startswith(norm(p["cwd_prefix"]) + os.sep)]
     proj = dict(max(hits, key=lambda p: len(p["cwd_prefix"]))) if hits else {"cwd_prefix": cwd, "files": []}
     proj["memory_dir"] = Path(proj.get("memory_dir") or memory_dir_for(proj["cwd_prefix"]))
     proj.setdefault("files", []); proj.setdefault("index_cap", INDEX_CAP)
@@ -161,6 +164,7 @@ def selftest() -> int:
         res.append(("corpus_file_counts", verify(snap, spec, mem) == []))
         res.append(("frontmatter_ignored", body_lines("---\nmodified: 1\n---\nA\n") == ["A"]))
         res.append(("config_resolves_project", project_for(str(tmp / "proj" / "sub"))["memory_dir"] == mem))
+        res.append(("sibling_folder_not_inside", project_for(str(tmp / "proj-lane1"))["memory_dir"] != mem))
         res.append(("default_memory_dir", memory_dir_for("D:\\work\\app") == Path.home() / ".claude/projects/D--work-app/memory"))
         (mem / "START.md").write_text("x" * 9000, encoding="utf-8")
         out = hook(json.dumps({"cwd": str(tmp / "proj")}))

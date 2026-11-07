@@ -278,6 +278,9 @@ Keys sent with `ui keys` land in the same TUI a person may be watching; prefer t
 hook on the Skill tool (`hooks/agent-fleet-tui-tab.ps1`, optional, Desktop only, once per session,
 off with `AGENT_FLEET_TAB_OFF=1`) injects this reminder, because a hook cannot open a tab itself.
 Closing the tab only detaches; the shared TUI keeps running.
+With an agent office web UI installed, set `AGENT_OFFICE_ENSURE` (a WSL command that starts it only when it
+is down): the keeper hook then keeps it up and this reminder opens the office (`AGENT_OFFICE_URL`, default
+`http://localhost:4610/`) in the browser pane instead of the TUI tab. Unset, nothing changes.
 
 ### One claim domain
 
@@ -341,7 +344,9 @@ CLI, data or bridge is missing fails silently mid-task, or worse, answers wrongl
 the graph reports "no match" and the lane rebuilds existing code). So `fleet.py spawn` runs a **preflight** first:
 
 1. `~/.claude/fleet-requirements.json` (or `$FLEET_REQUIREMENTS`) lists, per project (`cwd_prefix`: one path or a
-   list, longest match wins, WSL `/mnt/x/...` paths match their Windows form), the skills its lanes need. Each has a
+   list, longest match wins, WSL `/mnt/x/...` paths match their Windows form; a prefix covers its own folder and
+   below, never a sibling like `app-lane1` for `app`, unless it ends in `-` or `_`, e.g. `C:\wt\app-`, which covers
+   every folder whose name starts with it), the skills its lanes need. Each has a
    **functional `check`** run the way a lane sees it (`bash -lc` in WSL), an optional **`install`**, and `required`.
 2. A failing check runs its install, then checks again. A required skill that still fails **refuses the spawn**;
    an optional one only warns. A passing result is reused for 30 minutes so spawning stays fast.

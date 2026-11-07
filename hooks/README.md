@@ -4,9 +4,9 @@ Both are PowerShell, fail open, and print nothing unless they have something to 
 
 | Hook | Event | Does | Off |
 |---|---|---|---|
-| `agent-fleet-ui-keeper.ps1` | SessionStart | keeps ONE hidden agent-fleet TUI running in WSL (`tmux -L fleetui`, session `ui`) so session status stays current; detached, idempotent | `AGENT_FLEET_UI_OFF=1` |
+| `agent-fleet-ui-keeper.ps1` | SessionStart | keeps ONE hidden agent-fleet TUI running in WSL (`tmux -L fleetui`, session `ui`) so session status stays current; detached, idempotent; with `AGENT_OFFICE_ENSURE` set (a WSL command that starts an agent office web UI only when it is down) it also runs that | `AGENT_FLEET_UI_OFF=1`; office only: `AGENT_OFFICE_OFF=1` |
 | `memtrim-guard.ps1` | SessionStart | a memory file over budget gets a snapshot and the instruction to move (never delete) its text into a DETAIL file, proven by `scripts/memtrim.py verify`; warns when `MEMORY.md` passes 90% of its cap; needs `~/.claude/memtrim.json` (SKILL.md section 8) | `MEMTRIM_OFF=1` |
-| `agent-fleet-tui-tab.ps1` | PostToolUse, matcher `Skill` | in Claude Code Desktop, the first `Skill(agent-fleet)` of a session tells Claude to open that TUI in a Terminal-panel tab | `AGENT_FLEET_TAB_OFF=1` |
+| `agent-fleet-tui-tab.ps1` | PostToolUse, matcher `Skill` | in Claude Code Desktop, the first `Skill(agent-fleet)` of a session tells Claude to open that TUI in a Terminal-panel tab; with `AGENT_OFFICE_ENSURE` set it opens the office (`AGENT_OFFICE_URL`, default `http://localhost:4610/`) in the browser pane instead | `AGENT_FLEET_TAB_OFF=1` |
 
 Copy the ones you want into `~/.claude/hooks/`, then add to `~/.claude/settings.json` (merge into existing arrays):
 
