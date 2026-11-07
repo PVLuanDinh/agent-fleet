@@ -321,14 +321,21 @@ def to_win_path(p: str) -> str:
 
 
 def project_for(cwd: str) -> dict:
-    """The requirements entry whose cwd_prefix (one or a list) contains cwd; longest prefix wins."""
-    c = to_win_path(str(cwd)).lower().rstrip("\\/")
+    """The requirements entry whose cwd_prefix (one or a list) contains cwd; longest prefix wins.
+
+    A prefix matches its own folder and everything under it, never a sibling that merely shares its
+    name (D:\\work\\app is not D:\\work\\app-lane1). A prefix ending in '-' or '_' (C:\\wt\\app-) is a
+    folder-name family and matches every folder whose name starts with it."""
+    def norm(p: str) -> str:
+        return to_win_path(str(p)).lower().replace("\\", "/").rstrip("/")
+    c = norm(cwd)
     best, n = {}, -1
     for proj in load_requirements().get("projects", []):
         prefixes = proj.get("cwd_prefix") or []
         for pre in [prefixes] if isinstance(prefixes, str) else prefixes:
-            pl = pre.lower().rstrip("\\/")
-            if c.startswith(pl) and len(pl) > n:
+            pl = norm(pre)
+            hit = c.startswith(pl) if pl.endswith(("-", "_")) else (c == pl or c.startswith(pl + "/"))
+            if hit and len(pl) > n:
                 best, n = proj, len(pl)
     return best
 

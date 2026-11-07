@@ -669,7 +669,12 @@ def fleet_bridge_mechanics():
     try:
         res += [("preflight_longest_prefix_wins", F.project_for("D:\\work\\app\\src").get("name") == "inner"),
                 ("preflight_wsl_path_matches", F.project_for("/mnt/c/wt/app-lane1").get("name") == "inner"),
-                ("preflight_other_cwd_unmatched", F.project_for("E:\\elsewhere") == {})]
+                ("preflight_other_cwd_unmatched", F.project_for("E:\\elsewhere") == {}),
+                # issue #1: a sibling folder that only shares the prefix's name is NOT inside the project
+                ("preflight_sibling_dash_folder_not_inside", F.project_for("D:\\work\\app-lane1").get("name") == "outer"),
+                ("preflight_sibling_longer_name_not_inside", F.project_for("D:\\work\\application").get("name") == "outer"),
+                ("preflight_exact_folder_matches", F.project_for("D:\\work\\app\\").get("name") == "inner"),
+                ("preflight_dash_family_prefix_matches", F.project_for("C:\\wt\\app-lane1\\src").get("name") == "inner")]
         reqf.write_bytes(b"\xef\xbb\xbf" + reqf.read_bytes())
         res.append(("preflight_bom_file_still_read", F.project_for("D:\\work\\app").get("name") == "inner"))
         reqf.write_text("{ not json", encoding="utf-8")

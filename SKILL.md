@@ -341,7 +341,9 @@ CLI, data or bridge is missing fails silently mid-task, or worse, answers wrongl
 the graph reports "no match" and the lane rebuilds existing code). So `fleet.py spawn` runs a **preflight** first:
 
 1. `~/.claude/fleet-requirements.json` (or `$FLEET_REQUIREMENTS`) lists, per project (`cwd_prefix`: one path or a
-   list, longest match wins, WSL `/mnt/x/...` paths match their Windows form), the skills its lanes need. Each has a
+   list, longest match wins, WSL `/mnt/x/...` paths match their Windows form; a prefix covers its own folder and
+   below, never a sibling like `app-lane1` for `app`, unless it ends in `-` or `_`, e.g. `C:\wt\app-`, which covers
+   every folder whose name starts with it), the skills its lanes need. Each has a
    **functional `check`** run the way a lane sees it (`bash -lc` in WSL), an optional **`install`**, and `required`.
 2. A failing check runs its install, then checks again. A required skill that still fails **refuses the spawn**;
    an optional one only warns. A passing result is reused for 30 minutes so spawning stays fast.
